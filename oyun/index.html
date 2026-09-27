@@ -281,12 +281,60 @@
     #hint { position: fixed; left: 50%; top: 44%; transform: translate(-50%, -50%) rotate(-2deg); z-index: 7; max-width: min(460px, 86vw); display: flex; gap: 12px; align-items: center; background: var(--gold); border: 4px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); padding: 10px 16px; font: 600 17px/1.35 system-ui, sans-serif; letter-spacing: 0; color: var(--ink); pointer-events: none; }
     #hint.in { animation: slam .35s cubic-bezier(.2,1.6,.4,1); }
     #hint .hicon { font: 400 34px 'Bangers', sans-serif; }
+
+    /* Çarşı: otağ tezgâhı */
+    #carsi { justify-content: flex-start; padding-top: 0; background: radial-gradient(circle at 50% 30%, rgba(90,50,20,.75), rgba(20,10,30,.92)); overflow-y: auto; }
+    #awning { position: sticky; top: 0; width: calc(100% + 32px); height: 34px; margin: 0 -16px; flex: none; background: repeating-linear-gradient(90deg, var(--red) 0 36px, var(--paper) 36px 72px); border-bottom: 4px solid var(--ink); clip-path: polygon(0 0, 100% 0, 100% 70%, 97.5% 100%, 95% 70%, 92.5% 100%, 90% 70%, 87.5% 100%, 85% 70%, 82.5% 100%, 80% 70%, 77.5% 100%, 75% 70%, 72.5% 100%, 70% 70%, 67.5% 100%, 65% 70%, 62.5% 100%, 60% 70%, 57.5% 100%, 55% 70%, 52.5% 100%, 50% 70%, 47.5% 100%, 45% 70%, 42.5% 100%, 40% 70%, 37.5% 100%, 35% 70%, 32.5% 100%, 30% 70%, 27.5% 100%, 25% 70%, 22.5% 100%, 20% 70%, 17.5% 100%, 15% 70%, 12.5% 100%, 10% 70%, 7.5% 100%, 5% 70%, 2.5% 100%, 0 70%); z-index: 1; }
+    #ctop { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+    #ctop h1 { font-size: clamp(44px, 10vw, 72px); }
+    #stabs { display: flex; gap: 8px; margin: 6px 0 10px; }
+    #stabs button.on { background: var(--gold); }
+    #slist { width: min(860px, 100%); display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+    .scard { background: var(--paper); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 8px 10px 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; transform: rotate(-.6deg); }
+    .scard:nth-child(even) { transform: rotate(.6deg); }
+    .scard .sicon { font-size: 34px; font-weight: 400; line-height: 1.1; }
+    .scard .sicon .gd { width: 34px; height: 34px; }
+    .scard h3 { margin: 0; font-weight: 400; font-size: 21px; color: var(--red); }
+    .scard p { margin: 0; font: 12.5px/1.4 system-ui, sans-serif; letter-spacing: 0; color: var(--ink); text-align: center; flex: 1; }
+    .scard .sown { font: 700 12px system-ui, sans-serif; letter-spacing: 0; color: #6a5236; }
+    .scard.soon { opacity: .7; }
+    .pips { display: flex; gap: 4px; }
+    .pips i { width: 16px; height: 10px; border: 2px solid var(--ink); background: #ddd2b8; transform: skewX(-12deg); }
+    .pips i.on { background: var(--gold); }
+    #counter { width: min(900px, 100%); height: 18px; margin: 14px 0 8px; background: linear-gradient(#8a5a2a, #5a3a1a); border: 3px solid var(--ink); border-radius: 4px; flex: none; }
+    #carsiback { margin-bottom: 16px; }
+    /* Boy Seçimi'ndeki takviye rafı */
+    #boyrack { width: min(560px, 100%); margin-top: 10px; background: rgba(21,16,28,.6); border: 3px solid var(--ink); padding: 6px 10px 8px; }
+    .rackhead { font-size: 15px; color: var(--gold); }
+    .rackrow { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+    .rack { width: 70px; font: 400 14px 'Bangers', sans-serif; background: var(--paper); border: 3px solid var(--ink); border-radius: 8px; padding: 2px 0; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+    .rack b { font-size: 24px; font-weight: 400; }
+    .rack.on { background: var(--gold); box-shadow: 0 0 0 3px var(--red); }
+    .rack.none { opacity: .75; }
+    /* Hayat Suyu */
+    #revive { z-index: 8; background: radial-gradient(circle, rgba(20,60,50,.8), rgba(10,10,20,.94)); }
+    #revive > * { flex: none; }
+    #revive h1 { font-size: clamp(44px, 11vw, 80px); }
+    #revive h2 { margin: 0; }
+    #rvbowl { position: relative; width: 150px; height: 150px; display: grid; place-items: center; margin: 4px 0; }
+    #rvbowl .bowl { width: 104px; filter: drop-shadow(0 0 18px #7ae8ff); animation: bob 1.6s ease-in-out infinite alternate; }
+    @keyframes bob { to { transform: translateY(-6px); } }
+    #rvring { position: absolute; inset: 0; transform: rotate(-90deg); --k: 1; }
+    #rvring circle { fill: none; stroke: #7dff9a; stroke-width: 8; stroke-dasharray: 339; stroke-dashoffset: calc(339 * (1 - var(--k))); }
+    #rvsec { position: absolute; right: -8px; top: -4px; font-size: 34px; color: #7dff9a; }
+    .rvtext { max-width: 360px; font-size: 15px !important; }
+    #rvgo.dim { opacity: .5; }
+    #rvgo .gd { width: 26px; height: 26px; }
+    /* bitiş ekranı rekorları */
+    #final .stamp { display: inline-block; margin: 8px 0 4px; font-family: 'Bangers', sans-serif; font-size: 34px; color: var(--red); border: 4px solid var(--red); padding: 0 12px; transform: rotate(-8deg); text-shadow: none; background: rgba(255,255,255,.85); }
+    #final .stamp:empty { display: none; }
+    #final .rec { color: var(--gold); }
     .menu-buttons { display: flex; flex-direction: column; gap: 12px; align-items: center; }
     button.small { font: inherit; font-size: 22px; letter-spacing: 1px; color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 10px; padding: 5px 22px; box-shadow: 0 4px 0 var(--ink); cursor: pointer; }
     #winstars { font-size: 56px; color: var(--gold); letter-spacing: 6px; }
     #winstory { max-width: 460px; }
 
-    .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; background: radial-gradient(circle, rgba(20,10,30,.25), rgba(20,10,30,.75)); }
+    .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: safe center; overflow-y: auto; text-align: center; padding: 16px; background: radial-gradient(circle, rgba(20,10,30,.25), rgba(20,10,30,.75)); }
     .screen h1 { margin: 0; font-size: clamp(56px, 16vw, 120px); color: var(--gold); font-weight: 400; line-height: .95; transform: rotate(-3deg); }
     .screen h2 { margin: 6px 0 16px; font-size: clamp(22px, 6vw, 36px); font-weight: 400; color: #ff9a5a; }
     .screen p { font-family: system-ui, sans-serif; font-size: 16px; line-height: 1.6; max-width: 420px; letter-spacing: 0; }
@@ -341,6 +389,7 @@
     <div id="boyslot"></div>
     <div id="boylist"></div>
     <div id="boydetail"></div>
+    <div id="boyrack" hidden></div>
     <div class="menu-buttons">
       <button id="boygo" class="big">AKINA BAŞLA ▸</button>
       <button id="boyback" class="small">◂ HARİTA</button>
@@ -370,6 +419,7 @@
     </div>
     <!-- sağdaki simgeli düğmeler: yeni ekranlar buraya eklenir (data-unlock ile kilitlenebilir) -->
     <div id="mside">
+      <button id="carsibtn" class="tile" data-unlock="carsi"><b>🏪</b><span>ÇARŞI</span></button>
       <button id="wardbtn" class="tile"><b>👘</b><span>KOSTÜM</span></button>
       <button id="bookbtn" class="tile"><b>📜</b><span>DESTAN</span></button>
       <button id="storybtn" class="tile"><b>🎞</b><span>HİKÂYE</span></button>
@@ -421,6 +471,40 @@
     <button id="wardback" aria-label="Kapat">✕</button>
     <div id="wlist"></div>
     <p id="wnote" class="ink">Şimdilik koşularda topladığın kut ile açılır. İleride mağazadan da satın alınabilecek.</p>
+  </div>
+
+
+  <div id="carsi" class="screen" hidden>
+    <div id="awning"></div>
+    <div id="ctop"><h1 class="ink">ÇARŞI</h1><div class="moneyrow" data-money></div></div>
+    <div id="stabs"><button data-tab="takviye" class="small">TAKVİYE</button><button data-tab="yukselt" class="small">YÜKSELTME</button><button data-tab="gokdemir" class="small">GÖK DEMİR</button></div>
+    <div id="slist"></div>
+    <div id="counter"></div>
+    <button id="carsiback" class="small">◂ MENÜ</button>
+  </div>
+
+  <div id="revive" class="screen" hidden>
+    <h1 class="ink">HAYAT SUYU</h1>
+    <h2 class="ink">İLE DEVAM ET</h2>
+    <div id="rvbowl">
+      <svg id="rvring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="54"/></svg>
+      <!-- altın kase içinde parlayan hayat suyu -->
+      <svg class="bowl" viewBox="0 0 100 70"><defs><radialGradient id="rvw" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#eaffff"/><stop offset=".5" stop-color="#7ae8ff"/><stop offset="1" stop-color="#2a9ad8"/></radialGradient><linearGradient id="rvg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#b8780a"/></linearGradient></defs>
+        <ellipse cx="50" cy="24" rx="40" ry="9" fill="url(#rvw)" stroke="#15101c" stroke-width="3"/>
+        <path d="M10 24 Q14 58 50 60 Q86 58 90 24 Q86 33 50 33 Q14 33 10 24Z" fill="url(#rvg)" stroke="#15101c" stroke-width="3"/>
+        <path d="M36 60 L40 68 L60 68 L64 60" fill="url(#rvg)" stroke="#15101c" stroke-width="3"/>
+        <path d="M22 40 Q50 50 78 40" fill="none" stroke="#fff4c0" stroke-width="2" opacity=".7"/></svg>
+      <b id="rvsec" class="ink">5</b>
+    </div>
+    <p class="ink rvtext">Destanda Er-Sogotoh'u dirilten su. Bir yudum, kaldığın yerden devam.</p>
+    <div class="menu-buttons">
+      <button id="rvgo" class="big">DEVAM ET · <i class="gd"></i> <span id="rvprice">1</span></button>
+      <button id="rvshop" class="small" hidden>GÖK DEMİR YETMİYOR · ÇARŞI ▸</button>
+      <!-- telefon sürümü: reklam izleyerek devam (şimdilik kapalı) -->
+      <button id="rvad" class="small" hidden disabled>▶ REKLAM İZLE (YAKINDA)</button>
+      <button id="rvno" class="small">VAZGEÇ</button>
+    </div>
+    <small id="rvleft" class="ink"></small>
   </div>
 
   <div id="win" class="screen" hidden>

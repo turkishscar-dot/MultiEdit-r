@@ -19,6 +19,7 @@ import { sfx, music, sting, regionOf } from './sound.js';
 import * as SOUND from './sound.js';
 import { bonus, collect as collectBonus } from './bonus.js';
 import { tip } from './tips.js';
+import { shop, upg, upgVal, drawShop, drawRack, BOOSTS } from './carsi.js';
 
 const LANES = [-2.5, 0, 2.5];
 const $ = id => document.getElementById(id);
@@ -248,6 +249,25 @@ const LEVELS = {
     ],
   },
 };
+// SONSUZ AKIN (SMU'daki Unlimited): her ~1500 m'de bölge değişir, bölge sonunda o bölgenin boss'u gelir.
+// Yedi bölge bitince tur başa döner, daha hızlı. LEVELS[0] o anki bölgeyi taşır.
+const ZONES = [
+  { lv: 1, name: 'ÖTÜKEN', theme: 'surlar', boss: 'tepegoz' },
+  { lv: 2, name: 'KARA BATAKLIK', theme: 'bataklik', boss: 'albasti' },
+  { lv: 3, name: 'ALTAY', theme: 'altay', boss: 'yelbegen' },
+  { lv: 4, name: 'GÖK YOLU', theme: 'gok', boss: 'karakus', flight: true },
+  { lv: 5, name: 'YERALTI', theme: 'yeralti', boss: 'erlik' },
+  { lv: 6, name: 'ÇİN', theme: 'cin', boss: 'general', foeModel: 'cinli', prisoners: true },
+  { lv: 7, name: 'KARANLIK ÜLKE', theme: 'karanlik', boss: 'boyali' },
+];
+const ZONE_LEN = 1500;
+let zone = 0, loop = 0, zoneStart = 0;
+function applyZone() {
+  const Z = ZONES[zone];
+  Object.assign(LEVELS[0], { theme: Z.theme, boss: Z.boss, flight: !!Z.flight, foeModel: Z.foeModel, prisoners: !!Z.prisoners, bossAt: zoneStart + ZONE_LEN });
+}
+const relicLv = () => (mode === 'endless' ? ZONES[zone].lv : level); // destan eşyaları o bölgenin bölümüne yazılır
+
 const GOAL_ICON = { dist: ['⬆', ' m'], kill: ['⚔', ''], kut: ['◆', ''], esir: ['⛓', ''], hoop: ['◯', ''], combo: ['✦', ' kombo'] };
 const HEIGHTS = [1, 3.5, 6]; // uçuşta üç yükseklik
 // Karanlıkta da görünsünler: mermilere renkli parıltı + yerde halka [renk, parıltı yüksekliği, boy]
@@ -344,6 +364,7 @@ let secret = 0, secretTheme = null, deer = null, deerDone = false, trail = null,
 let stageT = 0, godGlow = null, relicPlan = [], rain = null, guideLane = 1, guideT = 0, shield = 0, reviveUsed = false, smashUsed = false, rideTime = 12;
 const cur = () => LEVELS[level].floors?.[floor] ?? LEVELS[level];
 const relicSave = (() => { try { return JSON.parse(localStorage.getItem('oguz-relics')) || {}; } catch { return {}; } })();
+let continues = 0, noRevive = false, maxHp = 3, bereketT = 0, reviveT = 0, endlessBosses = 0;
 let gallopT = 0, runBosses = 0, runParries = 0, runBroken = 0, runGold = 0; // bu koşuda yenilen boss sayısı (XP için)
 let time = 0, runZ = 0, kut = 0, score = 0, combo = 0, kills = 0, nextZ = 0, bossAt = 0, cool = 0, shake = 0, bannerT = 0, overT = 0;
 let debugCam = null, camX = 0, fovKick = 0, slowK = 1, slowT = 0, stopT = 0, ambushT = 0, slashStep = 0, lastSlash = -9, wasSliding = false;
@@ -544,7 +565,7 @@ function toMenu() {
   Object.assign(P, { x: 0, y: 0, lane: 1, ride: 0, dead: false });
   state = 'menu';
   music('menu');
-  for (const id of ['hud', 'over', 'paused', 'bossbar', 'ride', 'map', 'book', 'win', 'tap', 'mash', 'wardrobe', 'loading', 'grid', 'goals', 'powers', 'boyscreen']) $(id).hidden = true;
+  for (const id of ['hud', 'over', 'paused', 'bossbar', 'ride', 'map', 'book', 'win', 'tap', 'mash', 'wardrobe', 'loading', 'grid', 'goals', 'powers', 'boyscreen', 'carsi', 'revive']) $(id).hidden = true;
   wolf.root.visible = deerActor.root.visible = false;
   $('menu').hidden = false;
   menuLocks();
@@ -662,7 +683,23 @@ function openBoylar(m, lv) {
     $('boydetail').replaceChildren(h, o, p, btn);
   };
   draw();
+  const rack = () => drawRack($('boyrack'), rack);
+  $('boyrack').hidden = !isUnlocked('carsi');
+  if (isUnlocked('carsi')) rack();
   $('boyscreen').hidden = false;
+}
+
+// Çarşı: otağ tezgâhı; takviyeler, kalıcı yükseltmeler, Gök Demir paketleri (yakında)
+let shopTab = 'takviye';
+function openShop() {
+  state = 'carsi';
+  for (const id of ['menu', 'over', 'win']) $(id).hidden = true;
+  drawShopTab();
+  $('carsi').hidden = false;
+}
+function drawShopTab() {
+  for (const b of document.querySelectorAll('#stabs button')) b.classList.toggle('on', b.dataset.tab === shopTab);
+  drawShop($('slist'), shopTab, drawShopTab);
 }
 
 // Destan Kitabı: kapak açılır, sol sayfada karakter döner, sağ sayfada destandaki yeri; sayfa çevrilerek gezilir
@@ -785,6 +822,7 @@ function closeWardrobe() {
 
 function win() {
   state = 'win';
+  $('banner').classList.remove('show');
   const stars = Math.max(1, P.hp);
   const r = relicSave[level];
   const full = r && r.yay && r.ok.every(Boolean) && !r.paid;
@@ -815,6 +853,7 @@ function endRunXP() {
 function start(m = mode, lv = level, skipIntro = false) {
   mode = m;
   level = m === 'endless' ? 0 : lv;
+  if (m === 'endless') { zone = loop = zoneStart = 0; applyZone(); }
   for (const id of ['book', 'map', 'win', 'over', 'menu', 'loading']) $(id).hidden = true;
   const L = LEVELS[level];
   floor = 0;
@@ -835,7 +874,7 @@ function start(m = mode, lv = level, skipIntro = false) {
   horse.root.visible = false;
   horseAway = null;
   Object.assign(P, { lane: 1, x: 0, y: 0, vy: 0, slide: 0, inv: 0, hp: 3, speed: has('kayi') ? 13.5 : 12, lock: 0, lunge: 0, ride: 0, sword: 0, dead: false, flip: 0, spin: 0, roll: false, rear: 0 });
-  time = kut = score = combo = kills = hoops = maxCombo = runBosses = runParries = runBroken = runGold = 0;
+  time = kut = score = combo = kills = hoops = maxCombo = runBosses = runParries = runBroken = runGold = endlessBosses = 0;
   comboT = 0; for (const k in runCounts) runCounts[k] = 0;
   collectBonus();
   planGold();
@@ -844,7 +883,8 @@ function start(m = mode, lv = level, skipIntro = false) {
   pow.kurt = pow.kilic = secret = 0; deer = trail = rain = null; deerDone = godDone = islikDone = false;
   secretTheme = null; wolf.root.visible = deerActor.root.visible = false;
   shield = has('karaevli') ? 1 : 0; reviveUsed = smashUsed = false;
-  rideTime = RIDE_TIME + (has('doger') ? 6 : 0);
+  rideTime = upgVal('at') + (has('doger') ? 6 : 0); // Çarşı yükseltmesi: at süresi
+  continues = 0; noRevive = false; maxHp = 3; bereketT = 0;
   planRelics();
   $('goals').hidden = !cur().goals;
   $('powers').hidden = true;
@@ -864,6 +904,22 @@ function start(m = mode, lv = level, skipIntro = false) {
   hearts();
   comboUi();
   if (has('alayuntli') && !flying) mount(); // Ala-yuntlı: akına at sırtında başla
+  useBoosts();
+}
+
+// Çarşı'dan rafa konan takviyeler koşu başında harcanır
+function useBoosts() {
+  if (!isUnlocked('carsi')) return;
+  const used = shop.consume();
+  for (const id of used) {
+    if (id === 'kimiz') { maxHp = 4; P.hp = 4; hearts(); }
+    if (id === 'kurt') callWolf();
+    if (id === 'bereket') bereketT = 180;
+    if (id === 'nal' && !flying && !P.ride) mount();
+    if (id === 'nazar') shield++;
+    if (id === 'kilic') { pow.kilic = 10; setWeapon('sword'); }
+  }
+  if (used.length) banner(used.map(id => BOOSTS.find(b => b.id === id).icon).join(' ') + ' TAKVİYE!');
 }
 
 // --- nesneler ---
@@ -941,7 +997,7 @@ function spawnRow(z) {
     if (l === free) {
       if (relicPlan.length && d >= relicPlan[0][2]) { const [k, i] = relicPlan.shift(); add(k, l, z, { fy: 1.6, ri: i }); } // zıplayarak alınır
       else if (d > 150 && !P.ride && !sect && Math.random() < (has('doger') ? 0.06 : 0.035)) add('nal', l, z);
-      else if (d > 100 && Math.random() < (P.hp < 3 ? 0.025 : 0.004) * (has('bayindir') ? 2 : 1)) add('kimiz', l, z);
+      else if (d > 100 && Math.random() < (P.hp < maxHp ? 0.025 : 0.004) * (has('bayindir') ? 2 : 1) * upgVal('kimiz') / 100) add('kimiz', l, z);
       else if (d > 200 && !pow.kurt && Math.random() < 0.012) add('kurt', l, z);
       else if (d > 300 && !islikDone && Math.random() < 0.012) { islikDone = true; add('islik', l, z); }
       else if (LEVELS[level].prisoners && d > 60 && Math.random() < 0.22) add('esir', l, z);
@@ -975,6 +1031,14 @@ function startTrail(z) {
 // Uluğ Türük'ün rüyası: her bölümde üç gümüş ok ve bir altın yay saklı; toplananlar bir daha çıkmaz
 function planRelics() {
   relicPlan = [];
+  if (mode === 'endless') { // Sonsuz Akın: bölgenin bölümündeki eksik destan eşyaları bölgeye dağılır
+    const r = (relicSave[relicLv()] ??= { yay: false, ok: [false, false, false] });
+    [['gumus', 0], ['gumus', 1], ['yay', 0], ['gumus', 2]].forEach(([k, i], j) => {
+      if (k === 'yay' ? r.yay : r.ok[i]) return;
+      relicPlan.push([k, i, zoneStart + 300 + j * 280]);
+    });
+    return;
+  }
   if (mode !== 'level') return;
   const r = (relicSave[level] ??= { yay: false, ok: [false, false, false] });
   const at = cur().goals?.find(g => g[0] === 'dist')?.[1] ?? 900, nf = LEVELS[level].floors?.length || 1;
@@ -1135,7 +1199,7 @@ function updateObj(o, dt) {
     o.z -= 3 * dt;
     if ((o.ft += dt) > 1.8) o.dead = true;
   }
-  if (o.kind === 'kut' && !o.mag && ahead < 7 && ahead > 0 && (has('salur') || (has('kizik') && Math.abs(o.x - P.x) < 2.8))) o.mag = true;
+  if (o.kind === 'kut' && !o.mag && ahead < 7 && ahead > 0 && (has('salur') || (has('kizik') && Math.abs(o.x - P.x) < 2.8) || (upg('miknatis') && Math.abs(o.x - P.x) < 1.1 + upg('miknatis') * 0.35))) o.mag = true; // Çarşı: kut mıknatısı
   if (o.def.foe && !o.phase && !o.dying && !o.bank) o.x += (LANES[o.lane] - o.x) * Math.min(1, dt * 8); // şerit değiştiren düşman
   if (o.raft) o.raft.position.set(o.x, Math.sin(o.t * 2) * 0.05, o.z);
   if (o.def.deer) updateDeer(o, dt, ahead);
@@ -1214,7 +1278,7 @@ function pickup(o) {
   const at = o.mesh.position;
   switch (o.kind) {
     case 'kut': {
-      const n = pow.kurt > 0 && P.lane === guideLane ? 2 : 1; // kurdun yolundan gidene iki kat
+      const n = (pow.kurt > 0 && P.lane === guideLane ? 2 : 1) * (time < bereketT ? 2 : 1); // kurdun yolundan gidene iki kat; Bereket Muskası
       kut += n; score += 10 * n * mult(); o.dead = true; sfx('kut', { gap: 0.02 }); return true;
     }
     case 'tamga':
@@ -1228,7 +1292,7 @@ function pickup(o) {
     case 'kimiz':
       sfx('heal');
       o.dead = true;
-      P.hp = Math.min(3, P.hp + (has('yiva') ? 2 : 1));
+      P.hp = Math.min(maxHp, P.hp + (has('yiva') ? 2 : 1));
       hearts();
       banner('ŞİFA! +♥');
       sparks.emit(o.x, 1.5, o.z, 40, 0xff4a6a, 5, 3);
@@ -1237,19 +1301,14 @@ function pickup(o) {
     case 'kan': return true;
     case 'kurt': // Gök yeleli kurt: önden koşup güvenli yolu gösterir, pusucuları yakalar
       o.dead = true;
-      pow.kurt = 14;
-      wolf.root.visible = true;
-      wolf.root.position.set(P.x, 0, P.z - 3);
-      wolf.play('Gallop', { speed: 1.4, fade: 0 });
-      banner('GÖK YELELİ KURT!');
-      sfx('howl');
+      callWolf();
       sparks.emit(o.x, 1.2, o.z, 40, 0x6ab8ff, 5, 3);
       return true;
     case 'islik': o.dead = true; volley(); return true;
     case 'gumus': case 'yay': {
       sfx('gold');
       o.dead = true;
-      const r = relicSave[level];
+      const r = relicSave[relicLv()];
       if (r) { if (o.kind === 'yay') r.yay = true; else r.ok[o.ri] = true; saveRelics(); }
       const n = r ? r.ok.filter(Boolean).length : 0;
       banner(o.kind === 'yay' ? 'ALTIN YAY!' : `GÜMÜŞ OK ${n}/3`);
@@ -1261,7 +1320,7 @@ function pickup(o) {
       sfx('gold'); sfx('shieldbreak', { gain: 0.6 });
       o.dead = true;
       trail = null;
-      pow.kilic = 12;
+      pow.kilic = upgVal('kilic');
       timedOver(hero, 'MX_GS_PowerUp', 0.9);
       setWeapon('sword');
       banner('TANRI KILICI!');
@@ -1270,6 +1329,15 @@ function pickup(o) {
       return true;
   }
   return false;
+}
+
+function callWolf() {
+  pow.kurt = upgVal('kurt'); // Çarşı yükseltmesi: kurt süresi
+  wolf.root.visible = true;
+  wolf.root.position.set(P.x, 0, P.z - 3);
+  wolf.play('Gallop', { speed: 1.4, fade: 0 });
+  banner('GÖK YELELİ KURT!');
+  sfx('howl');
 }
 
 // Mete'nin ıslıklı oku: ok nereye giderse bütün ordu oraya atar — önündeki her şeye ok yağmuru
@@ -1281,11 +1349,12 @@ function volley() {
 }
 function updateRain(dt) {
   rain.t += dt;
-  while (rain.n < 40 && rain.n < rain.t * 34) {
+  const drops = upgVal('yagmur'), wide = 70 + (drops - 40) * 2; // Çarşı: ok yağmuru daha yoğun ve uzun
+  while (rain.n < drops && rain.n < rain.t * 34 * drops / 40) {
     rain.n++;
     const m = W.makeArrow();
     m.rotation.x = Math.PI / 2;
-    const d = { m, x: LANES[rain.n % 3] + rand(-0.6, 0.6), y: rand(14, 20), z: P.z - rand(8, 70) };
+    const d = { m, x: LANES[rain.n % 3] + rand(-0.6, 0.6), y: rand(14, 20), z: P.z - rand(8, wide) };
     scene.add(m);
     rain.drops.push(d);
   }
@@ -1303,7 +1372,7 @@ function updateRain(dt) {
     }
   }
   rain.drops = rain.drops.filter(d => !d.done);
-  if (rain.n >= 40 && !rain.drops.length) rain = null;
+  if (rain.n >= drops && !rain.drops.length) rain = null;
 }
 
 // Kurt önden koşar: önündeki 30 m'de engelsiz (tercihen kutlu) şeride geçer
@@ -1342,8 +1411,9 @@ function enterSecret() {
   for (const o of objs) if (!o.actor || o.def.foe) o.dead = true;
   setTheme('koru');
 }
-function flash() { // beyaz parlama: tema değişimini örter
+function flash(color = '#fff') { // beyaz parlama: tema değişimini örter
   const f = $('flash');
+  f.style.background = color;
   f.style.transition = 'none';
   f.style.opacity = 1;
   void f.offsetWidth;
@@ -1535,9 +1605,9 @@ function gild(actor, on) {
   else if (actor.goldGlow) actor.root.remove(actor.goldGlow);
 }
 let goldPlan = [];
-function planGold() { // her koşuda 1-3 altın düşman, rastgele mesafelerde
-  const end = cur().goals?.find(g => g[0] === 'dist')?.[1] ?? 1500;
-  goldPlan = Array.from({ length: 1 + Math.floor(Math.random() * 3) }, () => Math.round(200 + Math.random() * Math.max(200, end - 250))).sort((a, b) => a - b);
+function planGold(from = 0) { // her koşuda (Sonsuz Akın'da her bölgede) 1-3 altın düşman, rastgele mesafelerde
+  const end = cur().goals?.find(g => g[0] === 'dist')?.[1] ?? ZONE_LEN;
+  goldPlan = Array.from({ length: 1 + Math.floor(Math.random() * 3) }, () => from + Math.round(200 + Math.random() * Math.max(200, end - 250))).sort((a, b) => a - b);
 }
 function spawnGold(z) {
   const foes = (THEMES[theme].foes ?? THEMES[sect?.prev]?.foes)?.filter(f => !FOE[f[0]].shoot && !FOE[f[0]].bank);
@@ -1857,8 +1927,9 @@ function bossEscape() {
   banner(`${name} KAÇTI!`);
   for (const o of objs) if (o.parry || o.def.foe) o.dead = true;
   endBoss();
-  if (mode === 'endless') return;
+  if (mode === 'endless') return nextZone(); // boss ödülü yok, koşu sürer
   P.dead = true;
+  noRevive = true;
   overTitle = `${name} KAÇTI!`;
   state = 'dying';
   overT = 1.8;
@@ -1928,8 +1999,60 @@ function finishDone(b) {
   const fl = LEVELS[level].floors;
   if (mode === 'level' && fl && floor < fl.length - 1) return nextFloor();
   if (mode === 'level') { if (!flying) hero.play('Idle_Loop', { fade: 0.3 }); return win(); }
-  setWeapon(weapon);
-  hero.play('Sprint_Loop', { fade: 0.2 });
+  endlessBosses++;
+  nextZone();
+}
+
+// Sonsuz Akın'da bölge geçişi: beyaz parlama, kısa sinematik, yeni bölge
+function nextZone() {
+  zone++;
+  if (zone >= ZONES.length) { zone = 0; loop++; }
+  zoneStart = dist();
+  const Z = ZONES[zone];
+  applyZone();
+  bossAt = LEVELS[0].bossAt;
+  for (const o of objs) release(o);
+  objs = [];
+  if (P.ride) { P.ride = 0; $('ride').hidden = true; horse.root.visible = false; }
+  const z = P.z;
+  flash();
+  const shot = {
+    dur: 2.8,
+    enter(c) { c.fade(0); setTheme(Z.theme); c.title([[`${loop + 1}. TUR · ${zone + 1}. BÖLGE`, 'sub'], [Z.name, 'logo']]); c.titleAlpha(0); c.hero.play(pick(RUNS[weapon]), { fade: 0 }); },
+    update(c, k, t) {
+      const hz = z - 6 - t * 14;
+      c.P.z = hz + 6;
+      c.show(c.hero, 0, 0, hz, Math.PI);
+      c.cam(Math.sin(k * 1.2) * 3, 1.6 + k * 1.5, hz - 5 + k * 1.5, 0, 1.2, hz);
+      c.fade(k > 0.85 ? (k - 0.85) * 6 : 0);
+      c.titleAlpha(k > 0.1 && k < 0.9 ? 1 : 0, k > 0.1 && k < 0.15);
+    },
+  };
+  playCine([shot], () => enterZone(Z));
+}
+function enterZone(Z) {
+  setTheme(Z.theme);
+  flying = !!Z.flight;
+  sect = null; hideProps();
+  P.row = 1; P.vy = 0; P.y = flying ? HEIGHTS[1] : 0;
+  tulpar.root.visible = flying;
+  if (flying) tulpar.play('Gallop', { speed: 0.7, fade: 0 });
+  $('grid').hidden = !flying;
+  $('esirc').hidden = !Z.prisoners;
+  nextZ = P.z - 30;
+  sectAt = dist() + 300;
+  P.x = LANES[P.lane = 1];
+  hero.root.visible = true;
+  hero.root.rotation.set(0, Math.PI, 0);
+  P.inv = 1.5;
+  planGold(zoneStart);
+  planRelics();
+  $('fade').style.opacity = 0;
+  state = 'run';
+  setWeapon(flying ? 'bow' : weapon);
+  hero.play(flying ? 'Sitting_Idle_Loop' : 'Sprint_Loop');
+  $('hud').hidden = false;
+  banner(Z.name);
 }
 
 // Kat geçişi: yerin bir kat daha altına düşülür, yeni kat yeni görevlerle başlar
@@ -1963,7 +2086,7 @@ function nextFloor() {
     planRelics();
     $('fade').style.opacity = 0;
     P.inv = 1.5;
-    if (P.hp < 3) { P.hp++; hearts(); } // her katta bir can tazelenir
+    if (P.hp < maxHp) { P.hp++; hearts(); } // her katta bir can tazelenir
     state = 'run';
     setWeapon(weapon);
     hero.play('Sprint_Loop');
@@ -2162,16 +2285,19 @@ function update(dt) {
   if (!hero) return;
   if (state === 'cine') { ctx.update(dt); cine.update(dt); sparks.update(dt); dust.update(dt); return; }
   if (state === 'book' || state === 'wardrobe') { book.update(dt); return; }
-  if (state === 'menu' || state === 'map' || state === 'gate' || state === 'win' || state === 'boylar') { hero.update(dt); return; }
+  if (state === 'menu' || state === 'map' || state === 'gate' || state === 'win' || state === 'boylar' || state === 'carsi') { hero.update(dt); return; }
   if (state === 'dying') {
     hero.update(dt);
-    if ((overT -= dt) <= 0) gameOver();
+    if ((overT -= dt) <= 0) { if (!noRevive && continues < 3) showRevive(); else gameOver(); }
     return;
   }
+  if (state === 'revive') { reviveTick(dt); return; }
   if (state !== 'run') return;
   if (fin) { updateFinisher(dt); sparks.update(dt); dust.update(dt); return; }
 
-  if (!boss) P.speed = Math.min(24, (has('kayi') ? 13.5 : 12) + time * 0.1);
+  if (!boss) P.speed = mode === 'endless' // Sonsuz Akın: her bölgede ve her turda daha hızlı
+    ? Math.min(24 + loop * 3, (has('kayi') ? 13.5 : 12) + loop * 2.5 + zone * 0.4 + (dist() - zoneStart) * 0.004)
+    : Math.min(24, (has('kayi') ? 13.5 : 12) + time * 0.1);
   flow += (holdTarget - flow) * Math.min(1, dt * 6);
   const speed = P.speed * (P.ride ? 1.45 : 1) * flow * (sect?.S.fast || 1);
   P.vz = speed;
@@ -2359,7 +2485,7 @@ function view(dt, realDt) {
 }
 
 // --- arayüz ---
-function hearts() { $('hearts').textContent = '♥'.repeat(Math.max(0, P.hp)) + '♡'.repeat(Math.max(0, 3 - P.hp)); }
+function hearts() { $('hearts').textContent = '♥'.repeat(Math.max(0, P.hp)) + '♡'.repeat(Math.max(0, maxHp - P.hp)); }
 function bossBar() { $('bosshp').style.width = (Math.max(0, boss.hp) / boss.max) * 100 + '%'; }
 function banner(text) { $('banner').textContent = text; $('banner').classList.add('show'); bannerT = 2.2; }
 
@@ -2396,9 +2522,74 @@ function pop(text, pos) {
   setTimeout(() => el.remove(), 650);
 }
 
+// Sonsuz Akın rekorları: en iyi skor, en uzun mesafe, yenilen boss; günün en iyisi gece yarısı sıfırlanır.
+// Günlük kayıt ileride çevrim içi sıralamaya (Kurultay) gönderilecek koşu özetini de tutar.
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+function endlessRecords() {
+  const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  const rec = load('oguz-sonsuz', { bestScore: 0, bestDist: 0, bosses: 0, daily: null });
+  const sc = Math.floor(score), run = { date: today(), score: sc, dist: dist(), kills, bosses: endlessBosses, time: Math.round(time), zone, loop };
+  if (rec.daily?.date !== today()) rec.daily = null; // yeni gün
+  const newAll = sc > rec.bestScore, newDay = !rec.daily || sc > rec.daily.score;
+  rec.bestScore = Math.max(rec.bestScore, sc);
+  rec.bestDist = Math.max(rec.bestDist, dist());
+  rec.bosses += endlessBosses;
+  if (newDay) rec.daily = run;
+  try { localStorage.setItem('oguz-sonsuz', JSON.stringify(rec)); } catch {}
+  return [
+    ['Mesafe', dist() + ' m'], ['Bölge', `${loop + 1}. tur · ${ZONES[zone].name}`], ['Yenilen boss', endlessBosses], ['Kut', kut], ['Düşman', kills], ['Skor', sc.toLocaleString('tr-TR')], ['XP', '+' + runXP()],
+    [null, newAll ? 'YENİ REKOR!' : newDay ? 'GÜNÜN REKORU!' : '', 'stamp'],
+    ['Bugünün en iyisi', rec.daily.score.toLocaleString('tr-TR'), 'rec'], ['Tüm zamanların en iyisi', `${rec.bestScore.toLocaleString('tr-TR')} · ${rec.bestDist} m · ${rec.bosses} boss`, 'rec'],
+  ];
+}
+
+// HAYAT SUYU İLE DEVAM ET: destanda Er-Sogotoh'u dirilten su (Ögel, s.99). Gök Demir ile 1 → 2 → 4, koşu başına en çok 3.
+const REVIVE_PRICE = [1, 2, 4];
+function showRevive() {
+  state = 'revive';
+  reviveT = 5;
+  const price = REVIVE_PRICE[continues], can = wallet.gokdemir >= price;
+  $('rvprice').textContent = price;
+  $('rvgo').classList.toggle('dim', !can);
+  $('rvshop').hidden = can;
+  $('rvleft').textContent = `${3 - continues} hakkın kaldı`;
+  $('revive').hidden = false;
+  $('hud').hidden = true;
+}
+function reviveTick(dt) {
+  hero.update(dt);
+  reviveT -= dt;
+  $('rvring').style.setProperty('--k', Math.max(0, reviveT / 5));
+  $('rvsec').textContent = Math.ceil(Math.max(0, reviveT));
+  if (reviveT <= 0) declineRevive();
+}
+function doRevive() {
+  const price = REVIVE_PRICE[continues];
+  if (!wallet.spendGD(price)) { toast('⬢', 'Gök Demir yetmiyor', 'Altın düşmanlardan, görevlerden ve başarımlardan kazanılır.'); return; }
+  continues++;
+  $('revive').hidden = true;
+  $('hud').hidden = false;
+  state = 'run';
+  P.dead = false;
+  P.hp = maxHp;
+  P.inv = 2; // 2 sn yenilmez
+  for (const o of objs) if (P.z - o.z > -2 && P.z - o.z < 20 && !o.def.esir) o.dead = true; // önündeki 20 m temizlenir
+  hearts();
+  banner('HAYAT SUYU!');
+  flash('#7dff9a');
+  sparks.emit(P.x, 1.4, P.z, 80, 0x7dff9a, 7, 4);
+  sfx('revive');
+  hero.play(flying || P.ride ? 'Sitting_Idle_Loop' : 'Sprint_Loop', { fade: 0.2 });
+}
+function declineRevive() {
+  $('revive').hidden = true;
+  gameOver();
+}
+
 let overTitle = null;
 function gameOver() {
   state = 'over';
+  $('banner').classList.remove('show');
   $('over').querySelector('h1').textContent = overTitle || 'YENİLDİN!';
   overTitle = null;
   wallet.deposit(kut);
@@ -2406,9 +2597,11 @@ function gameOver() {
   try { best = Math.max(best, +localStorage.getItem('oguz-best') || 0); localStorage.setItem('oguz-best', best); } catch {}
   const f = $('final');
   f.replaceChildren();
-  for (const [k, v] of [['Mesafe', dist() + ' m'], ['Kut', kut], ['Düşman', kills], ['Skor', Math.floor(score)], ['En iyi', best], ['XP', '+' + runXP()]]) {
+  const rows = mode === 'endless' ? endlessRecords() : [['Mesafe', dist() + ' m'], ['Kut', kut], ['Düşman', kills], ['Skor', Math.floor(score)], ['En iyi', best], ['XP', '+' + runXP()]];
+  for (const [k, v, cls] of rows) {
     const row = document.createElement('div');
-    row.textContent = `${k}: ${v}`;
+    row.textContent = k ? `${k}: ${v}` : v;
+    if (cls) row.className = cls;
     f.append(row);
   }
   $('over').hidden = false;
@@ -2496,6 +2689,12 @@ addEventListener('keydown', e => {
 });
 addEventListener('click', e => { if (e.target.closest('button')) sfx('click'); }, true);
 $('start').onclick = openMap;
+$('carsibtn').onclick = () => locked('carsi') || openShop();
+$('carsiback').onclick = toMenu;
+for (const b of document.querySelectorAll('#stabs button')) b.onclick = () => { shopTab = b.dataset.tab; drawShopTab(); };
+$('rvgo').onclick = doRevive;
+$('rvno').onclick = declineRevive;
+$('rvshop').onclick = () => { declineRevive(); if (isUnlocked('carsi')) { shopTab = 'gokdemir'; openShop(); } };
 $('endless').onclick = () => locked('endless') || openBoylar('endless', 0);
 $('again').onclick = () => start();
 $('wagain').onclick = () => start('level', level);
@@ -2555,6 +2754,7 @@ renderer.setAnimationLoop(() => {
 
 // test kancası (tarayıcı konsolundan oyunu adım adım sürmek için)
 window.__game = {
+  get zone() { return zone; }, get loop() { return loop; }, nextZone, shop, openShop, showRevive, doRevive, get continues() { return continues; },
   startBoss, get objs2() { return objs; },
   get runCounts() { return runCounts; }, get bonus() { return bonus; }, spawnGold, get runStats() { return { parries: runParries, broken: runBroken, gold: runGold, bosses: runBosses }; },
   sfx, music, sting, SOUND,
