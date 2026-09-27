@@ -18,8 +18,12 @@ import { toast, fillMoney, levelBar, levelUps } from './ui.js';
 import { sfx, music, sting, regionOf } from './sound.js';
 import * as SOUND from './sound.js';
 import { bonus, collect as collectBonus } from './bonus.js';
-import { tip } from './tips.js';
+import { tip, hideTip } from './tips.js';
 import { shop, upg, upgVal, drawShop, drawRack, BOOSTS } from './carsi.js';
+import * as TORE from './tore.js';
+import { rec, recMax, recSet } from './tore.js';
+import { buildNodes, drawMap, isOpen, nextMain, migrate, medalsFor, thresholds, store as hStore, saveStore, COND_TEXT, REGIONS } from './harita.js';
+import { level as akinciLevel } from './akinci.js';
 
 const LANES = [-2.5, 0, 2.5];
 const $ = id => document.getElementById(id);
@@ -268,7 +272,7 @@ function applyZone() {
 }
 const relicLv = () => (mode === 'endless' ? ZONES[zone].lv : level); // destan eşyaları o bölgenin bölümüne yazılır
 
-const GOAL_ICON = { dist: ['⬆', ' m'], kill: ['⚔', ''], kut: ['◆', ''], esir: ['⛓', ''], hoop: ['◯', ''], combo: ['✦', ' kombo'] };
+const GOAL_ICON = { dist: ['⬆', ' m'], kill: ['⚔', ''], kut: ['◆', ''], esir: ['⛓', ''], hoop: ['◯', ''], combo: ['✦', ' kombo'], kilpayi: ['✦', ' kıl payı'], ride_dist: ['🐎', ' m'], nohit: ['🛡', ' m'], kill_arrow: ['🏹', ''], isabet: ['𐰴', ''] };
 const HEIGHTS = [1, 3.5, 6]; // uçuşta üç yükseklik
 // Karanlıkta da görünsünler: mermilere renkli parıltı + yerde halka [renk, parıltı yüksekliği, boy]
 const HAZARD = {
@@ -364,6 +368,7 @@ let secret = 0, secretTheme = null, deer = null, deerDone = false, trail = null,
 let stageT = 0, godGlow = null, relicPlan = [], rain = null, guideLane = 1, guideT = 0, shield = 0, reviveUsed = false, smashUsed = false, rideTime = 12;
 const cur = () => LEVELS[level].floors?.[floor] ?? LEVELS[level];
 const relicSave = (() => { try { return JSON.parse(localStorage.getItem('oguz-relics')) || {}; } catch { return {}; } })();
+let runHits = 0, runArrow = 0, runRide = 0, runFly = 0, nodeRun = null, runRecorded = false;
 let continues = 0, noRevive = false, maxHp = 3, bereketT = 0, reviveT = 0, endlessBosses = 0;
 let gallopT = 0, runBosses = 0, runParries = 0, runBroken = 0, runGold = 0; // bu koşuda yenilen boss sayısı (XP için)
 let time = 0, runZ = 0, kut = 0, score = 0, combo = 0, kills = 0, nextZ = 0, bossAt = 0, cool = 0, shake = 0, bannerT = 0, overT = 0;
@@ -440,6 +445,8 @@ loadAssets(p => ($('loadbar').style.width = p * 100 + '%')).then(a => {
   comic = new Comic(renderer.domElement);
   state = 'gate';
   fillMoney();
+  recMax('costumes', wallet.owned.length);
+  recMax('level', akinciLevel());
   $('loadbar').parentElement.hidden = true;
   $('loadtext').hidden = true;
   $('enter').hidden = false;
@@ -564,12 +571,15 @@ function toMenu() {
   hero.play(pick(MENU_IDLE));
   Object.assign(P, { x: 0, y: 0, lane: 1, ride: 0, dead: false });
   state = 'menu';
+  nodeRun = null;
+  hideTip();
   music('menu');
-  for (const id of ['hud', 'over', 'paused', 'bossbar', 'ride', 'map', 'book', 'win', 'tap', 'mash', 'wardrobe', 'loading', 'grid', 'goals', 'powers', 'boyscreen', 'carsi', 'revive']) $(id).hidden = true;
+  for (const id of ['hud', 'over', 'paused', 'bossbar', 'ride', 'map', 'book', 'win', 'tap', 'mash', 'wardrobe', 'loading', 'grid', 'goals', 'powers', 'boyscreen', 'carsi', 'revive', 'result', 'tore']) $(id).hidden = true;
   wolf.root.visible = deerActor.root.visible = false;
   $('menu').hidden = false;
   menuLocks();
   levelBar();
+  toreDot();
 }
 
 // Açılmamış menü düğmeleri kilitli görünür; dokununca kaçıncı seviyede açılacağını söyler
@@ -584,37 +594,177 @@ function locked(key) {
 
 const progress = (() => { try { return JSON.parse(localStorage.getItem('oguz-levels')) || {}; } catch { return {}; } })();
 
+// TÖRE DEFTERİ: günlük görevler, başarımlar, giriş armağanı
+TORE.onUnlock((a, t) => toast('🏆', `${a.name} ${['I', 'II', 'III'][t - 1]}`, a.desc.replace('{n}', (a.tiers[t - 1] / a.div).toLocaleString('tr-TR')) + ' · ödülünü Töre Defteri\'nden al'));
+TORE.setRelicCheck(() => [1, 2, 3, 4, 5, 6, 7].some(l => { const r = relicSave[l]; return !r || !r.yay || !r.ok.every(Boolean); }));
+wallet.onChange((kind, n) => { if (n > 0 && kind === 'kut') rec('kut', n); if (n > 0 && kind === 'gd') rec('gd', n); });
+shop.onBuy = kind => { if (kind === 'upgrade') rec('upgrade'); };
+let toreTab = 'gunluk';
+function openTore() {
+  state = 'tore';
+  $('menu').hidden = true;
+  drawTore();
+  $('tore').hidden = false;
+}
+function drawTore() {
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  for (const b of document.querySelectorAll('#ttabs button')) b.classList.toggle('on', b.dataset.tab === toreTab);
+  const box = $('tlist');
+  box.replaceChildren();
+  const rewardTxt = r => [r.kut && `◆ ${r.kut}`, r.gd && `⬢ ${r.gd}`, r.davul && `🥁 ${r.davul} Tunç Davul`, r.xp && `${r.xp} XP`].filter(Boolean).join(' · ');
+  if (toreTab === 'gunluk') {
+    box.append(el('p', 'tnote', 'Her gün üç görev. Gece yarısı yenilenir; ödülü buradan al.'));
+    for (const q of TORE.daily().quests) {
+      const r = TORE.DAILY_REWARD[q.tier], row = el('div', 'trow ' + q.tier);
+      row.append(el('b', 'tmed', { kolay: '🥉', orta: '🥈', zor: '🥇' }[q.tier]));
+      const mid = el('div', 'tmid');
+      mid.append(el('strong', null, q.text), bar(q.prog / q.n), el('small', null, `${q.prog.toLocaleString('tr-TR')} / ${q.n.toLocaleString('tr-TR')} · ${rewardTxt(r)}`));
+      row.append(mid);
+      const btn = el('button', 'small', q.claimed ? 'ALINDI' : 'AL');
+      btn.disabled = q.claimed || q.prog < q.n;
+      btn.onclick = () => { const got = TORE.claimDaily(q.id); if (got) { levelUps(addXP(got.xp), levelBar); drawTore(); } };
+      row.append(btn);
+      box.append(row);
+    }
+  } else if (toreTab === 'basarim') {
+    const done = TORE.ACH.reduce((s, a) => s + TORE.achTier(a.id), 0);
+    box.append(el('p', 'tnote', `${done} / ${TORE.ACH.length * 3} kademe · her kademe ödül verir`));
+    for (const a of TORE.ACH) {
+      const t = TORE.achTier(a.id), row = el('div', 'trow' + (t === 3 ? ' full' : ''));
+      row.append(el('b', 'tmed', ['▫', '🥉', '🥈', '🥇'][t]));
+      const mid = el('div', 'tmid'), goal = a.tiers[Math.min(t, 2)];
+      mid.append(el('strong', null, a.name + ' ' + ['I', 'II', 'III'][Math.min(t, 2)]), bar(Math.min(1, TORE.stat(a.key) / goal)), el('small', null, a.desc.replace('{n}', (goal / a.div).toLocaleString('tr-TR')) + ` · ${Math.floor(Math.min(TORE.stat(a.key), goal) / a.div).toLocaleString('tr-TR')} / ${(goal / a.div).toLocaleString('tr-TR')}`));
+      row.append(mid);
+      const can = t > TORE.achClaimed(a.id);
+      const btn = el('button', 'small', can ? 'AL' : t === 3 ? 'TAMAM' : rewardTxt(TORE.ACH_REWARD[t]));
+      btn.disabled = !can;
+      btn.onclick = () => { const got = TORE.claimAch(a.id); levelUps(addXP(got.xp), levelBar); drawTore(); };
+      row.append(btn);
+      box.append(row);
+    }
+  } else {
+    const L = TORE.loginState(), ready = TORE.loginReady(), cur = L.day % 7;
+    box.append(el('p', 'tnote', 'Her gün bir armağan. Bir gün kaçırsan da takvim sıfırlanmaz, kaldığın yerden sürer.'));
+    const cal = el('div', 'tcal');
+    TORE.LOGIN.forEach((r, i) => {
+      const got = i < cur || (!ready && i === cur - 1 + (cur === 0 ? 7 : 0));
+      const d = el('div', 'tday' + (i < cur ? ' got' : '') + (i === cur && ready ? ' today' : '') + (i === 6 ? ' big' : ''));
+      d.append(el('small', null, `${i + 1}. GÜN`), el('b', null, r.davul ? '🥁' : r.gd ? '⬢' : '◆'), el('span', null, r.davul ? 'Tunç Davul' : r.gd ? `${r.gd} Gök Demir` : `${r.kut} kut`));
+      void got;
+      cal.append(d);
+    });
+    box.append(cal);
+    const btn = el('button', 'big', ready ? `${cur + 1}. GÜNÜN ARMAĞANINI AL` : 'YARIN GEL');
+    btn.disabled = !ready;
+    btn.onclick = () => { const r = TORE.claimLogin(); if (r) { toast(r.davul ? '🥁' : r.gd ? '⬢' : '◆', `${r.day}. gün armağanı`, rewardTxt(r)); drawTore(); } };
+    box.append(btn);
+  }
+  function bar(k) { const b = el('div', 'tbar'), i = el('i'); i.style.width = Math.round(k * 100) + '%'; b.append(i); return b; }
+  toreDot();
+}
+function toreDot() { $('torebtn').querySelector('.dot').hidden = !TORE.toreBadge(); }
+
+// AKIN HARİTASI: parşömen üstünde düğümler (harita.js). Her düğüm ayrı görev; madalya ve ödül verir.
+let NODES = null;
+const nodes = () => (NODES ??= (() => { const n = buildNodes(LEVELS, PARTS, BOSSES); migrate(progress, n); return n; })());
 function openMap() {
   state = 'map';
-  $('menu').hidden = $('win').hidden = $('over').hidden = $('boyscreen').hidden = true;
-  const list = $('maplist');
-  list.replaceChildren();
-  for (const part of PARTS) {
-    const h = document.createElement('h3');
-    h.className = 'ink';
-    h.textContent = `${part.name} · ${part.sub}`;
-    list.append(h);
-    const row = document.createElement('div');
-    row.className = 'nodes';
-    for (const lv of part.levels) {
-      const b = document.createElement('button');
-      b.className = 'node' + (lv.ready ? '' : ' locked');
-      b.disabled = !lv.ready;
-      const stars = progress[lv.id] ? '★'.repeat(progress[lv.id]) + '☆'.repeat(3 - progress[lv.id]) : '';
-      const r = relicSave[lv.id], relicTxt = r ? `🏹 ${r.ok.filter(Boolean).length}/3${r.yay ? ' · ALTIN YAY' : ''}` : '';
-      for (const [cls, text] of [['num', lv.id], ['name', lv.name], ['boss', lv.ready ? lv.boss : 'YAKINDA'], ['stars', stars], ['relic', relicTxt]]) {
-        const sp = document.createElement('span');
-        sp.className = cls;
-        sp.textContent = text;
-        b.append(sp);
-      }
-      b.onclick = () => openBoylar('level', lv.id);
-      row.append(b);
-    }
-    list.append(row);
-  }
+  for (const id of ['menu', 'win', 'over', 'boyscreen', 'result']) $(id).hidden = true;
+  $('mapdetail').hidden = true;
+  drawMap($('maplist'), nodes(), showNode);
   $('map').hidden = false;
+  const openOnes = [...document.querySelectorAll('.mnode:not(.locked)')]; // son açık düğüme kaydır
+  openOnes.at(-1)?.scrollIntoView({ block: 'center' });
 }
+function reqOk(n) {
+  if (n.req?.boy && !picks.list.includes(n.req.boy)) return false;
+  if (n.req?.costume && wallet.worn !== n.req.costume) return false;
+  return true;
+}
+function reqText(n) {
+  if (n.req?.boy) return `Bu görev ${BOYLAR.find(b => b.id === n.req.boy).name} boyundan bir yiğit ister.`;
+  if (n.req?.costume) return `Bu görev ${COSTUMES.find(c => c.id === n.req.costume).name} kostümünü ister.`;
+  return '';
+}
+function showNode(n, open) {
+  const box = $('mapdetail'), st = hStore[n.id], t = thresholds(n);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const F = !n.extra && !n.soon ? LEVELS[n.lv].floors[n.floor] : null;
+  const goals = n.soon ? 'Bu bölüm henüz yapılıyor.' : n.extra ? n.text : F.goals.map(([k, v]) => `${GOAL_ICON[k][0]} ${v}${GOAL_ICON[k][1]}`).join('  ·  ') + (F.boss ? `  ·  sonunda ${BOSSES[F.boss].name}` : '');
+  const kids = [el('h3', null, n.name), el('small', null, n.extra ? 'EK GÖREV' : `${REGIONS[n.lv]?.name || ''} · ${n.sub || ''}`), el('p', 'mgoal', goals)];
+  if (!n.soon) {
+    kids.push(el('p', 'mthr', `Madalya: 🥉 bitir · 🥈 ${t[1].toLocaleString('tr-TR')} · 🥇 ${t[2].toLocaleString('tr-TR')} skor`));
+    const r = n.reward;
+    kids.push(el('p', 'mrew', (st?.m ? 'İlk ödül alındı · ' : 'İlk bitirişte: ') + `◆ ${r.kut}` + (r.gd ? ` · ⬢ ${r.gd}` : '') + ` · ${r.xp} XP` + (st?.best ? ` · En iyi skor ${st.best.toLocaleString('tr-TR')}` : '')));
+    if (n.req) kids.push(el('p', 'mreq' + (reqOk(n) ? ' ok' : ''), (reqOk(n) ? '✓ ' : '✗ ') + reqText(n)));
+  }
+  const row = el('div', 'menu-buttons');
+  const go = el('button', 'big', open ? 'BAŞLA ▸' : '🔒 KİLİTLİ');
+  go.disabled = !open;
+  go.onclick = () => playNode(n);
+  const close = el('button', 'small', 'KAPAT');
+  close.onclick = () => { box.hidden = true; };
+  row.append(go, close);
+  if (n.req?.costume && wallet.worn !== n.req.costume) {
+    const w = el('button', 'small', wallet.owned.includes(n.req.costume) ? 'KOSTÜMÜ GİY' : 'KOSTÜMLER ▸');
+    w.onclick = () => { if (wallet.owned.includes(n.req.costume)) { wallet.wear(n.req.costume); applyCostume(hero, n.req.costume); showNode(n, open); } else openWardrobe(); };
+    row.append(w);
+  }
+  kids.push(row);
+  box.replaceChildren(...kids);
+  box.hidden = false;
+}
+function playNode(n) {
+  if (n.req?.costume && wallet.worn !== n.req.costume) return toast('👘', 'Kostüm şartı', reqText(n));
+  nodeRun = n;
+  $('mapdetail').hidden = true;
+  openBoylar('level', n.lv);
+}
+
+// GÖREV TAMAM: SMU'daki gibi sonuç ekranı; madalyalar sırayla dolar
+const MEDAL_XP = [30, 60, 100];
+function nodeDone() {
+  const n = nodeRun, st = (hStore[n.id] ??= { m: 0, best: 0 });
+  state = 'result';
+  $('banner').classList.remove('show');
+  hideTip();
+  const sc = Math.floor(score), m = medalsFor(n, sc), was = st.m, first = !was, newBest = sc > st.best && was > 0;
+  st.m = Math.max(was, m); st.best = Math.max(st.best, sc);
+  saveStore();
+  const runKut = Math.round(kut * (has('alkaevli') ? 1.25 : 1));
+  wallet.deposit(runKut);
+  let xp = 0, gd = runGold, bonusKut = 0;
+  for (let k = was; k < m; k++) xp += MEDAL_XP[k];
+  if (first) { bonusKut = n.reward.kut; wallet.deposit(n.reward.kut); wallet.addGD(n.reward.gd); gd += n.reward.gd; xp += n.reward.xp; }
+  rec('medals', Math.max(0, m - was));
+  if (m === 3 && was < 3) rec('medal_gold');
+  if (runHits === 0) rec('flawless');
+  let story = '';
+  if (!n.extra && n.last) { // bölümün son kısmı: bölüm tamam
+    const lvNodes = nodes().filter(x => x.lv === n.lv && !x.extra);
+    const stars = Math.min(...lvNodes.map(x => hStore[x.id]?.m || 0));
+    const firstThree = stars === 3 && (progress[n.lv] || 0) < 3;
+    if (firstThree) { wallet.addGD(3); gd += 3; }
+    progress[n.lv] = Math.max(progress[n.lv] || 0, stars);
+    try { localStorage.setItem('oguz-levels', JSON.stringify(progress)); } catch {}
+    story = EPILOG[n.lv] || '';
+  }
+  for (const id of ['hud', 'bossbar', 'ride']) $(id).hidden = true;
+  $('rname').textContent = n.name;
+  const md = $('rmedals');
+  [...md.children].forEach((c, i) => { c.className = ''; if (i < m) setTimeout(() => { c.className = ['bz', 'gm', 'al'][i] + ' fill'; sfx(i === 2 ? 'gold' : 'coin2'); }, 500 + i * 450); });
+  const rows = [['Skor', sc.toLocaleString('tr-TR')], ['En yüksek kombo', maxCombo], ['Kut', `◆ ${runKut + bonusKut}`], ['XP', `+${runXP() + xp}`], ['Gök Demir', `⬢ ${gd}`]];
+  $('rstats').replaceChildren(...rows.map(([k, v]) => { const d = document.createElement('div'); d.append(Object.assign(document.createElement('span'), { textContent: k }), Object.assign(document.createElement('b'), { textContent: v })); return d; }));
+  $('rstamp').hidden = !newBest;
+  $('rstory').textContent = story;
+  const nx = n.extra ? null : nextMain(nodes(), n);
+  $('rnext').hidden = !nx;
+  $('rnext').onclick = () => { $('result').hidden = true; if (nx) showNodeOnMap(nx); };
+  $('result').hidden = false;
+  sting('win');
+  endRunXP(xp);
+}
+function showNodeOnMap(n) { openMap(); showNode(n, isOpen(nodes(), n)); }
 
 // Boy seçimi: bölüm öncesi isteğe bağlı; yuva sayısı geçilen ana bölümlerle artar.
 // Her Han'ın simgesi: Gün güneş, Ay hilal, Yıldız yıldız, Gök gökkubbe, Dağ dağ, Deniz dalga
@@ -805,6 +955,7 @@ function drawWardrobe() {
     b.onclick = e => {
       e.stopPropagation();
       if (!owned && !wallet.buy(c)) return;
+      recMax('costumes', wallet.owned.length);
       wallet.wear(c.id);
       wardSel = c.id;
       applyCostume(hero, c.id);
@@ -843,10 +994,21 @@ function win() {
   endRunXP();
 }
 
+// Koşu sonu istatistikleri (Töre Defteri)
+function recordRun() {
+  if (runRecorded) return;
+  runRecorded = true;
+  rec('dist', dist()); recMax('max_dist', dist()); recMax('max_combo', maxCombo);
+  rec('ride_dist', Math.floor(runRide)); rec('fly_dist', Math.floor(runFly));
+  if (mode === 'endless') recMax('endless_dist', dist());
+}
+
 // Koşu sonu XP'si: mesafe, düşman, boss
 function runXP() { return Math.floor(dist() / XP.perMeters) + kills * XP.kill + runBosses * XP.boss; }
-function endRunXP() {
-  const ups = addXP(runXP());
+function endRunXP(extra = 0) {
+  recordRun();
+  const ups = addXP(runXP() + extra);
+  recMax('level', akinciLevel());
   levelUps(ups, levelBar);
 }
 
@@ -855,10 +1017,15 @@ function start(m = mode, lv = level, skipIntro = false) {
   level = m === 'endless' ? 0 : lv;
   if (m === 'endless') { zone = loop = zoneStart = 0; applyZone(); }
   for (const id of ['book', 'map', 'win', 'over', 'menu', 'loading']) $(id).hidden = true;
+  if (nodeRun?.extra) { // ek görev: bölümün temasında tek kısımlık, boss'suz görev
+    const B0 = LEVELS[nodeRun.lv], F0 = B0.floors[nodeRun.after];
+    LEVELS.g = { theme: F0.theme, flight: B0.flight, foeModel: B0.foeModel, prisoners: B0.prisoners, floors: [{ name: nodeRun.name, sub: 'EK GÖREV', theme: F0.theme, boss: null, goals: [nodeRun.cond] }] };
+    level = 'g';
+  }
   const L = LEVELS[level];
   floor = 0;
   setTheme(cur().theme);
-  if (m === 'level' && !skipIntro) {
+  if (m === 'level' && !skipIntro && !nodeRun?.extra && !(nodeRun?.floor > 0)) {
     ctx.clear();
     return playCine(levelIntro(level), () => start(m, lv, true));
   }
@@ -876,6 +1043,8 @@ function start(m = mode, lv = level, skipIntro = false) {
   Object.assign(P, { lane: 1, x: 0, y: 0, vy: 0, slide: 0, inv: 0, hp: 3, speed: has('kayi') ? 13.5 : 12, lock: 0, lunge: 0, ride: 0, sword: 0, dead: false, flip: 0, spin: 0, roll: false, rear: 0 });
   time = kut = score = combo = kills = hoops = maxCombo = runBosses = runParries = runBroken = runGold = endlessBosses = 0;
   comboT = 0; for (const k in runCounts) runCounts[k] = 0;
+  runHits = runArrow = runRide = runFly = 0; runRecorded = false;
+  for (const id of picks.list) recSet('boys', id);
   collectBonus();
   planGold();
   runZ = P.z; nextZ = P.z - 35; bossAt = cur().goals ? Infinity : L.bossAt; ambushT = 6; esirs = 0;
@@ -905,12 +1074,15 @@ function start(m = mode, lv = level, skipIntro = false) {
   comboUi();
   if (has('alayuntli') && !flying) mount(); // Ala-yuntlı: akına at sırtında başla
   useBoosts();
+  if (nodeRun?.floor > 0) { floor = nodeRun.floor - 1; nextFloor(); } // haritadan sonraki bir kısım: o kısmın girişiyle başlar
+  rec('runs');
 }
 
 // Çarşı'dan rafa konan takviyeler koşu başında harcanır
 function useBoosts() {
   if (!isUnlocked('carsi')) return;
   const used = shop.consume();
+  rec('boost', used.length);
   for (const id of used) {
     if (id === 'kimiz') { maxHp = 4; P.hp = 4; hearts(); }
     if (id === 'kurt') callWolf();
@@ -996,7 +1168,7 @@ function spawnRow(z) {
     if (trail && l === trail.lane && z < trail.z0 && z > trail.z1) continue; // kan izi şeridi kılıca kadar boş
     if (l === free) {
       if (relicPlan.length && d >= relicPlan[0][2]) { const [k, i] = relicPlan.shift(); add(k, l, z, { fy: 1.6, ri: i }); } // zıplayarak alınır
-      else if (d > 150 && !P.ride && !sect && Math.random() < (has('doger') ? 0.06 : 0.035)) add('nal', l, z);
+      else if (d > 150 && !P.ride && !sect && Math.random() < (has('doger') ? 0.06 : 0.035) + (nodeRun?.mods?.nal || 0)) add('nal', l, z);
       else if (d > 100 && Math.random() < (P.hp < maxHp ? 0.025 : 0.004) * (has('bayindir') ? 2 : 1) * upgVal('kimiz') / 100) add('kimiz', l, z);
       else if (d > 200 && !pow.kurt && Math.random() < 0.012) add('kurt', l, z);
       else if (d > 300 && !islikDone && Math.random() < 0.012) { islikDone = true; add('islik', l, z); }
@@ -1039,7 +1211,7 @@ function planRelics() {
     });
     return;
   }
-  if (mode !== 'level') return;
+  if (mode !== 'level' || nodeRun?.extra) return;
   const r = (relicSave[level] ??= { yay: false, ok: [false, false, false] });
   const at = cur().goals?.find(g => g[0] === 'dist')?.[1] ?? 900, nf = LEVELS[level].floors?.length || 1;
   // dört eşya kısımlara dağılır: her kısımda o kısma düşenler
@@ -1079,6 +1251,7 @@ function freeEsir(o) {
   o.actor.root.rotation.y = o.side > 0 ? -Math.PI / 2 : Math.PI / 2;
   o.actor.play('Sprint_Loop', { fade: 0.1 });
   esirs++;
+  rec('esir');
   score += 150 * mult() * (has('uregir') ? 2 : 1);
   if (has('uregir')) kut += 5;
   $('esirc').textContent = '⛓ ' + esirs;
@@ -1125,6 +1298,8 @@ function hurt(o) {
     return pop('KALKAN!', { x: P.x, y: 0, z: P.z });
   }
   sfx('hurt');
+  runHits++;
+  if (nodeRun?.cond?.[0] === 'nohit') return missionFail('DARBE ALDIN!');
   P.hp--; P.inv = has('eymur') ? 2.4 : 1.4; shake = 0.4; combo = has('dodurga') ? Math.floor(combo / 2) : 0;
   comboUi();
   hearts();
@@ -1176,6 +1351,8 @@ function killFoe(o, how) {
   sfx(how === 'arrow' ? 'arrowhit' : 'hit');
   sfx('death', { gain: 0.7 });
   kills++;
+  rec('kill');
+  if (how === 'arrow') { rec('kill_arrow'); runArrow++; }
   addCombo('vurus', how === 'horse' ? 50 : 100);
   if (how === 'sword') stopT = 0.06;
   if (bonus.foeKut) kut += bonus.foeKut;
@@ -1184,6 +1361,7 @@ function killFoe(o, how) {
     slowmo(0.25, 0.45);
     fovKick = -12;
     pop('BİTİRİŞ!', at);
+    rec('finisher');
   } else pop(pick(['ŞAK!', 'HAP!', 'ÇAT!']), at);
   return true;
 }
@@ -1253,6 +1431,7 @@ function addCombo(kind, pts, n = 1) {
   comboT = comboTime();
   maxCombo = Math.max(maxCombo, combo);
   runCounts[kind] += 1;
+  if (kind !== 'vurus') rec(kind);
   const gain = Math.round(pts * mult() * (kind === 'vurus' ? 1 : 1 + bonus.comboPts));
   score += gain;
   comboUi(true);
@@ -1288,9 +1467,10 @@ function pickup(o) {
       sparks.emit(o.x, 1.6, o.z, 30, 0xffd23f, 5, 2);
       o.mesh.visible = false;
       return true;
-    case 'hoop': hoops++; score += 50 * mult() * (has('begdili') ? 2 : 1); sparks.emit(o.x, o.y, o.z, 20, 0xffd23f, 5, 2); o.mesh.visible = false; return true;
+    case 'hoop': hoops++; rec('hoop'); score += 50 * mult() * (has('begdili') ? 2 : 1); sparks.emit(o.x, o.y, o.z, 20, 0xffd23f, 5, 2); o.mesh.visible = false; return true;
     case 'kimiz':
       sfx('heal');
+      rec('kimiz');
       o.dead = true;
       P.hp = Math.min(maxHp, P.hp + (has('yiva') ? 2 : 1));
       hearts();
@@ -1309,6 +1489,7 @@ function pickup(o) {
       sfx('gold');
       o.dead = true;
       const r = relicSave[relicLv()];
+      rec(o.kind); rec('relic');
       if (r) { if (o.kind === 'yay') r.yay = true; else r.ok[o.ri] = true; saveRelics(); }
       const n = r ? r.ok.filter(Boolean).length : 0;
       banner(o.kind === 'yay' ? 'ALTIN YAY!' : `GÜMÜŞ OK ${n}/3`);
@@ -1317,6 +1498,7 @@ function pickup(o) {
       return true;
     }
     case 'kilic': // Tanrı Kılıcı
+      rec('godsword');
       sfx('gold'); sfx('shieldbreak', { gain: 0.6 });
       o.dead = true;
       trail = null;
@@ -1332,6 +1514,7 @@ function pickup(o) {
 }
 
 function callWolf() {
+  rec('wolf');
   pow.kurt = upgVal('kurt'); // Çarşı yükseltmesi: kurt süresi
   wolf.root.visible = true;
   wolf.root.position.set(P.x, 0, P.z - 3);
@@ -1343,6 +1526,7 @@ function callWolf() {
 // Mete'nin ıslıklı oku: ok nereye giderse bütün ordu oraya atar — önündeki her şeye ok yağmuru
 function volley() {
   sfx('whistle');
+  rec('volley');
   banner('ISLIKLI OK! ORDU, ATEŞ!');
   slowmo(0.5, 0.5);
   rain = { t: 0, n: 0, drops: [] };
@@ -1404,6 +1588,7 @@ function updateDeer(o, dt, ahead) {
   if (ahead < 1.5 && ahead > -1 && Math.abs(o.x - P.x) < 1.2) { o.dead = true; enterSecret(); }
 }
 function enterSecret() {
+  rec('deer');
   banner('AK GEYİK! GİZLİ YOL!');
   flash();
   secret = 10;
@@ -1549,6 +1734,7 @@ function tryParry() {
   sparks.emit(o.x, o.y + 1.3, o.z, 50, 0xffd23f, 7, 3);
   sfx('parry');
   runParries++;
+  rec('parry');
   return true;
 }
 
@@ -1569,6 +1755,7 @@ function breakObj(o) {
   for (let i = 0; i < n; i++) add('kut', o.lane, o.z - 1.2 - i * 1.3);
   score += 20 * mult();
   runBroken++;
+  rec('broken');
   tip('kirik', 'Çatlak ahşap engelleri kılıçla kır, içinden kut saçılır!', '📦', slowmo);
 }
 function updateChips(dt) {
@@ -1622,6 +1809,7 @@ function spawnGold(z) {
 function goldKilled(o) {
   wallet.addGD(1);
   runGold++;
+  rec('gold');
   banner('ALTIN AV! +1 GÖK DEMİR');
   sfx('gold');
   sparks.emit(o.x, 1.6, o.z, 70, 0xffd23f, 8, 4);
@@ -1715,6 +1903,7 @@ function burst(x, y, z, size) {
 // --- at ---
 function mount() {
   sfx('neigh');
+  rec('mount');
   P.ride = rideTime; P.slide = 0; P.lock = 0;
   horseAway = null;
   horse.root.visible = true;
@@ -1920,6 +2109,17 @@ function updateBoss(dt) {
   b.def.post?.(B, b);
 }
 
+// Ek görev başarısız (ör. darbesiz görevde darbe)
+function missionFail(why) {
+  banner(why);
+  P.dead = true;
+  noRevive = true;
+  overTitle = 'GÖREV BAŞARISIZ';
+  state = 'dying';
+  overT = 1.4;
+  timed(hero, pick(HURTS), 0.5);
+}
+
 // Kaçış süresi doldu: boss kaçar. Bölümde bölüm kaybedilir; Sonsuz Akın'da koşu sürer, boss ödülü alınmaz.
 function bossEscape() {
   const name = boss.def.name;
@@ -1992,11 +2192,14 @@ function updateFinisher(dt) {
 function finishDone(b) {
   score += 2000;
   runBosses++;
+  rec('boss'); rec('boss:' + b.kind); recSet('boss_kinds', b.kind);
+  if (mode === 'endless') rec('endless_boss');
   banner(`${b.def.name} YENİLDİ!`);
   endBoss();
   fin = null;
   swordMode(false);
   const fl = LEVELS[level].floors;
+  if (nodeRun) { if (!flying) hero.play('Idle_Loop', { fade: 0.3 }); return nodeDone(); }
   if (mode === 'level' && fl && floor < fl.length - 1) return nextFloor();
   if (mode === 'level') { if (!flying) hero.play('Idle_Loop', { fade: 0.3 }); return win(); }
   endlessBosses++;
@@ -2196,7 +2399,7 @@ function sectView(dt) { // view(): bölümdeki duruşlar ve sahne eşyaları
 
 // Görevler: hepsi tamamlanınca boss gelir
 let goalBase = { kill: 0, kut: 0, esir: 0, hoop: 0 };
-function goalVal(k) { return { dist: dist(), kill: kills - goalBase.kill, kut: kut - goalBase.kut, esir: esirs - goalBase.esir, hoop: hoops - goalBase.hoop, combo: maxCombo }[k]; }
+function goalVal(k) { return { dist: dist(), kill: kills - goalBase.kill, kut: kut - goalBase.kut, esir: esirs - goalBase.esir, hoop: hoops - goalBase.hoop, combo: maxCombo, kilpayi: runCounts.kilpayi, ride_dist: Math.floor(runRide), nohit: dist(), kill_arrow: runArrow, isabet: runCounts.isabet }[k]; }
 function updateGoals() {
   const G = cur().goals;
   if (!G) return;
@@ -2285,7 +2488,7 @@ function update(dt) {
   if (!hero) return;
   if (state === 'cine') { ctx.update(dt); cine.update(dt); sparks.update(dt); dust.update(dt); return; }
   if (state === 'book' || state === 'wardrobe') { book.update(dt); return; }
-  if (state === 'menu' || state === 'map' || state === 'gate' || state === 'win' || state === 'boylar' || state === 'carsi') { hero.update(dt); return; }
+  if (state === 'menu' || state === 'map' || state === 'gate' || state === 'win' || state === 'boylar' || state === 'carsi' || state === 'result' || state === 'tore') { hero.update(dt); return; }
   if (state === 'dying') {
     hero.update(dt);
     if ((overT -= dt) <= 0) { if (!noRevive && continues < 3) showRevive(); else gameOver(); }
@@ -2303,6 +2506,8 @@ function update(dt) {
   P.vz = speed;
   const dz = speed * dt;
   P.z -= dz;
+  if (P.ride) runRide += dz;
+  if (flying) runFly += dz;
   score += dz * mult();
   P.x += (LANES[P.lane] - P.x) * Math.min(1, dt * (sect?.S.slip || 14)); // buzda kaygan: şerit gecikmeli oturur
   if (flying) P.y += ((sect?.kind === 'kartal' && sect.t < 0.6 ? 0 : HEIGHTS[P.row]) - P.y) * Math.min(1, dt * 7); // kartal önce iner, sonra kaldırır
@@ -2342,6 +2547,7 @@ function update(dt) {
   sectTick(dt);
   W.flowWater(dt);
   if (stageT > 0 && !sect && (stageT -= dt) <= 0) {
+    if (nodeRun) return nodeDone();
     const fl = LEVELS[level].floors;
     if (mode === 'level' && fl && floor < fl.length - 1) nextFloor(); else win();
   }
@@ -2567,6 +2773,7 @@ function doRevive() {
   const price = REVIVE_PRICE[continues];
   if (!wallet.spendGD(price)) { toast('⬢', 'Gök Demir yetmiyor', 'Altın düşmanlardan, görevlerden ve başarımlardan kazanılır.'); return; }
   continues++;
+  rec('revive');
   $('revive').hidden = true;
   $('hud').hidden = false;
   state = 'run';
@@ -2590,6 +2797,7 @@ let overTitle = null;
 function gameOver() {
   state = 'over';
   $('banner').classList.remove('show');
+  hideTip();
   $('over').querySelector('h1').textContent = overTitle || 'YENİLDİN!';
   overTitle = null;
   wallet.deposit(kut);
@@ -2690,16 +2898,24 @@ addEventListener('keydown', e => {
 addEventListener('click', e => { if (e.target.closest('button')) sfx('click'); }, true);
 $('start').onclick = openMap;
 $('carsibtn').onclick = () => locked('carsi') || openShop();
+$('torebtn').onclick = openTore;
+$('toreback').onclick = toMenu;
+for (const b of document.querySelectorAll('#ttabs button')) b.onclick = () => { toreTab = b.dataset.tab; drawTore(); };
 $('carsiback').onclick = toMenu;
 for (const b of document.querySelectorAll('#stabs button')) b.onclick = () => { shopTab = b.dataset.tab; drawShopTab(); };
 $('rvgo').onclick = doRevive;
 $('rvno').onclick = declineRevive;
 $('rvshop').onclick = () => { declineRevive(); if (isUnlocked('carsi')) { shopTab = 'gokdemir'; openShop(); } };
-$('endless').onclick = () => locked('endless') || openBoylar('endless', 0);
+$('endless').onclick = () => { if (locked('endless')) return; nodeRun = null; openBoylar('endless', 0); };
 $('again').onclick = () => start();
 $('wagain').onclick = () => start('level', level);
+$('ragain').onclick = () => { $('result').hidden = true; start('level', nodeRun.lv, true); };
+$('rmap').onclick = openMap;
 $('storybtn').onclick = () => playComic(PROLOG_PAGES);
-$('boygo').onclick = () => { $('boyscreen').hidden = true; boyAfter(); };
+$('boygo').onclick = () => {
+  if (nodeRun?.req?.boy && !picks.list.includes(nodeRun.req.boy)) return toast('🏹', 'Boy şartı', reqText(nodeRun));
+  $('boyscreen').hidden = true; boyAfter();
+};
 $('boyback').onclick = openMap;
 $('bookbtn').onclick = openBook;
 $('wardbtn').onclick = openWardrobe;
@@ -2754,6 +2970,7 @@ renderer.setAnimationLoop(() => {
 
 // test kancası (tarayıcı konsolundan oyunu adım adım sürmek için)
 window.__game = {
+  TORE, openTore, get nodes() { return nodes(); }, playNode, hStore, get nodeRun() { return nodeRun; }, set nodeRun(v) { nodeRun = v; },
   get zone() { return zone; }, get loop() { return loop; }, nextZone, shop, openShop, showRevive, doRevive, get continues() { return continues; },
   startBoss, get objs2() { return objs; },
   get runCounts() { return runCounts; }, get bonus() { return bonus; }, spawnGold, get runStats() { return { parries: runParries, broken: runBroken, gold: runGold, bosses: runBosses }; },

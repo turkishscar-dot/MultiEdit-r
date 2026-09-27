@@ -3,14 +3,16 @@
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 const seen = new Set(load('oguz-tips', []));
-let off = (() => { try { return localStorage.getItem('oguz-test') === '1'; } catch { return false; } })(); // test botu ipuçlarında takılmasın
+let off = false;
+const testMode = () => { try { return localStorage.getItem('oguz-test') === '1'; } catch { return false; } }; // test botu ipuçlarında takılmasın
 let hideT = null;
 export const tipsOff = v => { off = v; };
 export const tipSeen = id => seen.has(id);
 export function resetTips() { seen.clear(); save('oguz-tips', []); }
+export function hideTip() { const b = document.getElementById('hint'); if (b) b.hidden = true; }
 // show(id, metin, simge, slow): ilk kezse gösterir ve true döner. slow = oyunun ağır çekim fonksiyonu
 export function tip(id, text, icon = '', slow = null) {
-  if (off || seen.has(id)) return false;
+  if (off || testMode() || seen.has(id)) return false;
   seen.add(id);
   save('oguz-tips', [...seen]);
   const box = document.getElementById('hint');

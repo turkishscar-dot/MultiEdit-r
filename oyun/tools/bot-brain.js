@@ -127,10 +127,11 @@
   }
   window.__bot = {
     stats,
-    begin(lv, endless, gd) {
+    begin(lv, endless, gd, node) {
       god = gd;
       const G = g();
       G.frozen = true; G.norender = true;
+      if (node) { const n = G.nodes.find(x => x.id === node); G.nodeRun = n; lv = n.lv; }
       G.start(endless ? 'endless' : 'level', lv, true);
     },
     run(sec) {
@@ -138,7 +139,7 @@
       for (let i = 0; i < sec / DT; i++) {
         const st = G.state;
         if (st === 'cine') { G.cine.skip(); ev('cine'); }
-        if (st === 'win' || st === 'over') break;
+        if (st === 'win' || st === 'over' || st === 'result') break;
         if (window.__botHook) window.__botHook(G);
         if (st === 'run' && !G.fin) {
           cd -= DT;
@@ -158,8 +159,8 @@
         G.tick(DT);
       }
       const st = G.state;
-      if (st === 'win' || st === 'over') { if (sawBoss) { logBoss(); sawBoss = null; } }
-      return { combos: { ...G.runCounts }, run: G.runStats, state: st, done: st === 'win' || st === 'over', level: G.level, floor: G.floor, dist: G.dist, hp: G.P.hp, kills: G.kills, score: Math.floor(G.score), kut: G.kut, t: Math.round(G.time), ...stats };
+      if (st === 'win' || st === 'over' || st === 'result') { if (sawBoss) { logBoss(); sawBoss = null; } }
+      return { combos: { ...G.runCounts }, run: G.runStats, state: st, done: st === 'win' || st === 'over' || st === 'result', medals: G.nodeRun ? (G.hStore[G.nodeRun.id]?.m || 0) : null, level: G.level, floor: G.floor, dist: G.dist, hp: G.P.hp, kills: G.kills, score: Math.floor(G.score), kut: G.kut, t: Math.round(G.time), ...stats };
     },
   };
 })();

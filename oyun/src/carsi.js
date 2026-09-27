@@ -29,12 +29,14 @@ export const shop = {
   inv: load('oguz-takviye', {}), // takviye id -> adet
   upg: load('oguz-yukselt', {}), // yükseltme id -> kademe (0-5)
   rack: load('oguz-raf', []), // bir sonraki koşuya seçilen takviyeler
+  onBuy: null, // (tür, id): istatistik kancası
   saveAll() { save('oguz-takviye', this.inv); save('oguz-yukselt', this.upg); save('oguz-raf', this.rack); },
   buyBoost(id) {
     const b = BOOSTS.find(x => x.id === id);
     if (b.gd ? !wallet.spendGD(b.gd) : !wallet.spend(b.price)) return false;
     this.inv[id] = (this.inv[id] || 0) + 1;
     this.saveAll();
+    this.onBuy?.('boost', id);
     return true;
   },
   buyUpg(id) {
@@ -42,6 +44,7 @@ export const shop = {
     if (t >= 5 || !wallet.spend(UPG_PRICE[t])) return false;
     this.upg[id] = t + 1;
     this.saveAll();
+    this.onBuy?.('upgrade', id);
     return true;
   },
   toggleRack(id) {

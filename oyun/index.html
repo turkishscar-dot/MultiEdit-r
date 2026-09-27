@@ -329,6 +329,77 @@
     #final .stamp { display: inline-block; margin: 8px 0 4px; font-family: 'Bangers', sans-serif; font-size: 34px; color: var(--red); border: 4px solid var(--red); padding: 0 12px; transform: rotate(-8deg); text-shadow: none; background: rgba(255,255,255,.85); }
     #final .stamp:empty { display: none; }
     #final .rec { color: var(--gold); }
+
+    /* Akın Haritası: parşömen, mürekkep yol, düğümler */
+    #map { padding: 0; }
+    #mapwrap { width: min(760px, 100%); margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px 80px; background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.35), transparent 40%), radial-gradient(circle at 80% 70%, rgba(120,80,30,.18), transparent 50%), repeating-linear-gradient(0deg, rgba(90,60,20,.05) 0 2px, transparent 2px 7px), #ecd9b0; border-left: 6px double #6a4a2a; border-right: 6px double #6a4a2a; min-height: 100%; box-shadow: 0 0 0 200vmax rgba(20,10,30,.6); }
+    #mapwrap h1 { font-size: clamp(40px, 9vw, 70px); margin-bottom: 4px; }
+    .region { margin-top: 10px; }
+    .rhead { display: flex; align-items: baseline; gap: 10px; border-bottom: 3px solid #3a2a18; padding-bottom: 2px; }
+    .rhead .ricon { font-size: 30px; font-weight: 400; }
+    .rhead h3 { margin: 0; font-weight: 400; font-size: 28px; color: #7a1a1a; }
+    .rhead small { font: italic 14px Georgia, serif; color: #5a3a1a; }
+    .rfield { position: relative; }
+    .rfield svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .rfield path { fill: none; stroke: #3a2a18; stroke-width: 3; stroke-dasharray: 8 7; vector-effect: non-scaling-stroke; }
+    .mnode { position: absolute; transform: translate(-50%, -32px); display: flex; flex-direction: column; align-items: center; background: none; border: none; padding: 0; cursor: pointer; font: inherit; color: var(--ink); }
+    .mnode .nicon { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; font-size: 28px; font-weight: 400; background: var(--paper); border: 4px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+    .mnode.boss .nicon { background: #f2c0b0; width: 70px; height: 70px; border-color: #7a1a1a; }
+    .mnode.extra .nicon { width: 48px; height: 48px; font-size: 22px; background: #cfe0f0; border-style: dashed; }
+    .mnode.done .nicon { background: var(--gold); }
+    .mnode.locked { opacity: .55; cursor: pointer; }
+    .mnode.locked .nicon { filter: grayscale(1); }
+    .nlab { display: flex; flex-direction: column; align-items: center; margin-top: 2px; background: rgba(236,217,176,.9); padding: 0 6px; }
+    .nlab strong { font-weight: 400; font-size: 16px; white-space: nowrap; }
+    .nlab small { font: 11px system-ui, sans-serif; letter-spacing: 0; color: #5a3a1a; white-space: nowrap; }
+    .medals { display: flex; gap: 3px; margin-top: 1px; }
+    .medals i { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--ink); background: #d8c8a4; }
+    .medals i.bz, #rmedals i.bz { background: #c07a3a; } .medals i.gm, #rmedals i.gm { background: #d8dde6; } .medals i.al, #rmedals i.al { background: #ffcf3f; }
+    #mapdetail { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(460px, calc(100% - 24px)); background: var(--paper); border: 4px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 12px 16px; z-index: 3; text-align: left; }
+    #mapdetail h3 { margin: 0; font-weight: 400; font-size: 30px; color: var(--red); }
+    #mapdetail small { font: 12px system-ui, sans-serif; letter-spacing: 0; color: #6a5236; }
+    #mapdetail p { margin: 6px 0; font: 14px/1.45 system-ui, sans-serif; letter-spacing: 0; }
+    #mapdetail .mreq { color: var(--red); font-weight: 700; } #mapdetail .mreq.ok { color: #2a7a3a; }
+    #mapdetail .menu-buttons { flex-direction: row; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+    @media (max-width: 520px) { #mapwrap h1 { margin-top: 46px; } }
+    #mapback { position: fixed; left: 16px; top: max(14px, env(safe-area-inset-top)); z-index: 2; }
+    /* GÖREV TAMAM */
+    #result { z-index: 6; background: radial-gradient(circle, rgba(60,40,10,.8), rgba(15,8,20,.94)); }
+    #result h1 { font-size: clamp(44px, 11vw, 88px); }
+    #result h2 { margin: 0 0 6px; }
+    #rmedals { display: flex; gap: 16px; margin: 6px 0; }
+    #rmedals i { width: 58px; height: 58px; border-radius: 50%; border: 5px solid var(--ink); background: #3a3040; box-shadow: 3px 3px 0 var(--ink); }
+    #rmedals i.fill { animation: medal .5s cubic-bezier(.2,1.8,.4,1); }
+    @keyframes medal { from { transform: scale(2.2) rotate(-40deg); opacity: 0; } }
+    #rstats { width: min(320px, 90%); font: 16px/1.7 system-ui, sans-serif; letter-spacing: 0; color: #fff; }
+    #rstats div { display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,.25); }
+    #rstats b { color: var(--gold); }
+    #rstamp { font-size: 34px; color: var(--red); border: 4px solid var(--red); padding: 0 12px; transform: rotate(-8deg); background: rgba(255,255,255,.9); margin: 6px 0; animation: slam .45s cubic-bezier(.2,1.6,.4,1); }
+    #rstory { max-width: 460px; font-size: 14px !important; }
+    .rbtns { flex-direction: row !important; flex-wrap: wrap; justify-content: center; }
+    /* Töre Defteri */
+    #tore { justify-content: flex-start; padding-top: max(18px, env(safe-area-inset-top)); background: radial-gradient(circle, rgba(40,25,50,.85), rgba(15,8,20,.95)); }
+    #tore h1 { font-size: clamp(40px, 9vw, 70px); }
+    #ttabs { display: flex; gap: 8px; margin: 6px 0 10px; flex: none; }
+    #ttabs button.on { background: var(--gold); }
+    #tlist { width: min(640px, 100%); display: flex; flex-direction: column; gap: 8px; }
+    .tnote { margin: 0 0 4px !important; font-size: 13px !important; color: #d9c7a8; }
+    .trow { display: flex; gap: 10px; align-items: center; background: var(--paper); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 6px 10px; text-align: left; }
+    .trow.full { background: #fff4c8; }
+    .tmed { font-size: 28px; font-weight: 400; width: 34px; text-align: center; }
+    .tmid { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .tmid strong { font-weight: 400; font-size: 19px; color: var(--red); }
+    .tmid small { font: 12px system-ui, sans-serif; letter-spacing: 0; color: #5a4a3a; }
+    .tbar { height: 9px; border: 2px solid var(--ink); background: #e6dcc6; margin: 2px 0; transform: skewX(-12deg); overflow: hidden; }
+    .tbar i { display: block; height: 100%; background: linear-gradient(#9ae07a, #3a9a4a); }
+    .trow button { flex: none; font-size: 16px; padding: 4px 12px; }
+    .tcal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .tday { background: var(--paper); border: 3px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); padding: 4px 2px; display: flex; flex-direction: column; align-items: center; }
+    .tday small { font-size: 12px; } .tday b { font-size: 24px; font-weight: 400; } .tday span { font: 10px system-ui, sans-serif; letter-spacing: 0; text-align: center; }
+    .tday.got { background: #b8e0a0; opacity: .7; } .tday.today { background: var(--gold); animation: pop .6s infinite alternate; } .tday.big { background: #f2c0b0; }
+    #tlist > .big { margin: 12px auto 0; }
+    #toreback { margin: 12px 0 16px; flex: none; }
+    @media (max-width: 520px) { .tcal { grid-template-columns: repeat(4, 1fr); } }
     .menu-buttons { display: flex; flex-direction: column; gap: 12px; align-items: center; }
     button.small { font: inherit; font-size: 22px; letter-spacing: 1px; color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 10px; padding: 5px 22px; box-shadow: 0 4px 0 var(--ink); cursor: pointer; }
     #winstars { font-size: 56px; color: var(--gold); letter-spacing: 6px; }
@@ -343,6 +414,8 @@
     .loadbar i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .2s; }
     button.big { font: inherit; font-size: 34px; letter-spacing: 2px; color: var(--ink); background: var(--gold); border: 4px solid var(--ink); border-radius: 14px; padding: 8px 40px; box-shadow: 0 6px 0 var(--ink); cursor: pointer; }
     button:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+    button:disabled { opacity: .5; cursor: default; }
+    button:disabled:active { transform: none; }
     button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
   </style>
 </head>
@@ -419,6 +492,7 @@
     </div>
     <!-- sağdaki simgeli düğmeler: yeni ekranlar buraya eklenir (data-unlock ile kilitlenebilir) -->
     <div id="mside">
+      <button id="torebtn" class="tile"><b>🏆</b><span>TÖRE</span><i class="dot" hidden></i></button>
       <button id="carsibtn" class="tile" data-unlock="carsi"><b>🏪</b><span>ÇARŞI</span></button>
       <button id="wardbtn" class="tile"><b>👘</b><span>KOSTÜM</span></button>
       <button id="bookbtn" class="tile"><b>📜</b><span>DESTAN</span></button>
@@ -436,9 +510,33 @@
   </div>
 
   <div id="map" class="screen" hidden>
-    <h1 class="ink">AKIN HARİTASI</h1>
-    <div id="maplist"></div>
-    <p><button id="mapback" class="small">◂ MENÜ</button></p>
+    <div id="mapwrap">
+      <h1 class="ink">AKIN HARİTASI</h1>
+      <div id="maplist"></div>
+    </div>
+    <div id="mapdetail" hidden></div>
+    <button id="mapback" class="small">◂ MENÜ</button>
+  </div>
+
+  <div id="result" class="screen" hidden>
+    <h1 class="ink">GÖREV TAMAM</h1>
+    <h2 class="ink" id="rname"></h2>
+    <div id="rmedals"><i></i><i></i><i></i></div>
+    <div id="rstats"></div>
+    <div id="rstamp" hidden>YENİ REKOR</div>
+    <p id="rstory" class="ink"></p>
+    <div class="menu-buttons rbtns">
+      <button id="ragain" class="small">TEKRAR</button>
+      <button id="rnext" class="big">SONRAKİ ▸</button>
+      <button id="rmap" class="small">HARİTA</button>
+    </div>
+  </div>
+
+  <div id="tore" class="screen" hidden>
+    <h1 class="ink">TÖRE DEFTERİ</h1>
+    <div id="ttabs"><button data-tab="gunluk" class="small">GÜNLÜK</button><button data-tab="basarim" class="small">BAŞARIM</button><button data-tab="giris" class="small">ARMAĞAN</button></div>
+    <div id="tlist"></div>
+    <button id="toreback" class="small">◂ MENÜ</button>
   </div>
 
   <div id="book" hidden>
