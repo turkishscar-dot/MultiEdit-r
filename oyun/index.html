@@ -264,6 +264,23 @@
       #mtop #lvbar { width: min(300px, 80%); text-align: center; }
       #mcenter { margin-top: -60px; }
     }
+
+    /* kombo süre halkası ve tür etiketi */
+    #comboring { position: absolute; left: 8px; bottom: max(90px, calc(env(safe-area-inset-bottom) + 86px)); width: 116px; height: 116px; transform: rotate(-90deg); pointer-events: none; --k: 1; }
+    #comboring circle { fill: none; stroke: var(--red); stroke-width: 6; stroke-dasharray: 289; stroke-dashoffset: calc(289 * (1 - var(--k))); filter: drop-shadow(0 0 2px var(--ink)); }
+    #combolabel { position: absolute; left: 10px; bottom: max(70px, calc(env(safe-area-inset-bottom) + 66px)); font-size: 18px; color: #fff; background: var(--ink); padding: 0 8px; transform: skewX(-8deg); opacity: 0; transition: opacity .2s; white-space: nowrap; }
+    #combolabel.show { opacity: 1; }
+    #combolabel.k-kilpayi { background: #1f4e9c; } #combolabel.k-isabet { background: #b8860b; } #combolabel.k-kalkan { background: #6a6a7a; } #combolabel.k-vurus { background: var(--red); }
+    #praise { left: 124px !important; bottom: max(150px, calc(env(safe-area-inset-bottom) + 146px)) !important; }
+    /* boss kaçış çubuğu */
+    #escbar { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    #escbar small { font-size: 13px; color: #9ad0ff; }
+    #escbar div { flex: 1; height: 7px !important; border-width: 2px !important; background: #10203a !important; }
+    #esc { display: block; height: 100%; width: 100%; background: linear-gradient(#9ad0ff, #2a7ae0); transition: width .2s; }
+    /* eğitim ipucu kutusu */
+    #hint { position: fixed; left: 50%; top: 44%; transform: translate(-50%, -50%) rotate(-2deg); z-index: 7; max-width: min(460px, 86vw); display: flex; gap: 12px; align-items: center; background: var(--gold); border: 4px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); padding: 10px 16px; font: 600 17px/1.35 system-ui, sans-serif; letter-spacing: 0; color: var(--ink); pointer-events: none; }
+    #hint.in { animation: slam .35s cubic-bezier(.2,1.6,.4,1); }
+    #hint .hicon { font: 400 34px 'Bangers', sans-serif; }
     .menu-buttons { display: flex; flex-direction: column; gap: 12px; align-items: center; }
     button.small { font: inherit; font-size: 22px; letter-spacing: 1px; color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 10px; padding: 5px 22px; box-shadow: 0 4px 0 var(--ink); cursor: pointer; }
     #winstars { font-size: 56px; color: var(--gold); letter-spacing: 6px; }
@@ -294,7 +311,9 @@
     </div>
     <div id="goals" hidden></div>
     <div id="powers" class="ink" hidden></div>
-    <div id="combo" hidden><b id="combon">1</b><small>COMBO</small></div>
+    <svg id="comboring" viewBox="0 0 100 100" hidden><circle cx="50" cy="50" r="46"/></svg>
+    <div id="combo" hidden><b id="combon">1</b><small>KOMBO</small></div>
+    <div id="combolabel"></div>
     <div id="praise"></div>
     <button id="pause" aria-label="Duraklat">❚❚</button>
     <button id="weapon" aria-label="Silah değiştir (Q)">⚔</button>
@@ -302,12 +321,13 @@
   <div id="speed"></div>
   <div id="grid" hidden><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <div id="ride" class="ink" hidden>AT<div><i id="ridebar"></i></div></div>
-  <div id="bossbar" class="ink" hidden><span id="bossname">TEPEGÖZ</span><div><i id="bosshp"></i></div></div>
+  <div id="bossbar" class="ink" hidden><div id="escbar"><small>KAÇIŞ</small><div><i id="esc"></i></div></div><span id="bossname">TEPEGÖZ</span><div><i id="bosshp"></i></div></div>
   <div id="mash" class="ink" hidden>BİTİR!<div><i id="mashbar"></i></div></div>
   <div id="banner" class="ink"></div>
   <div id="tap" class="ink" hidden>DOKUN! VUR!</div>
   <div id="pops"></div>
   <div id="toasts"></div>
+  <div id="hint" hidden></div>
   <div id="levelup" class="screen" hidden>
     <h1 class="ink"></h1>
     <h2 class="ink"></h2>

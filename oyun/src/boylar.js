@@ -1,3 +1,5 @@
+import { addSource } from './bonus.js';
+
 // 24 Oğuz boyu ve ongun kuşları (Ögel, Türk Mitolojisi I, s.218–219, 355–370). Bölüm öncesi seçilen boyun
 // küçük bir gücü olur. Seçim yuvası sayısı: 1 + geçilen ana bölüm sayısı (en çok 5).
 export const BOYLAR = [
@@ -35,4 +37,6 @@ const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } cat
 // Seçili boylar (kalıcı) ve o anki koşu için etkin güçler
 export const picks = { list: load('oguz-boylar', []), save() { save('oguz-boylar', this.list); } };
 export const has = id => picks.list.includes(id);
+// Boy güçleri ileride bonus alanıyla da verilebilir: { ..., bonus: { nearMiss: 2, comboTime: 3 } }
+addSource(b => { for (const id of picks.list) { const boy = BOYLAR.find(x => x.id === id); for (const [k, v] of Object.entries(boy?.bonus || {})) b[k] += v; } });
 export const slots = progress => Math.min(5, 1 + Object.keys(progress).filter(k => +k > 0).length);

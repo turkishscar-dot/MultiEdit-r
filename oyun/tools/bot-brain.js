@@ -3,12 +3,23 @@
   const DT = 1 / 30;
   const g = () => window.__game;
   let cd = 0, god = false, stats = { hits: 0, jumps: 0, slides: 0, taps: 0, bosses: 0, floors: 0, maxDist: 0, events: {} };
-  let lastHp = 3, lastFloor = 0, sawBoss = null;
+  let lastHp = 3, lastFloor = 0, sawBoss = null, bossT0 = 0;
+  stats.bossLog = [];
   const ev = k => (stats.events[k] = (stats.events[k] || 0) + 1);
 
   function act(a) { g().act(a); cd = 0.12; }
   function laneTo(t) { const P = g().P; if (t < P.lane) act('left'); else if (t > P.lane) act('right'); }
 
+  // Geri çalma: altın parlayan mermi şeritte ve 0.3 sn'den az kaldıysa kılıçla vur
+  function parryThink() {
+    const G = g(), P = G.P;
+    const o = G.objs.find(o => o.parry && !o.parried && !o.done && !o.dead && Math.abs(o.x - P.x) < 1.3 && (o.row == null || o.row === P.row)
+      && P.z - o.z > 0 && (P.z - o.z) / Math.max(1, o.vz + P.vz) <= 0.22);
+    if (!o) return false;
+    if (G.weapon !== 'sword' && !G.flying) G.act('weapon');
+    G.act('tap'); cd = 0.15; stats.parryTry = (stats.parryTry || 0) + 1;
+    return true;
+  }
   function groundThink() {
     const G = g(), P = G.P, objs = G.objs;
     const react = P.speed * 0.3 + 1.2;
@@ -18,6 +29,7 @@
       if (o.dead || o.dying || o.done) continue;
       const a = P.z - o.z;
       if (a < -0.5 || a > look) continue;
+      if (o.parry && G.boss && !o.parried) continue; // geri çalınacak: kaçma, bekle
       if (o.def.hit === 'block' && !o.def.foe) danger[o.lane] += 10 / Math.max(1, a);
       if (o.def.foe && !o.bank) danger[o.lane] += 1 / Math.max(1, a);
       if (o.kind === 'kut' || o.kind === 'nal' || o.kind === 'kimiz' || o.esir) gain[o.lane] += 0.2;
@@ -25,11 +37,20 @@
     const wl = G.warnLane;
     if (wl >= 0) danger[wl] += 50;
     // şu anki şeritte yakın engel
-    const here = objs.filter(o => !o.dead && !o.dying && !o.done && o.lane === P.lane && P.z - o.z > 0 && P.z - o.z < react && o.def.hit);
+    const here = objs.filter(o => !o.dead && !o.dying && !o.done && !o.parry && o.lane === P.lane && P.z - o.z > 0 && P.z - o.z < react && o.def.hit);
     for (const o of here) {
       if (o.def.foe && o.ready !== false) { if (cd <= 0) { act('tap'); stats.taps++; } continue; }
       if (o.def.hit === 'low' && P.y === 0 && cd <= 0) { act('up'); stats.jumps++; return; }
       if (o.def.hit === 'high' && P.slide <= 0 && cd <= 0) { act('down'); stats.slides++; return; }
+    }
+    // çatlak sandık: kır
+    const crate = objs.find(o => o.def.brk && !o.dead && !o.done && o.lane === P.lane && P.z - o.z > 0.5 && P.z - o.z < 4);
+    if (crate && cd <= 0 && G.weapon === 'sword') { act('tap'); stats.taps++; return; }
+    // altın düşman: şeridine geç, yetişince vur
+    const gold = objs.find(o => o.gold && !o.dying && !o.dead && P.z - o.z > 0 && P.z - o.z < 30);
+    if (gold && cd <= 0) {
+      if (gold.lane !== P.lane && danger[gold.lane] < 0.4) { laneTo(gold.lane); return; }
+      if (gold.lane === P.lane && P.z - gold.z < 8.5) { act('tap'); return; }
     }
     // yakın düşmana saldır
     const foe = objs.find(o => o.def.foe && !o.dying && o.ready && Math.abs(o.x - P.x) < 1.3 && P.z - o.z > 0 && P.z - o.z < 8);
@@ -100,6 +121,10 @@
     return false;
   }
 
+  function logBoss() {
+    const b = sawBoss;
+    stats.bossLog.push({ boss: b.kind, sure: Math.round(g().time - bossT0), kacis: b.escMax, kalan: Math.round(b.minEsc ?? 0), hp: b.hp, kacti: b.esc <= 0 });
+  }
   window.__bot = {
     stats,
     begin(lv, endless, gd) {
@@ -118,7 +143,11 @@
         if (st === 'run' && !G.fin) {
           cd -= DT;
           if (god) G.P.inv = Math.max(G.P.inv, 0.5);
-          if (G.boss) { if (G.boss !== sawBoss) { sawBoss = G.boss; stats.bosses++; ev('boss:' + G.boss.kind); } if (!bossThink()) (G.flying ? skyThink : groundThink)(); }
+          if (G.boss) {
+            if (G.boss !== sawBoss) { if (sawBoss) logBoss(); sawBoss = G.boss; bossT0 = G.time; stats.bosses++; ev('boss:' + G.boss.kind); }
+            sawBoss.minEsc = Math.min(sawBoss.minEsc ?? 999, G.boss.esc);
+            if (!(cd <= 0 && parryThink()) && !bossThink()) (G.flying ? skyThink : groundThink)();
+          } else if (sawBoss) { logBoss(); sawBoss = null; }
           else if (G.flying) skyThink();
           else groundThink();
           if (G.P.hp < lastHp) stats.hits++;
@@ -129,7 +158,8 @@
         G.tick(DT);
       }
       const st = G.state;
-      return { state: st, done: st === 'win' || st === 'over', level: G.level, floor: G.floor, dist: G.dist, hp: G.P.hp, kills: G.kills, score: Math.floor(G.score), kut: G.kut, t: Math.round(G.time), ...stats };
+      if (st === 'win' || st === 'over') { if (sawBoss) { logBoss(); sawBoss = null; } }
+      return { combos: { ...G.runCounts }, run: G.runStats, state: st, done: st === 'win' || st === 'over', level: G.level, floor: G.floor, dist: G.dist, hp: G.P.hp, kills: G.kills, score: Math.floor(G.score), kut: G.kut, t: Math.round(G.time), ...stats };
     },
   };
 })();

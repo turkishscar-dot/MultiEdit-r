@@ -1597,3 +1597,83 @@ export function makeShieldBoard() { // Oğuz'un üstünde kaydığı yuvarlak ka
   g.add(mesh(G.cyl, M.iron, [0, 0.03, 0], [0.68, 0.05, 0.68]), mesh(G.cyl, M.wood, [0, 0.07, 0], [0.6, 0.06, 0.6]), mesh(G.dome, M.gold, [0, 0.1, 0], [0.16, 0.1, 0.16]));
   return g;
 }
+
+// ---- kombo: altın tamga halkası (yolda dikey halka; içinden geçilir) ----
+const tamgaTex = tex(128, 128, (g, w) => { // Kayı boyunun tamgası: iki yana açılan ok ve ortada dikme
+  g.clearRect(0, 0, w, w);
+  g.strokeStyle = '#15101c'; g.lineWidth = 22; g.lineCap = 'round'; g.lineJoin = 'round';
+  const path = () => { g.beginPath(); g.moveTo(24, 30); g.lineTo(44, 98); g.moveTo(104, 30); g.lineTo(84, 98); g.moveTo(64, 20); g.lineTo(64, 110); g.stroke(); };
+  path();
+  g.strokeStyle = '#ffd23f'; g.lineWidth = 12;
+  path();
+});
+const tamgaMat = new THREE.SpriteMaterial({ map: tamgaTex, depthWrite: false });
+tamgaMat.userData.outlineParameters = NO_OUTLINE;
+const tamgaRingMat = new THREE.MeshBasicMaterial({ color: 0xffc21a });
+tamgaRingMat.userData.outlineParameters = { thickness: 0.005, color: [0.3, 0.18, 0], alpha: 1 };
+const TAMGA_RING = new THREE.TorusGeometry(1.25, 0.11, 8, 36);
+export function makeTamga() {
+  const g = new THREE.Group();
+  const r = new THREE.Mesh(TAMGA_RING, tamgaRingMat);
+  r.position.y = 1.45;
+  const s = new THREE.Sprite(tamgaMat);
+  s.scale.setScalar(0.9);
+  s.position.y = 3.2;
+  g.add(r, s);
+  g.userData.anim = t => { r.rotation.z = Math.sin(t * 2) * 0.08; s.position.y = 3.2 + Math.sin(t * 4) * 0.08; };
+  return g;
+}
+
+// ---- kırılabilir ahşap engeller: çatlak dokuyla belli olur ----
+const crackTex = tex(128, 128, (g, w) => {
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, w, w);
+  g.strokeStyle = '#2a1608'; g.lineWidth = 3; g.lineCap = 'round';
+  for (let k = 0; k < 3; k++) { // kırık çizgiler dallanır
+    let x = 20 + Math.random() * 88, y = 4;
+    g.beginPath(); g.moveTo(x, y);
+    while (y < w - 4) {
+      x += rand(-16, 16); y += rand(10, 22);
+      g.lineTo(x, y);
+      if (Math.random() < 0.35) { g.moveTo(x, y); g.lineTo(x + rand(-22, 22), y + rand(8, 18)); g.moveTo(x, y); }
+    }
+    g.stroke();
+  }
+});
+const cracked = new Map();
+export function crackify(obj) {
+  obj.traverse(o => {
+    if (!o.isMesh || !o.material?.isMeshToonMaterial) return;
+    if (!cracked.has(o.material)) {
+      const m = o.material.clone();
+      if (m.map) { // dokulu ahşap: çatlak çizgileri dokunun üstüne çizilir
+        const c = document.createElement('canvas'), img = m.map.image;
+        c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d');
+        g.drawImage(img, 0, 0);
+        g.globalCompositeOperation = 'multiply';
+        g.drawImage(crackTex.image, 0, 0, c.width, c.height);
+        m.map = new THREE.CanvasTexture(c);
+        m.map.colorSpace = THREE.SRGBColorSpace;
+        m.map.wrapS = m.map.wrapT = THREE.RepeatWrapping;
+      } else m.map = crackTex;
+      cracked.set(o.material, m);
+    }
+    o.material = cracked.get(o.material);
+  });
+  return obj;
+}
+
+// Kırılınca saçılan tahta parçaları
+const chipMat = toon(0x8a5a2a, 'chip');
+export function makeChips(n = 8) {
+  const g = new THREE.Group();
+  for (let i = 0; i < n; i++) {
+    const m = new THREE.Mesh(G.box, chipMat);
+    m.scale.set(rand(0.12, 0.35), rand(0.06, 0.12), rand(0.2, 0.5));
+    m.userData.v = new THREE.Vector3(rand(-4, 4), rand(3, 7), rand(-3, 3));
+    m.userData.r = new THREE.Vector3(rand(-9, 9), rand(-9, 9), rand(-9, 9));
+    g.add(m);
+  }
+  return g;
+}

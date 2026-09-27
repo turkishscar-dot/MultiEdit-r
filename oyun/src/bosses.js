@@ -1,4 +1,5 @@
 // Boss'lar. Her biri kendi durum makinesi ve vuruş mekaniğiyle.
+// escape: KAÇIŞ çubuğu süresi (sn; bitince boss kaçar). B.add(..., { parry: true }): kılıçla geri çalınabilen mermi.
 // Hiçbiri geri geri yürümez: devler sırtını dönüp kaçar, durunca döner; ruhlar süzülür; Erlik alevde kaybolup belirir.
 // B = main.js'ten gelen yardımcılar, b = boss durumu (gz: dünyadaki z, off: oyuncuya uzaklık).
 const LANES = [-2.5, 0, 2.5];
@@ -12,7 +13,7 @@ const runTo = (B, b, off, k, dt) => (b.gz += -B.P.vz * dt + (B.P.z - off - b.gz)
 
 // ---------------- Tepegöz: kaçar, topuzla kaya savurur, döner ve şeridi ezer; sersemlerken kılıçla vurulur
 const tepegoz = {
-  name: 'TEPEGÖZ', hp: 9, model: 'tepegoz', scale: 2.5, hitY: 3.2,
+  name: 'TEPEGÖZ', hp: 9, escape: 80, model: 'tepegoz', scale: 2.5, hitY: 3.2,
   start(B, b) {
     b.gz = B.P.z - 70; b.rot = Math.PI;
     b.actor.play('Sprint_Loop', { speed: 0.8, fade: 0 });
@@ -28,7 +29,7 @@ const tepegoz = {
       if (b.t > 1.8 - phase * 0.25) {
         b.t = 0;
         a.overlay('Punch_Cross', { speed: 1.4 }); // koşarken topuzu yere vurur, kaya geri seker
-        B.add('boulder', b.lane, b.gz + 2.5, { vz: 8 + phase * 2 });
+        B.add('boulder', b.lane, b.gz + 2.5, { vz: 8 + phase * 2, parry: true });
         B.dust.emit(LANES[b.lane], 0.3, b.gz + 2, 20, 0xc9a77a, 5, 3);
         b.lane = pickLane();
         if (++b.n >= 2 + phase) { b.n = 0; b.lane = B.P.lane; setState(b, 'turn'); a.play('Sword_Idle', { fade: 0.2 }); }
@@ -72,7 +73,7 @@ const tepegoz = {
 // ---------------- Albastı: süzülür, çığlık dalgası yollar, sisin içinde 3 kopyaya bölünür.
 // Gerçeğinin gölgesi vardır; onu okla vurunca açığa çıkar ve oklara açık kalır. Kılıç işlemez.
 const albasti = {
-  name: 'ALBASTI', hp: 9, model: 'albasti', scale: 1.15, hitY: 1.8, clones: 2,
+  name: 'ALBASTI', hp: 9, escape: 75, model: 'albasti', scale: 1.15, hitY: 1.8, clones: 2,
   start(B, b) {
     b.gz = B.P.z - 60; b.rot = 0; b.y = 1.2;
     for (const a of [b.actor, ...b.extra]) a.play('Idle_Loop', { speed: 0.5, fade: 0 });
@@ -179,7 +180,7 @@ const albasti = {
 // ---------------- Yelbegen: üç başlı dev. Kaçarken buz kayası savurur; döner, başları sırayla şeritlere saldırır.
 // Sonra ekranda çıkan yöne kaydırarak bir başı kesersin. Yanlış ya da geç kalırsan baş ısırır.
 const yelbegen = {
-  name: 'YELBEGEN', hp: 3, model: 'yelbegen', scale: 2.6, hitY: 3.4,
+  name: 'YELBEGEN', hp: 3, escape: 70, model: 'yelbegen', scale: 2.6, hitY: 3.4,
   start(B, b) {
     b.gz = B.P.z - 70; b.rot = Math.PI;
     const h = n => b.actor.root.getObjectByName(n);
@@ -200,7 +201,7 @@ const yelbegen = {
       if (b.t > 1.4) {
         b.t = 0;
         a.overlay('Punch_Cross', { speed: 1.4 });
-        B.add('ice', pickLane(), b.gz + 2.5, { vz: 11 });
+        B.add('ice', pickLane(), b.gz + 2.5, { vz: 11, parry: true });
         if (++b.n >= 3) { b.n = 0; setState(b, 'turn'); a.play('Sword_Idle', { fade: 0.2 }); b.bites = [0, 1, 2].sort(() => Math.random() - 0.5); }
       }
     }
@@ -275,7 +276,7 @@ const yelbegen = {
 // ---------------- Erlik Han: üç aşamalı final. Alevde kaybolup ileride belirir; ateş sütunları, kul dalgaları,
 // balyoz şok dalgası (zıpla). Yorulup diz çökünce kılıçla vur. Canı bitince hızlı hızlı dokunarak bitir.
 const erlik = {
-  name: 'ERLİK HAN', hp: 12, model: 'erlik', scale: 2.2, hitY: 3,
+  name: 'ERLİK HAN', hp: 12, escape: 90, model: 'erlik', scale: 2.2, hitY: 3,
   start(B, b) {
     b.gz = B.P.z - 30; b.rot = 0;
     b.actor.play('Sword_Idle', { fade: 0 });
@@ -357,7 +358,7 @@ const erlik = {
 // ---------------- Dev Kara Kuş (uçuş bölümü): önde uçar, tüy yağdırır ve kuş sürüsü salar.
 // Arada dönüp çığlık atar; o an gözü açıktadır, okla vur.
 const karakus = {
-  name: 'DEV KARA KUŞ', hp: 9, model: 'karakus', scale: 3.2, hitY: 0, flying: true,
+  name: 'DEV KARA KUŞ', hp: 9, escape: 75, model: 'karakus', scale: 3.2, hitY: 0, flying: true,
   start(B, b) { b.gz = B.P.z - 80; b.rot = Math.PI; b.y = 4.5; B.banner('DEV KARA KUŞ!'); },
   update(B, b, dt) {
     const phase = b.hp > 6 ? 1 : b.hp > 3 ? 2 : 3;
@@ -371,7 +372,7 @@ const karakus = {
       if (b.t > 1.3 - phase * 0.2) {
         b.t = 0;
         const cells = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(() => Math.random() - 0.5).slice(0, 2 + phase);
-        for (const c of cells) B.add('feather', c % 3, b.gz + 3, { vz: 18, row: Math.floor(c / 3) });
+        for (const c of cells) B.add('feather', c % 3, b.gz + 3, { vz: 18, row: Math.floor(c / 3), parry: true });
         if (++b.n >= 4) { b.n = 0; b.sh = 0; setState(b, 'screech'); B.tap('ŞİMDİ! OKLA!'); }
       }
     }
@@ -397,7 +398,7 @@ const karakus = {
 // Sonra atından atlar ve kalkanla düelloya girer: kalkanlıyken vuruş işlemez. Saldırısından doğru hamleyle
 // (▲ zıpla / ▼ eğil) kaçarsan dengesi bozulur, o an vur.
 const general = {
-  name: 'ÇİN GENERALİ', hp: 9, model: 'general', scale: 1.15, hitY: 1.8, mount: true,
+  name: 'ÇİN GENERALİ', hp: 9, escape: 85, model: 'general', scale: 1.15, hitY: 1.8, mount: true,
   start(B, b) {
     b.gz = B.P.z - 60; b.rot = Math.PI; b.y = 1.2; b.riding = true;
     b.actor.play('Sitting_Idle_Loop', { fade: 0 });
@@ -416,7 +417,7 @@ const general = {
         b.t = 0;
         if (b.n % 2 === 0) { // surlardaki okçular: iki şeride ok (eğil)
           const skip = pickLane();
-          for (let l = 0; l < 3; l++) if (l !== skip) B.add('bolt', l, B.P.z - 34, { vz: 26 });
+          for (let l = 0; l < 3; l++) if (l !== skip) B.add('bolt', l, B.P.z - 34, { vz: 26, parry: true });
           if (b.n === 0) B.pop('OKÇULAR!', { x: 0, y: 3, z: B.P.z - 12 });
         } else B.add('caltrop', pickLane(), b.gz + 1.5); // atından demir diken (zıpla)
         if (++b.n >= 6) { setState(b, 'dismount'); a.play('NinjaJump_Start', { loop: false, speed: 1.2, fade: 0.1 }); }
@@ -492,7 +493,7 @@ const general = {
 // balyozuyla yere vurup şok dalgası ve bakır gülle yollar; sonra döner, bakır burnunu şeride saplar.
 // Burnu toprağa gömülü kalınca kılıçla vur.
 const kerey = {
-  name: 'KEREY HAN', hp: 9, model: 'kerey', scale: 2.2, hitY: 3,
+  name: 'KEREY HAN', hp: 9, escape: 80, model: 'kerey', scale: 2.2, hitY: 3,
   start(B, b) {
     b.gz = B.P.z - 70; b.rot = Math.PI;
     b.actor.play('Sprint_Loop', { speed: 0.8, fade: 0 });
@@ -509,7 +510,7 @@ const kerey = {
         b.t = 0;
         a.overlay('Punch_Cross', { speed: 1.4 });
         if (b.n % 2) for (let l = 0; l < 3; l++) B.add('shock', l, b.gz + 2, { vz: 12 + phase * 2 }); // bütün şeritlere dalga: zıpla
-        else B.add('boulder', pickLane(), b.gz + 2.5, { vz: 10 + phase * 2 }); // bakır gülle: şerit değiştir
+        else B.add('boulder', pickLane(), b.gz + 2.5, { vz: 10 + phase * 2, parry: true }); // bakır gülle: şerit değiştir ya da geri çal
         if (phase === 3 && b.n % 3 === 0) B.add('kormos', pickLane(), B.P.z - 34, { variant: 'sulmus' });
         if (++b.n >= 3 + phase) { b.n = 0; b.lane = B.P.lane; setState(b, 'turn'); a.play('Sword_Idle', { fade: 0.2 }); B.banner('BURNUNU SAPLAYACAK!'); }
       }
@@ -556,7 +557,7 @@ const kerey = {
 // ve üstüne koşar (Ögel s.461). Üç vuruştan sonra örs akkor kesilir: o an örsü okla. Körük alevinden kaç.
 // Can bitince Erlik yerin dibine, tahtına kaçar.
 const demirhane = {
-  name: "ERLİK'İN DEMİRHANESİ", hp: 6, model: 'erlik', scale: 2.4, hitY: 1.6, ranged: true,
+  name: "ERLİK'İN DEMİRHANESİ", hp: 6, escape: 75, model: 'erlik', scale: 2.4, hitY: 1.6, ranged: true,
   start(B, b) {
     b.gz = B.P.z - 60; b.rot = 0; b.heat = 0;
     b.anvil = B.prop('makeAnvil');
@@ -610,7 +611,7 @@ const demirhane = {
 // Üç kat dökülünce sırtını dönüp kaçar ve sürüsünü çağırır: artık okla vurulur.
 const COATS = ['Coat1', 'Coat2', 'Coat3'];
 const boyali = {
-  name: 'İT-BARAK PEHLİVANI', hp: 6, model: 'boyali', scale: 1.5, hitY: 2.2,
+  name: 'İT-BARAK PEHLİVANI', hp: 6, escape: 80, model: 'boyali', scale: 1.5, hitY: 2.2,
   start(B, b) {
     b.gz = B.P.z - 55; b.rot = 0; b.coats = 3;
     for (const c of COATS) b.actor.parts[c].visible = true;
@@ -695,9 +696,9 @@ const boyali = {
 
 // ---------------- Kısım başbuğları (ara boss): her bölgenin güçlü savaşçısı. Oğuz durur, düello olur.
 // Saldırıları: şeride atılma (yana kaç), yüksek savuruş (▼ eğil), alçak savuruş (▲ zıpla). Iskalayınca sendeler: vur!
-function champion({ name, model, scale = 1.4, parts = [], hp = 4, hitY = 2.2, idle = 'MX_GS_Idle', atks = ['lunge', 'high', 'low'] }) {
+function champion({ name, model, scale = 1.4, parts = [], hp = 4, hitY = 2.2, idle = 'MX_GS_Idle', atks = ['lunge', 'high', 'low'], escape = 60 }) {
   return {
-    name, hp, model, scale, hitY,
+    name, hp, model, scale, hitY, escape, // escape: KAÇIŞ çubuğunun süresi (sn)
     start(B, b) {
       b.gz = B.P.z - 50; b.rot = 0;
       for (const p of ['Axe', 'Dao', 'Shield', 'Spear']) if (b.actor.parts[p]) b.actor.parts[p].visible = parts.includes(p);

@@ -17,6 +17,8 @@ import { addXP, XP, isUnlocked, UNLOCKS, UNLOCK_NAMES, unlockAll } from './akinc
 import { toast, fillMoney, levelBar, levelUps } from './ui.js';
 import { sfx, music, sting, regionOf } from './sound.js';
 import * as SOUND from './sound.js';
+import { bonus, collect as collectBonus } from './bonus.js';
+import { tip } from './tips.js';
 
 const LANES = [-2.5, 0, 2.5];
 const $ = id => document.getElementById(id);
@@ -125,14 +127,15 @@ const embers = new W.Particles(scene, 300, true, -1.5); // Yeraltı'nda yüksele
 
 // --- oyun verisi ---
 const DEF = {
-  barricade: { make: W.makeBarricade, hit: 'block' },
-  cart: { make: W.makeCart, hit: 'block' },
-  crates: { make: W.makeCrates, hit: 'block' },
+  barricade: { make: W.makeBarricade, hit: 'block', brk: true },
+  cart: { make: W.makeCart, hit: 'block', brk: true },
+  crates: { make: W.makeCrates, hit: 'block', brk: true },
   rope: { make: W.makeRope, hit: 'low' },
   beam: { make: W.makeBeam, hit: 'high' },
   boulder: { make: W.makeBoulder, hit: 'block' },
   spear: { make: W.makeSpear, hit: 'high' },
   kut: { make: W.makeKut },
+  tamga: { make: W.makeTamga }, // İSABET: içinden geçilen altın tamga halkası
   kimiz: { make: W.makeKimiz }, // nadir: bir can verir
   hoop: { make: W.makeHoop }, // uçuşta boş hücreyi gösteren halka
   // destan eşyaları: koşarken toplanır
@@ -142,11 +145,11 @@ const DEF = {
   nal: { make: W.makeHorseshoe },
   kormos: { foe: true, hit: 'block' },
   // Kara Bataklık
-  stump: { make: W.makeStump, hit: 'block' }, boat: { make: W.makeBoat, hit: 'block' },
+  stump: { make: W.makeStump, hit: 'block' }, boat: { make: W.makeBoat, hit: 'block', brk: true },
   vine: { make: W.makeVine, hit: 'low' }, log: { make: W.makeLog, hit: 'high' },
   // Altay Geçidi
-  snowrock: { make: W.makeSnowRock, hit: 'block' }, sled: { make: W.makeSled, hit: 'block' },
-  fence: { make: W.makeFence, hit: 'low' }, pine: { make: W.makePine, hit: 'high' },
+  snowrock: { make: W.makeSnowRock, hit: 'block' }, sled: { make: W.makeSled, hit: 'block', brk: true },
+  fence: { make: W.makeFence, hit: 'low', brk: true }, pine: { make: W.makePine, hit: 'high' },
   // Yeraltı
   bones: { make: W.makeBones, hit: 'block' }, cage: { make: W.makeCage, hit: 'block' }, lavarock: { make: W.makeLavaRock, hit: 'block' },
   spikes: { make: W.makeSpikes, hit: 'low' }, chain: { make: W.makeChain, hit: 'high' },
@@ -157,7 +160,7 @@ const DEF = {
   cloud: { make: W.makeCloud, hit: 'block' }, feather: { make: W.makeFeather, hit: 'block' },
   bird: { make: () => makeBird(), hit: 'block', flyfoe: true },
   // Çin Seferi
-  jars: { make: W.makeJars, hit: 'block' }, supply: { make: W.makeSupply, hit: 'block' },
+  jars: { make: W.makeJars, hit: 'block', brk: true }, supply: { make: W.makeSupply, hit: 'block', brk: true },
   lowgate: { make: W.makeLowGate, hit: 'low' }, bannerbeam: { make: W.makeBannerBeam, hit: 'high' },
   caltrop: { make: W.makeCaltrops, hit: 'low' }, bolt: { make: W.makeBolt, hit: 'high' },
   esir: { esir: true },
@@ -341,12 +344,12 @@ let secret = 0, secretTheme = null, deer = null, deerDone = false, trail = null,
 let stageT = 0, godGlow = null, relicPlan = [], rain = null, guideLane = 1, guideT = 0, shield = 0, reviveUsed = false, smashUsed = false, rideTime = 12;
 const cur = () => LEVELS[level].floors?.[floor] ?? LEVELS[level];
 const relicSave = (() => { try { return JSON.parse(localStorage.getItem('oguz-relics')) || {}; } catch { return {}; } })();
-let gallopT = 0, runBosses = 0; // bu koşuda yenilen boss sayısı (XP için)
+let gallopT = 0, runBosses = 0, runParries = 0, runBroken = 0, runGold = 0; // bu koşuda yenilen boss sayısı (XP için)
 let time = 0, runZ = 0, kut = 0, score = 0, combo = 0, kills = 0, nextZ = 0, bossAt = 0, cool = 0, shake = 0, bannerT = 0, overT = 0;
 let debugCam = null, camX = 0, fovKick = 0, slowK = 1, slowT = 0, stopT = 0, ambushT = 0, slashStep = 0, lastSlash = -9, wasSliding = false;
 
 const dist = () => Math.max(0, Math.floor(runZ - P.z));
-const mult = () => (1 + Math.min(combo, 20) * 0.1) * (has('kayi') ? 1.15 : 1);
+const mult = () => (1 + Math.min(combo, 40) * 0.1) * (has('kayi') ? 1.15 : 1) * (1 + bonus.scoreMult); // 40 komboya kadar artar
 const slowmo = (k, dur) => { slowK = k; slowT = dur; };
 
 function swordMode(on) { // ara sahneler ve bitiriş: kılıç elde mi kında mı
@@ -832,7 +835,10 @@ function start(m = mode, lv = level, skipIntro = false) {
   horse.root.visible = false;
   horseAway = null;
   Object.assign(P, { lane: 1, x: 0, y: 0, vy: 0, slide: 0, inv: 0, hp: 3, speed: has('kayi') ? 13.5 : 12, lock: 0, lunge: 0, ride: 0, sword: 0, dead: false, flip: 0, spin: 0, roll: false, rear: 0 });
-  time = kut = score = combo = kills = hoops = maxCombo = runBosses = 0;
+  time = kut = score = combo = kills = hoops = maxCombo = runBosses = runParries = runBroken = runGold = 0;
+  comboT = 0; for (const k in runCounts) runCounts[k] = 0;
+  collectBonus();
+  planGold();
   runZ = P.z; nextZ = P.z - 35; bossAt = cur().goals ? Infinity : L.bossAt; ambushT = 6; esirs = 0;
   goalsDone = false; goalKey = ''; stageT = 0; goalBase = { kill: 0, kut: 0, esir: 0, hoop: 0 };
   pow.kurt = pow.kilic = secret = 0; deer = trail = rain = null; deerDone = godDone = islikDone = false;
@@ -897,6 +903,11 @@ function add(kind, lane, z, extra = {}) {
   } else {
     mesh = def.make();
     if (HAZARD[kind]) W.hazardGlow(mesh, ...HAZARD[kind]);
+    if (def.brk) W.crackify(mesh); // kılıçla kırılabilir: çatlaklı doku
+    if (extra.parry) { // geri çalınabilir boss mermisi: hafif altın parıltı
+      mesh.add(W.glowSprite(0xffd23f, 2.8, kind === 'feather' ? 0 : 1.2));
+      tip('parry', 'Altın parlayan mermiye kılıçla doğru anda vur, geri çal!', '⚔', slowmo);
+    }
     scene.add(mesh);
   }
   const o = { kind, def, mesh, actor, lane, x: LANES[lane], y: 0, z, vz: 0, t: kind === 'pillar' ? 0 : rand(0, 9), ...extra }; // sütun zamanlaması sıfırdan
@@ -908,6 +919,7 @@ function add(kind, lane, z, extra = {}) {
 function release(o) {
   if (o.alert) scene.remove(o.alert);
   if (o.raft) scene.remove(o.raft);
+  if (o.gold) gild(o.actor, false);
   if (o.actor) { o.actor.busy = false; o.actor.root.visible = false; if (o.def.deer) deer = null; return; }
   scene.remove(o.mesh);
   if (o.kind === 'boulder' || o.kind === 'ice') o.mesh.userData.spin.geometry.dispose(); // her kaya kendi geometrisini üretir
@@ -933,6 +945,7 @@ function spawnRow(z) {
       else if (d > 200 && !pow.kurt && Math.random() < 0.012) add('kurt', l, z);
       else if (d > 300 && !islikDone && Math.random() < 0.012) { islikDone = true; add('islik', l, z); }
       else if (LEVELS[level].prisoners && d > 60 && Math.random() < 0.22) add('esir', l, z);
+      else if (d > 80 && !sect && Math.random() < 0.07) add('tamga', l, z); // İSABET halkası
       else if (Math.random() < 0.65) for (let i = 0; i < 6; i++) add('kut', l, z + 3 - i * 2);
     } else if (Math.random() < 0.55) {
       const foes = (THEMES[theme].foes ?? THEMES[sect?.prev]?.foes)?.filter(f => d >= f[1]);
@@ -945,6 +958,7 @@ function spawnRow(z) {
     add('kormos', s < 0 ? 0 : 2, z - 4, { variant: level === 7 ? 'itokcu' : 'okcu', x: s * 6.6, y: 0.1, bank: true, ready: false });
   }
   if (sect) return;
+  if (goldPlan.length && d >= goldPlan[0]) { goldPlan.shift(); spawnGold(z); }
   if (!godDone && d > 500 && Math.random() < 0.004) startTrail(z); // çok nadir: Tanrı Kılıcı
   if (!deer && !deerDone && d > 350 && Math.random() < 0.025) { deerDone = true; deer = add('geyik', Math.floor(Math.random() * 3), z - 10, { vz: -P.speed * 0.8, lt: 0 }); }
 }
@@ -1011,9 +1025,8 @@ function freeEsir(o) {
 
 function killBird(o) {
   o.dead = true;
-  kills++; combo++;
-  score += 80 * mult();
-  comboUi(true);
+  kills++;
+  addCombo('vurus', 80);
   burst(o.x, o.y, o.z, 1.6);
   sparks.emit(o.x, o.y, o.z, 30, 0x2a2030, 5, 3);
   pop(pick(['ŞAK!', 'HAP!']), o);
@@ -1081,6 +1094,7 @@ function killFoe(o, how) {
     if (how === 'arrow') { pop('KALKAN!', at); return false; }
     o.shieldBroken = true;
     sfx('shieldbreak');
+    addCombo('kalkan', 60);
     o.actor.parts.Shield.visible = false;
     o.actor.play('Idle_Shield_Break', { loop: false, speed: 1.5, then: () => o.actor.play('Sword_Idle') });
     o.hp = 1;
@@ -1088,7 +1102,7 @@ function killFoe(o, how) {
     stopT = 0.05;
     return false;
   }
-  if (o.cfg.hp > 1 && how === 'arrow' && (o.hp -= 1) > 0) { pop('DAYANDI!', at); sparks.emit(at.x, 1.4, at.z, 15, 0xffd23f, 4, 2); return false; }
+  if ((o.cfg.hp > 1 || o.gold) && how === 'arrow' && (o.hp -= 1) > 0) { pop('DAYANDI!', at); sparks.emit(at.x, 1.4, at.z, 15, 0xffd23f, 4, 2); return false; }
   o.dying = true; o.vz = 0; o.t = 0;
   if (o.alert) { scene.remove(o.alert); o.alert = null; }
   timed(o.actor, how === 'horse' ? 'Hit_Knockback' : pick(DEATHS), 1.1);
@@ -1097,11 +1111,11 @@ function killFoe(o, how) {
   if (!how) return true;
   sfx(how === 'arrow' ? 'arrowhit' : 'hit');
   sfx('death', { gain: 0.7 });
-  kills++; combo++;
-  score += (how === 'horse' ? 50 : 100) * mult();
-  comboUi(true);
+  kills++;
+  addCombo('vurus', how === 'horse' ? 50 : 100);
   if (how === 'sword') stopT = 0.06;
-  maxCombo = Math.max(maxCombo, combo);
+  if (bonus.foeKut) kut += bonus.foeKut;
+  if (o.gold) goldKilled(o);
   if (kills % (has('avsar') ? 4 : 6) === 0 && how !== 'horse') { // bitiriş anı: ağır çekim + yakınlaşma
     slowmo(0.25, 0.45);
     fovKick = -12;
@@ -1144,13 +1158,55 @@ function updateObj(o, dt) {
     if (pickup(o)) {}
     else if (o.kind === 'esir') freeEsir(o);
     else if (!o.def.hit) {}
-    else if (P.ride || pow.kilic > 0) trample(o); // atlıyken ve Tanrı Kılıcı elindeyken önündeki her şey yıkılır
+    else if (P.ride || pow.kilic > 0) { o.hitP = true; trample(o); } // atlıyken ve Tanrı Kılıcı elindeyken önündeki her şey yıkılır
     else if (!dodged(o.def.hit)) {
+      o.hitP = true;
       if (has('cavuldur') && !smashUsed && !o.def.foe) { smashUsed = true; trample(o); pop('GÜÇLÜ OMUZ!', o.mesh.position); } // Çavuldur
       else hurt(o);
     }
   }
+  if (o.pa > 0 && ahead <= 0) nearMiss(o);
+  o.pa = ahead;
+  if (o.parried) { // geri çalınan mermi boss'a döner
+    if (boss && !fin && o.z <= boss.gz + 1.5) {
+      o.dead = true;
+      burst(o.x, o.y + 1.4, o.z, 2.4);
+      sparks.emit(o.x, o.y + 1.4, o.z, 40, 0xffd23f, 7, 3);
+      hitBoss();
+    } else if (P.z - o.z > 90) o.dead = true;
+    return;
+  }
   if (ahead < -8) o.dead = true;
+}
+
+// ---- kombo türleri (SMU'daki dört tür): VURUŞ, KIL PAYI, İSABET, KALKAN ----
+const COMBO_KIND = { vurus: 'VURUŞ', kilpayi: 'KIL PAYI', isabet: 'İSABET', kalkan: 'KALKAN' };
+const runCounts = { vurus: 0, kilpayi: 0, isabet: 0, kalkan: 0 }; // bu koşuda türlere göre sayı (görevler için)
+let comboT = 0, comboLabelT = 0;
+const comboTime = () => 5 + bonus.comboTime; // 5 sn yeni hareket gelmezse kombo söner
+function addCombo(kind, pts, n = 1) {
+  combo += n;
+  comboT = comboTime();
+  maxCombo = Math.max(maxCombo, combo);
+  runCounts[kind] += 1;
+  const gain = Math.round(pts * mult() * (kind === 'vurus' ? 1 : 1 + bonus.comboPts));
+  score += gain;
+  comboUi(true);
+  $('combolabel').textContent = `${COMBO_KIND[kind]}  +${gain.toLocaleString('tr-TR')}`;
+  $('combolabel').className = 'show k-' + kind;
+  comboLabelT = 1.4;
+}
+// Kıl payı: yan şeritteki engelin 0.6 m'den yakınından geçmek ya da alçak/yüksek engeli son 0.25 sn'de atlatmak
+function nearMiss(o) {
+  if (!o.def.hit || o.def.foe || o.hitP || o.parried || o.kind === 'pillar' || P.ride || P.dead || flying) return;
+  const dx = Math.abs(o.x - P.x);
+  let ok = dx >= 1.1 && dx < 1.7; // çarpışma sınırı 1.1 m: 0.6 m'lik şerit
+  if (!ok && dx < 1.1 && (o.def.hit === 'low' || o.def.hit === 'high')) ok = time - (o.def.hit === 'low' ? P.jumpAt : P.slideAt) <= 0.25;
+  if (!ok) return;
+  addCombo('kilpayi', 50, 1 + bonus.nearMiss);
+  pop('KIL PAYI!', o.mesh.position);
+  sfx('near');
+  tip('kilpayi', 'Kıl payı! Engelin dibinden geçmek ya da son anda atlamak kombo verir.', '✦', slowmo);
 }
 
 // Toplanan eşyalar: true dönerse çarpışma işlendi
@@ -1161,6 +1217,13 @@ function pickup(o) {
       const n = pow.kurt > 0 && P.lane === guideLane ? 2 : 1; // kurdun yolundan gidene iki kat
       kut += n; score += 10 * n * mult(); o.dead = true; sfx('kut', { gap: 0.02 }); return true;
     }
+    case 'tamga':
+      addCombo('isabet', 75);
+      pop('İSABET!', at);
+      sfx('combo');
+      sparks.emit(o.x, 1.6, o.z, 30, 0xffd23f, 5, 2);
+      o.mesh.visible = false;
+      return true;
     case 'hoop': hoops++; score += 50 * mult() * (has('begdili') ? 2 : 1); sparks.emit(o.x, o.y, o.z, 20, 0xffd23f, 5, 2); o.mesh.visible = false; return true;
     case 'kimiz':
       sfx('heal');
@@ -1290,6 +1353,20 @@ function flash() { // beyaz parlama: tema değişimini örter
 
 function updateFoe(o, dt, ahead) {
   const cfg = o.cfg;
+  if (o.gold) { // altın düşman: yaklaşınca sırtını dönüp önden kaçar, zikzak çizer
+    if (!o.fleeing && ahead < 26) {
+      o.fleeing = true; o.ft = 0;
+      o.actor.root.rotation.y = Math.PI;
+      o.actor.play(pick(FOE_RUN), { speed: 1.3, fade: 0.1 });
+      tip('altin', 'Altın düşman! Kaçmadan yakala: Gök Demir düşürür.', '✨', slowmo);
+    }
+    if (o.fleeing) {
+      o.vz = -P.vz * 0.82;
+      if ((o.lt -= dt) <= 0) { o.lt = 0.8 + Math.random() * 0.8; o.lane = clamp(o.lane + pick([-1, 1]), 0, 2); }
+      if ((o.ft += dt) > 11) { o.dead = true; dust.emit(o.x, 0.5, o.z, 30, 0xffd23f, 5, 3); pop('KAÇTI!', o.mesh.position); }
+    }
+    return;
+  }
   if (o.phase === 'lurk') { // bataklıkta suyun altında: yaklaşınca yükselir
     if (ahead < 22) { o.phase = 'rise'; o.pt = 0; dust.emit(o.x, 0.2, o.z, 30, 0x2e5a48, 4, 6); }
     return;
@@ -1374,13 +1451,110 @@ function land(o) {
 // Dokunma / sol tık: elde kılıç varsa kombo (yakındaki düşmana atılarak), yay varsa ok. Tepegöz sersemken kılıçla vurulur.
 function tapAction() {
   if (P.dead || fin) return;
+  if (tryParry()) return;
   if (boss && boss.def.tap(B, boss)) return;
   if (sect?.S.fly) return; // eller kartalın pençesinde / düşerken
   if (flying || weapon === 'bow') return throwArrow(); // havada kılıç yok
   const reach = pow.kilic > 0 ? 16 : P.ride ? 3 : 9;
   const inLane = objs.filter(o => o.def.foe && !o.dying && o.ready && Math.abs(o.x - P.x) < 1.3 && P.z - o.z > -0.5 && P.z - o.z < reach).sort((a, b) => b.z - a.z);
+  if (!inLane.length) { // önde düşman yoksa yakındaki ahşap engeli kır
+    const crate = objs.find(o => o.def.brk && !o.dead && !o.done && Math.abs(o.x - P.x) < 1.3 && P.z - o.z > -0.3 && P.z - o.z < 4.5);
+    if (crate && cool <= 0) { slash(null); breakObj(crate); return; }
+  }
   slash(inLane[0] || null);
   if (pow.kilic > 0) for (const o of inLane.slice(1)) killFoe(o, 'sword'); // Tanrı Kılıcı: şeritteki herkes
+}
+
+// Geri çalma: boss'un altın parlayan mermisi Oğuz'a 0.3 sn kala kılıçla vurulursa boss'a geri seker
+function tryParry() {
+  if (!boss || (weapon !== 'sword' && !flying)) return false;
+  const o = objs.find(o => o.parry && !o.parried && !o.done && !o.dead && Math.abs(o.x - P.x) < 1.4 && (o.row == null || o.row === P.row)
+    && P.z - o.z > -0.3 && (P.z - o.z) / Math.max(1, o.vz + P.vz) <= 0.3);
+  if (!o) return false;
+  o.parried = o.done = true;
+  o.vz = -(P.vz + 34);
+  if (flying) timedOver(hero, 'Sword_Regular_B', 0.35); else { cool = 0; slash(null); }
+  pop('GERİ ÇALDI!', o.mesh.position);
+  slowmo(0.35, 0.45);
+  sparks.emit(o.x, o.y + 1.3, o.z, 50, 0xffd23f, 7, 3);
+  sfx('parry');
+  runParries++;
+  return true;
+}
+
+// Ahşap engel kılıçla parçalanır, 3-5 kut saçar
+const chips = [];
+function breakObj(o) {
+  o.dead = true;
+  const at = o.mesh.position;
+  const c = W.makeChips(10);
+  c.position.set(at.x, 0.8, at.z);
+  scene.add(c);
+  chips.push({ c, t: 0 });
+  dust.emit(at.x, 0.8, at.z, 25, 0x7a4a24, 5, 4);
+  burst(at.x, 1, at.z, 1.8);
+  pop('ÇAT!', at);
+  sfx('crack');
+  const n = 3 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < n; i++) add('kut', o.lane, o.z - 1.2 - i * 1.3);
+  score += 20 * mult();
+  runBroken++;
+  tip('kirik', 'Çatlak ahşap engelleri kılıçla kır, içinden kut saçılır!', '📦', slowmo);
+}
+function updateChips(dt) {
+  for (const k of chips) {
+    k.t += dt;
+    for (const m of k.c.children) {
+      m.userData.v.y -= 20 * dt;
+      m.position.addScaledVector(m.userData.v, dt);
+      if (m.position.y < -0.7) { m.position.y = -0.7; m.userData.v.set(0, 0, 0); }
+      m.rotation.x += m.userData.r.x * dt; m.rotation.y += m.userData.r.y * dt;
+    }
+    if (k.t > 1.4) { scene.remove(k.c); k.dead = true; }
+  }
+  for (let i = chips.length - 1; i >= 0; i--) if (chips[i].dead) chips.splice(i, 1);
+}
+
+// ALTIN DÜŞMAN: bölgenin düşmanı altın zırhla; yaklaşınca önden kaçar, öldürülünce Gök Demir düşürür
+const GOLD_MAT = new Map();
+function gild(actor, on) {
+  actor.root.traverse(m => {
+    if (!m.isMesh || m.material?.isMeshBasicMaterial) return;
+    if (on) {
+      m.userData.plain ??= m.material;
+      if (!GOLD_MAT.has(m.userData.plain)) {
+        const g = m.userData.plain.clone(); // malzeme aynı modeldeki bütün düşmanlarda ortak: kopyala
+        g.color = new THREE.Color(0xffc83a);
+        g.emissive = new THREE.Color(0x6a4200);
+        GOLD_MAT.set(m.userData.plain, g);
+      }
+      m.material = GOLD_MAT.get(m.userData.plain);
+    } else if (m.userData.plain) m.material = m.userData.plain;
+  });
+  if (on) actor.root.add(actor.goldGlow ??= W.glowSprite(0xffe7a0, 1.6, 2.3)); // baş üstünde hâle
+  else if (actor.goldGlow) actor.root.remove(actor.goldGlow);
+}
+let goldPlan = [];
+function planGold() { // her koşuda 1-3 altın düşman, rastgele mesafelerde
+  const end = cur().goals?.find(g => g[0] === 'dist')?.[1] ?? 1500;
+  goldPlan = Array.from({ length: 1 + Math.floor(Math.random() * 3) }, () => Math.round(200 + Math.random() * Math.max(200, end - 250))).sort((a, b) => a - b);
+}
+function spawnGold(z) {
+  const foes = (THEMES[theme].foes ?? THEMES[sect?.prev]?.foes)?.filter(f => !FOE[f[0]].shoot && !FOE[f[0]].bank);
+  if (!foes?.length) return;
+  const o = add('kormos', Math.floor(Math.random() * 3), z, { variant: foes[0][0] });
+  if (!o) return;
+  Object.assign(o, { gold: true, phase: null, y: 0, ready: true, hp: 2, lt: 1 });
+  gild(o.actor, true);
+  o.alert = W.makeAlert();
+  scene.add(o.alert);
+}
+function goldKilled(o) {
+  wallet.addGD(1);
+  runGold++;
+  banner('ALTIN AV! +1 GÖK DEMİR');
+  sfx('gold');
+  sparks.emit(o.x, 1.6, o.z, 70, 0xffd23f, 8, 4);
 }
 
 function slash(target, atBoss = false) {
@@ -1606,6 +1780,7 @@ function startBoss() {
   def.start(B, boss);
   main.root.rotation.y = boss.rot;
   if (def.ranged && !flying) { setWeapon('bow'); banner('YAYINI ÇEK!'); }
+  boss.esc = boss.escMax = def.escape ?? 75; // KAÇIŞ çubuğu: süre biterse boss kaçar
   $('bossname').textContent = def.name;
   $('bossbar').hidden = false;
   bossBar();
@@ -1624,9 +1799,7 @@ function hitBoss() {
   const b = boss;
   if (!b || b.hp <= 0) return;
   b.hp--;
-  combo++;
-  score += 200 * mult();
-  comboUi(true);
+  addCombo('vurus', 200 * (1 + bonus.bossPts));
   const at = new THREE.Vector3(b.x, (b.def.hitY || 2) + (b.y || 0), b.gz + 1);
   burst(at.x, at.y, at.z, 2.6);
   sparks.emit(at.x, at.y, at.z, 40, 0xff9a3a, 7, 3);
@@ -1659,6 +1832,11 @@ function updateBoss(dt) {
   const b = boss;
   b.t += dt;
   b.time += dt;
+  if (!fin && b.hp > 0) { // düelloda (Oğuz dururken) süre yavaş akar
+    b.esc -= dt * (flow < 0.5 ? 0.35 : 1);
+    $('esc').style.width = Math.max(0, b.esc / b.escMax) * 100 + '%';
+    if (b.esc <= 0) return bossEscape();
+  }
   b.off = P.z - b.gz;
   b.def.update(B, b, dt);
   if (!boss) return;
@@ -1670,6 +1848,21 @@ function updateBoss(dt) {
   if (b.def.flying) flap(r, b.flap || 7);
   b.actor.update(dt);
   b.def.post?.(B, b);
+}
+
+// Kaçış süresi doldu: boss kaçar. Bölümde bölüm kaybedilir; Sonsuz Akın'da koşu sürer, boss ödülü alınmaz.
+function bossEscape() {
+  const name = boss.def.name;
+  sfx('roar');
+  banner(`${name} KAÇTI!`);
+  for (const o of objs) if (o.parry || o.def.foe) o.dead = true;
+  endBoss();
+  if (mode === 'endless') return;
+  P.dead = true;
+  overTitle = `${name} KAÇTI!`;
+  state = 'dying';
+  overT = 1.8;
+  hero.play('Idle_Loop', { fade: 0.3 });
 }
 
 // Boss bitirişi: ağır çekim, kamera etrafında döner, Oğuz ağır kombo ile son darbeyi vurur. Uçan boss spiral çizerek düşer.
@@ -2010,6 +2203,8 @@ function update(dt) {
   if (P.ride && (P.ride -= dt) <= 0) dismount();
   $('ridebar').style.width = (P.ride / rideTime) * 100 + '%';
   cool -= dt;
+  if (combo > 0 && (comboT -= dt) <= 0) { combo = 0; comboUi(); } // kombo söndü
+  comboRing();
   pending = pending.map(t => t - dt);
   while (pending.length && pending[0] <= 0) { pending.shift(); launchArrow(); }
 
@@ -2051,6 +2246,7 @@ function update(dt) {
     horse.update(dt);
     if (horseAway.t > 2.5) { horse.root.visible = false; horseAway = null; }
   }
+  updateChips(dt);
   sparks.update(dt);
   dust.update(dt);
 
@@ -2168,6 +2364,12 @@ function bossBar() { $('bosshp').style.width = (Math.max(0, boss.hp) / boss.max)
 function banner(text) { $('banner').textContent = text; $('banner').classList.add('show'); bannerT = 2.2; }
 
 let praiseT;
+function comboRing() {
+  const r = $('comboring');
+  r.hidden = $('combo').hidden;
+  if (!r.hidden) r.style.setProperty('--k', Math.max(0, comboT / comboTime()));
+  if (comboLabelT > 0 && (comboLabelT -= 1 / 60) <= 0) $('combolabel').className = '';
+}
 function comboUi(bump) {
   $('combo').hidden = combo < 2;
   $('combon').textContent = combo;
@@ -2194,8 +2396,11 @@ function pop(text, pos) {
   setTimeout(() => el.remove(), 650);
 }
 
+let overTitle = null;
 function gameOver() {
   state = 'over';
+  $('over').querySelector('h1').textContent = overTitle || 'YENİLDİN!';
+  overTitle = null;
   wallet.deposit(kut);
   let best = Math.floor(score);
   try { best = Math.max(best, +localStorage.getItem('oguz-best') || 0); localStorage.setItem('oguz-best', best); } catch {}
@@ -2225,7 +2430,7 @@ function act(a) {
   if (a === 'left') P.lane = Math.max(0, P.lane - 1);
   else if (a === 'right') P.lane = Math.min(2, P.lane + 1);
   else if (a === 'up' && P.y === 0) {
-    P.vy = P.ride ? 11 : has('karkin') ? 14.5 : 12.5; P.slide = 0;
+    P.vy = P.ride ? 11 : has('karkin') ? 14.5 : 12.5; P.slide = 0; P.jumpAt = time;
     if (P.ride) horse.play('Gallop_Jump', { loop: false, speed: 1.4, fade: 0.05, then: () => horse.play('Gallop', { speed: 1.5 }) });
     else { // üç çeşit zıplama: ninja, öne takla, burgu
       P.lock = 0.15;
@@ -2247,7 +2452,7 @@ function act(a) {
       P.lock = sc ? 0.6 : 0.15;
     }
     if (P.slide <= 0) sfx('slide');
-    P.slide = 0.8;
+    P.slide = 0.8; P.slideAt = time;
   } else if (a === 'tap') tapAction();
 }
 
@@ -2350,6 +2555,8 @@ renderer.setAnimationLoop(() => {
 
 // test kancası (tarayıcı konsolundan oyunu adım adım sürmek için)
 window.__game = {
+  startBoss, get objs2() { return objs; },
+  get runCounts() { return runCounts; }, get bonus() { return bonus; }, spawnGold, get runStats() { return { parries: runParries, broken: runBroken, gold: runGold, bosses: runBosses }; },
   sfx, music, sting, SOUND,
   unlockAll, addXP, levelUps, toast,
   get warnLane() { return warn.visible ? LANES.indexOf(warn.position.x) : -1; }, get flow() { return flow; }, get time() { return time; }, get dist() { return dist(); }, get level() { return level; }, get mode() { return mode; }, get kills() { return kills; }, get combo() { return combo; }, get score() { return score; }, get kut() { return kut; },
