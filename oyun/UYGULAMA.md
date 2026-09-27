@@ -14,7 +14,7 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
    - **Değişen:** `index.html`, `src/main.js`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js`, `SESLENDIRME.md`
    - **Yeni kaynak:** `src/akinci.js`, `ui.js`, `sound.js`, `bonus.js`, `tips.js`, `carsi.js`, `tore.js`, `harita.js`, `yigit.js`, `seferler.js`, `koleksiyon.js`, `ekranlar.js`, `diyalog.js`, `diyalog-metin.js`, `ayarlar.js`, `online.js`
    - **Belgeler:** `SES-KAYNAKLARI.md`, `CEVRIMICI.md`, `UYGULAMA.md`
-   - **Test araçları** (`tools/` içine; mevcut `bot.js`, `build_chars.py`, `vo_list.mjs` dosyalarının üstüne yazılmaz, adları farklı): `test-bot.mjs`, `bot-brain.js`, `regresyon.sh`, `flow-test.mjs`, `tore-test.mjs`, `cards-test.mjs`, `dialog-test.mjs`, `tips-test.mjs`, `sound-test.mjs`, `events-test.mjs`, `scenes.mjs`, `shot-menu.mjs`, `ui-test.mjs`, `fps-test.mjs`, `vo_dialog.mjs`
+   - **Test araçları** (`tools/` içine; mevcut `bot.js`, `build_chars.py`, `vo_list.mjs` dosyalarının üstüne yazılmaz, adları farklı): `test-bot.mjs`, `bot-brain.js`, `smu2-scenes.mjs`, `regresyon.sh`, `flow-test.mjs`, `tore-test.mjs`, `cards-test.mjs`, `dialog-test.mjs`, `tips-test.mjs`, `sound-test.mjs`, `events-test.mjs`, `scenes.mjs`, `shot-menu.mjs`, `ui-test.mjs`, `fps-test.mjs`, `vo_dialog.mjs`
 4. `npm run dev`, sonra `tools/regresyon.sh` (Playwright gerekir: `npm i -D playwright`). Hepsi "tamam" çıkmalı.
 5. `npm run build` ile `OYNA.html`'i yeniden üret.
 6. `node tools/vo_list.mjs` çalıştırılırsa SESLENDIRME.md'nin eski bölümü yeniden yazılır. Diyalog bölümü `<!-- diyaloglar -->` işaretleri arasında durur. Silinirse `node tools/vo_dialog.mjs` ile geri gelir.
@@ -23,6 +23,7 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 
 | Konu | Neden | Ne yapılmalı |
 |---|---|---|
+| Kanatlı Kul ve Kalkan Duvarı'nın kendi modelleri | Blender yok | Şimdilik Körmös modeline kodla takılıyor: sırtına Kara Kuş kanatları, sağ koluna ikinci kalkan (sol kalkanın aynası). İstenirse `build_chars.py` ile gerçek kanatlı bir model yapılabilir |
 | Uluğ Türük ve yeni kartların kendi modelleri | Bu ortamda Blender yok | `build_chars.py` ile Uluğ Türük (ak sakal, sarık/börk, uzun kaftan, asa) ve yeni kartlara özel başlıklar. Şimdilik Oğuz modelinden kuruluyor: ak saç-sakal, sarık, açık kaftan, kodla eklenen asa. Kadın yiğitler (Tomris, Banu Çiçek) için de ayrı model iyi olur, şu an sakalsız Oğuz modeli kullanılıyor |
 | Gerçek ses dosyaları | Ses sitelerine erişim kapalıydı | Sesler kodla üretiliyor (lisans sorunu yok, 0 MB). İstersen `public/ses/manifest.json` ile gerçek CC0 dosyaları eklenir, bkz. SES-KAYNAKLARI.md |
 | `tools/bot.js`'e geri çalmayı öğretmek | `tools/` zip'te yoktu | Burada ayrı bir bot yazıldı (`test-bot.mjs` + `bot-brain.js`) ve geri çalmayı biliyor. Mevcut `bot.js`'e aynı mantık (`parryThink`) aktarılabilir |
@@ -47,6 +48,22 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 - **Uluğ Türük diyalogları:** 20 kısmın başında ve 7 bölüm sonunda, portreli konuşma balonları; 68 cümle SESLENDIRME.md'de.
 - **Eğitim ipuçları:** ilk kısımda sırayla, sonra her yeni şeyde bir kez; telefonda el hareketi, masaüstünde tuş.
 - **Ayarlar:** ses düzeyleri, grafik (otomatik), titreşim, eğerek yönlendirme, ipuçlarını sıfırla, ara sahne galerisi, emeği geçenler, dil.
+
+## İkinci SMU paketi (ekran görüntülerinden istenenler)
+
+| İstek | Oğuz Kağan'daki karşılığı | Dosya |
+|---|---|---|
+| Düşmanın üstünde simge; kayınca yenilen düşman | **Mavi ▼ KAY simgesi** kalkanlıların üstünde çıkar. Altından kayınca düşman yere serilir (ALTINDAN!). Yeni **Kalkan Duvarı** (iki kalkanlı) düşmana kılıç işlemez, üstünden atlanmaz: yalnız kayılır | `main.js` (FOE.ikikalkan, dualShield), `world.js` (makeActIcon) |
+| Jetpack'li düşman, simge çıkınca zıpla | **Kanatlı Kul** (Erlik'in kulu, sırtında Kara Kuş kanatları) önde süzülür. **Sarı ▲ ZIPLA** simgesi çıkınca zıplarsan Oğuz sıçrar, onu havada indirir. Zıplamazsan şeridine mızrak savurur (altından kay) | `main.js` (updateFlyer, skyStrike) |
+| Yukarı çıkma, aşağı inme, uçurum | Yol rampayla **sur üstüne** çıkar, bazen **ikinci kata** tırmanır, **uçurumlarla** bölünür, sonra aşağı atlanır ya da rampayla inilir. Yerde de uçurum olur. Uçuruma düşen bir can yitirir, karşı kenardan devam eder. Görünüş bölgeye göre: sur taşı, bataklık iskelesi, karlı kaya, orman kayası, Yeraltı'nda bazalt ve **lav yarığı** | `main.js` (terrPlan, groundStep, fallPit), `world.js` (makeTerrain, makePit) |
+| Lazer (3 şerit, ince/kalın, sağdan/soldan) | **Kam ışını:** yolun sağındaki ya da solundaki boynuzlu kam totemi önce titrer, sonra üç şeridi kapatan ışın yakar. **İnce ışın:** altından kay ya da zıpla. **Kalın ışın:** yalnız zıpla. Renk bölgeye göre: kara şimşek (mor), bataklık ağusu (yeşil), ayaz (buz mavisi), orman (kehribar), Erlik'in yalını (kor), Çin'de ejder ateşi (kırmızı) | `main.js` (updateBeam), `world.js` (makeIsin) |
+| Boss'a kalkan küresi atmak | **Yada Taşı:** kamların yağmur-fırtına taşı. Boss savaşında yolda mavi taşlar çıkar; toplanan taş sağ alttaki mavi **YADA** düğmesiyle (masaüstünde **F**) boss'a fırlatılır. Tengri'nin şimşeği iner: boss 1 can yitirir, KAÇIŞ süresine +4 sn eklenir. Yelbegen'de bir yandaki iki başı yakar, son başı Oğuz keser | `main.js` (throwYada, yadaStrike), `bosses.js` (yelbegen.yada) |
+| Can bitince bitiriş animasyonu | Bitiriş artık üç çeşit: ağır kombo, **sıçrayıp tepeden inme**, dönerek vuruş. Son vuruşta gökten şimşek iner (TENGRİ ŞAHİT!) | `main.js` (startFinisher) |
+| Tempo: her saniye düşman/engel | Sıralar sıklaştı (~her saniye bir sıra), bir sıranın dolma olasılığı arttı, pusular daha sık. Yeni iki düşman da bütün yer bölgelerinde çıkar | `main.js` (update, spawnRow) |
+| Boss savaşında engeller sürsün | Koşan boss'larda boss'un ayağının dibinden 1-1.7 sn'de bir engel savrulur (canı azaldıkça iki şerit). Oğuz'un durduğu düellolarda (kısım başbuğları) çıkmaz. Kaçacak şerit hep bırakılır | `main.js` (bossRow) |
+| Boss yeteneğini koştuğumuz yere atsın | Tepegöz, Yelbegen, Çin Generali ve Kerey Han atışlarını %70 oyuncunun şeridine yapar | `bosses.js` (aim) |
+
+Bot bu mekanikleri de oynuyor (uçurumda zıplar, ışında kayar/zıplar, ▼ düşmanın altından kayar, ▲ çıkınca zıplar, Yada Taşı atar). Ekran görüntüleri: `node tools/smu2-scenes.mjs kalkan kanatli sur ucurum2 yerucurum isin kalinisin yada bitir`.
 
 ## Bilinçli kararlar
 

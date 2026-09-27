@@ -20,8 +20,29 @@
     G.act('tap'); cd = 0.15; stats.parryTry = (stats.parryTry || 0) + 1;
     return true;
   }
+  // SMU'dan gelenler: uçurum, kam ışını, ▲ kanatlı kul
+  function smuThink() {
+    const G = g(), P = G.P, v = Math.max(1, P.vz);
+    if (G.yada > 0 && cd <= 0 && G.boss) { G.act('yada'); ev('yada'); }
+    if (P.y !== 0 && !G.overPit) return false;
+    const pit = G.terr.find(t => t.kind === 'pit' && t.z0 < P.z + 0.5 && P.z - t.z0 < 12);
+    if (pit && P.y === 0) {
+      const d = P.z - pit.z0, len = pit.z0 - pit.z1;
+      if (d <= Math.max(1.2, v * 0.62 - len - 1.5)) { act('up'); stats.jumps++; ev('pitjump'); return true; }
+      return false;
+    }
+    const beam = G.objs.find(o => o.def.beam && !o.done && P.z - o.z > 0 && P.z - o.z < 20);
+    if (beam) {
+      const t = (P.z - beam.z) / v;
+      if (beam.def.thick && t <= 0.3 && P.y === 0) { act('up'); stats.jumps++; ev('beamjump'); return true; }
+      if (!beam.def.thick && t <= 0.35 && P.slide <= 0 && P.y === 0) { act('down'); stats.slides++; ev('beamslide'); return true; }
+    }
+    if (G.objs.some(o => o.phase === 'mark' && !o.dying) && P.y === 0) { act('up'); ev('skystrike'); return true; }
+    return false;
+  }
   function groundThink() {
     const G = g(), P = G.P, objs = G.objs;
+    if (smuThink()) return;
     const react = P.speed * 0.3 + 1.2;
     const look = 12 + P.speed * 0.5;
     const danger = [0, 0, 0], gain = [0, 0, 0];
@@ -33,15 +54,18 @@
       if (o.def.hit === 'block' && !o.def.foe) danger[o.lane] += 10 / Math.max(1, a);
       if (o.def.foe && !o.bank) danger[o.lane] += 1 / Math.max(1, a);
       if (o.kind === 'kut' || o.kind === 'nal' || o.kind === 'kimiz' || o.esir) gain[o.lane] += 0.2;
+      if (o.kind === 'yada') gain[o.lane] += 2;
     }
     const wl = G.warnLane;
     if (wl >= 0) danger[wl] += 50;
     // şu anki şeritte yakın engel
     const here = objs.filter(o => !o.dead && !o.dying && !o.done && !o.parry && o.lane === P.lane && P.z - o.z > 0 && P.z - o.z < react && o.def.hit);
     for (const o of here) {
+      if (o.def.foe && o.cfg?.icon === 'kay' && !o.shieldBroken) { if (P.slide <= 0 && cd <= 0) { act('down'); stats.slides++; ev('slidekill'); } return; }
       if (o.def.foe && o.ready !== false) { if (cd <= 0) { act('tap'); stats.taps++; } continue; }
-      if (o.def.hit === 'low' && P.y === 0 && cd <= 0) { act('up'); stats.jumps++; return; }
-      if (o.def.hit === 'high' && P.slide <= 0 && cd <= 0) { act('down'); stats.slides++; return; }
+      const tt = (P.z - o.z) / Math.max(1, P.vz); // çarpmaya kalan süre: yakınsa bekleme süresine bakma
+      if (o.def.hit === 'low' && P.y === 0 && (cd <= 0 || tt < 0.25)) { act('up'); stats.jumps++; return; }
+      if (o.def.hit === 'high' && P.slide <= 0 && (cd <= 0 || tt < 0.3)) { act('down'); stats.slides++; return; }
     }
     // çatlak sandık: kır
     const crate = objs.find(o => o.def.brk && !o.dead && !o.done && o.lane === P.lane && P.z - o.z > 0.5 && P.z - o.z < 4);
@@ -148,11 +172,16 @@
           if (G.boss) {
             if (G.boss !== sawBoss) { if (sawBoss) logBoss(); sawBoss = G.boss; bossT0 = G.time; stats.bosses++; ev('boss:' + G.boss.kind); }
             sawBoss.minEsc = Math.min(sawBoss.minEsc ?? 999, G.boss.esc);
+            if (G.yada > 0 && !G.fin) { G.act('yada'); ev('yada'); }
             if (!(cd <= 0 && parryThink()) && !bossThink()) (G.flying ? skyThink : groundThink)();
           } else if (sawBoss) { logBoss(); sawBoss = null; }
           else if (G.flying) skyThink();
           else groundThink();
-          if (G.P.hp < lastHp) stats.hits++;
+          if (G.P.hp < lastHp) {
+            stats.hits++;
+            (stats.hitLog ??= []).push({ d: G.dist, lane: G.P.lane, y: +G.P.y.toFixed(2), sl: +G.P.slide.toFixed(2), boss: G.boss?.kind, pit: G.overPit,
+              near: G.objs.filter(o => Math.abs(G.P.z - o.z) < 3 && o.def.hit).map(o => (o.variant || o.kind) + '@' + o.lane + ':' + (G.P.z - o.z).toFixed(1)).join(' ') });
+          }
           lastHp = G.P.hp;
           if (G.floor !== lastFloor) { lastFloor = G.floor; stats.floors++; }
           stats.maxDist = Math.max(stats.maxDist, G.dist);

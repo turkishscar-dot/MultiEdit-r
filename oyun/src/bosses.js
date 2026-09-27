@@ -5,6 +5,7 @@
 const LANES = [-2.5, 0, 2.5];
 const rand = (a, b) => a + Math.random() * (b - a);
 const pickLane = () => Math.floor(Math.random() * 3);
+const aim = B => (Math.random() < 0.7 ? B.P.lane : pickLane()); // çoğunlukla oyuncunun koştuğu şeride
 
 function setState(b, s) { b.state = s; b.t = 0; }
 // Dev koşarak oyuncunun `off` metre önünde kalmaya çalışır
@@ -31,7 +32,7 @@ const tepegoz = {
         a.overlay('Punch_Cross', { speed: 1.4 }); // koşarken topuzu yere vurur, kaya geri seker
         B.add('boulder', b.lane, b.gz + 2.5, { vz: 8 + phase * 2, parry: true });
         B.dust.emit(LANES[b.lane], 0.3, b.gz + 2, 20, 0xc9a77a, 5, 3);
-        b.lane = pickLane();
+        b.lane = aim(B);
         if (++b.n >= 2 + phase) { b.n = 0; b.lane = B.P.lane; setState(b, 'turn'); a.play('Sword_Idle', { fade: 0.2 }); }
       }
     }
@@ -201,7 +202,7 @@ const yelbegen = {
       if (b.t > 1.4) {
         b.t = 0;
         a.overlay('Punch_Cross', { speed: 1.4 });
-        B.add('ice', pickLane(), b.gz + 2.5, { vz: 11, parry: true });
+        B.add('ice', aim(B), b.gz + 2.5, { vz: 11, parry: true });
         if (++b.n >= 3) { b.n = 0; setState(b, 'turn'); a.play('Sword_Idle', { fade: 0.2 }); b.bites = [0, 1, 2].sort(() => Math.random() - 0.5); }
       }
     }
@@ -267,6 +268,16 @@ const yelbegen = {
     }
     if (b.hp > 0) yelbegen.flee(B, b);
     return true;
+  },
+  yada(B, b) { // Yada Taşı'nın şimşeği bir yandaki iki başı yakar; son başı Oğuz keser
+    const left = ['left', 'right'].filter(d => !b.cut.includes(d));
+    if (!left.length) { B.pop('SON BAŞI SEN KES!', { x: 0, y: 4, z: b.gz }); return; }
+    const dir = left[Math.floor(Math.random() * left.length)];
+    b.cut.push(dir);
+    for (const hd of b.heads[dir]) hd.visible = false;
+    b.hp--;
+    B.bar();
+    B.pop('BAŞI YANDI!', { x: dir === 'left' ? -1 : 1, y: 4, z: b.gz });
   },
   tap() { return true; }, // QTE'de dokunuş sayılmaz
   arrow(B, b, ar) { B.sparks.emit(ar.x, ar.y, ar.z, 10, 0xfff2a0, 3, 2); return true; },
@@ -419,7 +430,7 @@ const general = {
           const skip = pickLane();
           for (let l = 0; l < 3; l++) if (l !== skip) B.add('bolt', l, B.P.z - 34, { vz: 26, parry: true });
           if (b.n === 0) B.pop('OKÇULAR!', { x: 0, y: 3, z: B.P.z - 12 });
-        } else B.add('caltrop', pickLane(), b.gz + 1.5); // atından demir diken (zıpla)
+        } else B.add('caltrop', aim(B), b.gz + 1.5); // atından demir diken (zıpla)
         if (++b.n >= 6) { setState(b, 'dismount'); a.play('NinjaJump_Start', { loop: false, speed: 1.2, fade: 0.1 }); }
       }
     }
@@ -510,7 +521,7 @@ const kerey = {
         b.t = 0;
         a.overlay('Punch_Cross', { speed: 1.4 });
         if (b.n % 2) for (let l = 0; l < 3; l++) B.add('shock', l, b.gz + 2, { vz: 12 + phase * 2 }); // bütün şeritlere dalga: zıpla
-        else B.add('boulder', pickLane(), b.gz + 2.5, { vz: 10 + phase * 2, parry: true }); // bakır gülle: şerit değiştir ya da geri çal
+        else B.add('boulder', aim(B), b.gz + 2.5, { vz: 10 + phase * 2, parry: true }); // bakır gülle: şerit değiştir ya da geri çal
         if (phase === 3 && b.n % 3 === 0) B.add('kormos', pickLane(), B.P.z - 34, { variant: 'sulmus' });
         if (++b.n >= 3 + phase) { b.n = 0; b.lane = B.P.lane; setState(b, 'turn'); a.play('Sword_Idle', { fade: 0.2 }); B.banner('BURNUNU SAPLAYACAK!'); }
       }
@@ -698,7 +709,7 @@ const boyali = {
 // Saldırıları: şeride atılma (yana kaç), yüksek savuruş (▼ eğil), alçak savuruş (▲ zıpla). Iskalayınca sendeler: vur!
 function champion({ name, model, scale = 1.4, parts = [], hp = 4, hitY = 2.2, idle = 'MX_GS_Idle', atks = ['lunge', 'high', 'low'], escape = 60 }) {
   return {
-    name, hp, model, scale, hitY, escape, // escape: KAÇIŞ çubuğunun süresi (sn)
+    name, hp, model, scale, hitY, escape, duel: true, // escape: KAÇIŞ çubuğunun süresi (sn); duel: Oğuz durur, yolda engel çıkmaz
     start(B, b) {
       b.gz = B.P.z - 50; b.rot = 0;
       for (const p of ['Axe', 'Dao', 'Shield', 'Spear']) if (b.actor.parts[p]) b.actor.parts[p].visible = parts.includes(p);

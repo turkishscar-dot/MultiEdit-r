@@ -1677,3 +1677,180 @@ export function makeChips(n = 8) {
   }
   return g;
 }
+
+// ================= İNİŞ-ÇIKIŞ: yükselen sur yolları, rampalar ve uçurumlar =================
+// Parça dünyada zA'dan (yakın uç) zA - len'e uzanır. h0: yakın uçtaki, h1: uzak uçtaki yükseklik.
+// Dokular kutu izdüşümüyle metre başına yerleşir (her parçanın boyu farklı).
+const TW = 8.4; // parçanın genişliği: üç şerit + kenar
+const reTex = (t, r = 1) => { const c = t.clone(); c.repeat.set(r, r); c.needsUpdate = true; return c; };
+const TSTYLE = {
+  sur: { top: new THREE.MeshToonMaterial({ map: reTex(stoneTex), gradientMap: GRAD }), side: new THREE.MeshToonMaterial({ map: reTex(wallTex), gradientMap: GRAD }), ts: [3.2, 2.2], pit: 0x07050a },
+  tahta: { top: new THREE.MeshToonMaterial({ map: reTex(plankTex), gradientMap: GRAD }), side: toon(0x2a2018, 'tside'), ts: [2.6, 2.6], pit: 0x07140f },
+  kar: { top: new THREE.MeshToonMaterial({ map: reTex(snowTex), gradientMap: GRAD }), side: new THREE.MeshToonMaterial({ map: reTex(rockTex), gradientMap: GRAD, color: 0x9aa6c0 }), ts: [3, 3], pit: 0x0a1626 },
+  kaya: { top: new THREE.MeshToonMaterial({ map: reTex(rockTex), gradientMap: GRAD, color: 0xa8b890 }), side: new THREE.MeshToonMaterial({ map: reTex(rockTex), gradientMap: GRAD }), ts: [3, 3], pit: 0x080a06 },
+  bazalt: { top: new THREE.MeshToonMaterial({ map: reTex(basaltTex), gradientMap: GRAD }), side: new THREE.MeshToonMaterial({ map: reTex(basaltTex), gradientMap: GRAD, color: 0x8a7070 }), ts: [3, 3], pit: 0xff4a0a, lava: true },
+};
+function boxUV(geo, ts) {
+  geo.computeVertexNormals();
+  const p = geo.attributes.position, n = geo.attributes.normal, uv = geo.attributes.uv;
+  for (let i = 0; i < p.count; i++) {
+    const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i)), az = Math.abs(n.getZ(i));
+    if (ay >= ax && ay >= az) uv.setXY(i, p.getX(i) / ts, p.getZ(i) / ts);
+    else if (ax >= az) uv.setXY(i, p.getZ(i) / ts, p.getY(i) / ts);
+    else uv.setXY(i, p.getX(i) / ts, p.getY(i) / ts);
+  }
+  uv.needsUpdate = true;
+}
+export function makeTerrain(style, len, h0, h1) {
+  const S = TSTYLE[style];
+  const g = new THREE.Group();
+  const sh = new THREE.Shape();
+  sh.moveTo(0, -0.05); sh.lineTo(len, -0.05); sh.lineTo(len, h1); sh.lineTo(0, h0); sh.closePath();
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: TW, bevelEnabled: false });
+  geo.rotateY(Math.PI / 2);
+  geo.translate(-TW / 2, 0, 0);
+  boxUV(geo, S.ts[0]);
+  const m = new THREE.Mesh(geo, [S.side, S.top]);
+  m.receiveShadow = true;
+  g.add(m);
+  const hAt = u => h0 + (h1 - h0) * (u / len);
+  // kenar süsleri: surda mazgallar, iskelede korkuluk direkleri
+  if (style === 'sur') for (let u = 0.9; u < len - 0.4; u += 3) for (const s of [-1, 1]) g.add(mesh(G.box, S.side, [s * (TW / 2 - 0.3), hAt(u) + 0.3, -u], [0.55, 0.6, 1]));
+  if (style === 'tahta') for (let u = 1; u < len; u += 3) for (const s of [-1, 1]) g.add(mesh(G.cyl, M.deadwood, [s * (TW / 2 - 0.2), hAt(u) + 0.45, -u], [0.09, 0.9, 0.09]));
+  if (style === 'kar') for (let u = 2; u < len; u += 5) g.add(mesh(G.dome, M.white, [(Math.random() < 0.5 ? -1 : 1) * (TW / 2 - 0.4), hAt(u), -u], [0.7, 0.35, 0.9], false));
+  return g;
+}
+// Uçurum: yolun üstüne serilen karanlık boşluk (Yeraltı'nda kor lav). Kenarlarında kırık taşlar.
+const pitMats = {};
+const abyssTex = tex(16, 128, (g, w, h) => { // uçurum duvarı: yukarıda kaya rengi, aşağı indikçe kapkara
+  const r = g.createLinearGradient(0, 0, 0, h);
+  r.addColorStop(0, '#3a302a'); r.addColorStop(0.35, '#120d0c'); r.addColorStop(1, '#000');
+  g.fillStyle = r; g.fillRect(0, 0, w, h);
+});
+const abyssMat = new THREE.MeshBasicMaterial({ map: abyssTex });
+abyssMat.userData.outlineParameters = NO_OUTLINE;
+export function makePit(style, len, h = 0) {
+  const S = TSTYLE[style];
+  const mat = (pitMats[style] ??= new THREE.MeshBasicMaterial({ color: S.pit }));
+  mat.userData.outlineParameters = NO_OUTLINE;
+  const g = new THREE.Group();
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(9.8, len), mat);
+  p.rotation.x = -Math.PI / 2;
+  p.position.set(0, 0.015, -len / 2);
+  g.add(p);
+  if (S.lava) { const s = new THREE.Sprite(M.glow); s.scale.set(9, 3, 1); s.position.set(0, 0.6, -len / 2); g.add(s); }
+  if (h > 0 && !S.lava) { // yükseltideki uçurum: karşı duvar karanlığa iner, dip görünmez
+    const w = new THREE.Mesh(new THREE.PlaneGeometry(TW + 0.2, h), abyssMat);
+    w.position.set(0, h / 2, -len + 0.03);
+    g.add(w);
+    p.material = abyssMat.clone(); p.material.map = null; p.material.color.set(0x000000);
+  }
+  for (const e of [0, -len]) for (let x = -4.4; x <= 4.4; x += rand(0.6, 1.1)) {
+    const r = mesh(new THREE.DodecahedronGeometry(rand(0.18, 0.34)), S.side, [x, 0.04, e + (e ? 0.12 : -0.12)], [1, 0.5, 1], false);
+    r.rotation.set(rand(0, 3), rand(0, 3), 0);
+    g.add(r);
+  }
+  return g;
+}
+
+// ================= Düşmanın üstündeki eylem simgesi: ▼ KAY (mavi) ve ▲ ZIPLA (sarı) =================
+const iconTex = (dir, fill) => tex(128, 128, (g, w) => {
+  g.fillStyle = fill;
+  g.strokeStyle = '#15101c';
+  g.lineWidth = 8;
+  g.beginPath(); g.arc(w / 2, w / 2, 56, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = '#fff';
+  g.strokeStyle = '#15101c';
+  g.lineWidth = 5;
+  for (const k of [0, 1]) { // iki kat ok
+    const y = dir > 0 ? 70 - k * 30 : 42 + k * 30;
+    g.beginPath(); g.moveTo(30, y + dir * 14); g.lineTo(64, y - dir * 14); g.lineTo(98, y + dir * 14); g.lineTo(98, y + dir * 28); g.lineTo(64, y); g.lineTo(30, y + dir * 28); g.closePath();
+    g.fill(); g.stroke();
+  }
+});
+const ICONS = { kay: iconTex(-1, '#1f8fd6'), zipla: iconTex(1, '#f0a818') };
+export function makeActIcon(kind) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: ICONS[kind], depthTest: false }));
+  s.material.userData.outlineParameters = NO_OUTLINE;
+  s.renderOrder = 20;
+  s.scale.setScalar(1);
+  return s;
+}
+
+// ================= IŞIN (SMU'daki lazer): yolun kenarındaki kam totemi üç şeridi kapatan ışın salar =================
+// İnce ışın (göğüs hizası): altından kay ya da üstünden zıpla. Kalın ışın (diz hizası, kalın): yalnız zıplanır.
+// color: bölgenin rengi (kara şimşek, ayaz, yalın ateş...)
+const beamMats = {};
+export function makeIsin(color, thick, side) {
+  const g = new THREE.Group();
+  const m = (beamMats[color] ??= {
+    core: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false }),
+    glow: new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }),
+    halo: new THREE.SpriteMaterial({ map: dotTex, color, blending: THREE.AdditiveBlending, depthWrite: false }),
+  });
+  for (const k in m) m[k].userData.outlineParameters = NO_OUTLINE;
+  const y = thick ? 0.5 : 1.05, r = thick ? 0.36 : 0.1, L = 9.4;
+  // totem: taş dikme, üstünde boynuzlu baş; ağzından ışın çıkar
+  const tx = side * 4.75;
+  const totem = new THREE.Group();
+  totem.add(mesh(G.oct, M.spire, [0, 1.1, 0], [0.32, 2.2, 0.32]), mesh(G.box, M.spire, [0, 2.35, 0], [0.55, 0.45, 0.45]));
+  for (const s of [-1, 1]) { const h = mesh(G.cone, M.bone, [s * 0.32, 2.7, 0], [0.08, 0.5, 0.08]); h.rotation.z = -s * 0.5; totem.add(h); }
+  const eye = new THREE.Sprite(m.halo);
+  eye.scale.setScalar(0.9);
+  eye.position.set(-side * 0.3, y, 0);
+  totem.add(mesh(G.cyl, M.spire, [-side * 0.15, y, 0], [0.22, 0.3, 0.22]), eye);
+  totem.position.x = tx;
+  g.add(totem);
+  const beam = new THREE.Group();
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.45, r * 0.45, L, 8), m.core);
+  const glow = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L, 10), m.glow);
+  for (const c of [core, glow]) { c.rotation.z = Math.PI / 2; c.position.set(tx - side * (L / 2 + 0.2), y, 0); beam.add(c); }
+  const tipS = new THREE.Sprite(m.halo);
+  tipS.scale.setScalar(thick ? 2.4 : 1.3);
+  tipS.position.set(tx - side * (L + 0.2), y, 0);
+  beam.add(tipS);
+  g.add(beam);
+  // durum: 0 = sönük, 0..1 = yükleniyor (titrer), 1 = açık
+  g.userData.set = (k, t) => {
+    beam.visible = k >= 1 || (k > 0 && Math.sin(t * 40) > 0.2);
+    const w = k >= 1 ? 1 + Math.sin(t * 30) * 0.12 : 0.35;
+    core.scale.set(w, 1, w); glow.scale.set(w, 1, w);
+    eye.scale.setScalar(0.5 + k * 0.7);
+  };
+  g.userData.set(0, 0);
+  return g;
+}
+
+// ================= YADA TAŞI: boss'a fırlatılır, Tengri'nin şimşeğini indirir =================
+const yadaMat = new THREE.MeshBasicMaterial({ color: 0xbfe6ff });
+yadaMat.userData.outlineParameters = { thickness: 0.006, color: [0.05, 0.15, 0.35], alpha: 1 };
+export function makeYada() {
+  const g = new THREE.Group();
+  const v = new THREE.Group();
+  v.add(mesh(new THREE.IcosahedronGeometry(0.34, 0), yadaMat, [0, 0, 0], [1, 1.25, 1], false));
+  v.add(glowSprite(0x6ab8ff, 2.4, 0));
+  v.position.y = 1.3;
+  g.add(v);
+  g.userData.anim = t => { v.rotation.y = t * 3; v.position.y = 1.3 + Math.sin(t * 5) * 0.15; };
+  g.userData.stone = v;
+  return g;
+}
+const boltMat = new THREE.MeshBasicMaterial({ color: 0xeaf4ff, transparent: true, depthWrite: false });
+boltMat.userData.outlineParameters = NO_OUTLINE;
+export function makeLightning(h = 26) { // gökten inen kırık çizgi şimşek
+  const g = new THREE.Group();
+  let x = 0, y = h;
+  while (y > 0) {
+    const ny = Math.max(0, y - rand(1.5, 3.5)), nx = x + rand(-1.2, 1.2);
+    const len = Math.hypot(nx - x, ny - y);
+    const s = new THREE.Mesh(G.box, boltMat);
+    s.scale.set(0.16, len, 0.16);
+    s.position.set((x + nx) / 2, (y + ny) / 2, 0);
+    s.rotation.z = Math.atan2(-(nx - x), ny - y) + Math.PI;
+    g.add(s);
+    x = nx; y = ny;
+  }
+  const f = glowSprite(0x9ac8ff, 6, 0.5);
+  g.add(f);
+  return g;
+}
