@@ -15,6 +15,8 @@ import { COSTUMES, applyCostume, wallet } from './costumes.js';
 import { BOYLAR, picks, has, slots } from './boylar.js';
 import { addXP, XP, isUnlocked, UNLOCKS, UNLOCK_NAMES, unlockAll } from './akinci.js';
 import { toast, fillMoney, levelBar, levelUps } from './ui.js';
+import { sfx, music, sting, regionOf } from './sound.js';
+import * as SOUND from './sound.js';
 
 const LANES = [-2.5, 0, 2.5];
 const $ = id => document.getElementById(id);
@@ -111,6 +113,7 @@ function setTheme(t) {
     }
   }
   if (THEMES[t].mood) setMood(THEMES[t].mood);
+  if (!boss && regionOf(t) && state !== 'menu') music(regionOf(t)); // bölge müziği
 }
 const warn = W.makeWarn();
 warn.visible = false;
@@ -338,7 +341,7 @@ let secret = 0, secretTheme = null, deer = null, deerDone = false, trail = null,
 let stageT = 0, godGlow = null, relicPlan = [], rain = null, guideLane = 1, guideT = 0, shield = 0, reviveUsed = false, smashUsed = false, rideTime = 12;
 const cur = () => LEVELS[level].floors?.[floor] ?? LEVELS[level];
 const relicSave = (() => { try { return JSON.parse(localStorage.getItem('oguz-relics')) || {}; } catch { return {}; } })();
-let runBosses = 0; // bu koşuda yenilen boss sayısı (XP için)
+let gallopT = 0, runBosses = 0; // bu koşuda yenilen boss sayısı (XP için)
 let time = 0, runZ = 0, kut = 0, score = 0, combo = 0, kills = 0, nextZ = 0, bossAt = 0, cool = 0, shake = 0, bannerT = 0, overT = 0;
 let debugCam = null, camX = 0, fovKick = 0, slowK = 1, slowT = 0, stopT = 0, ambushT = 0, slashStep = 0, lastSlash = -9, wasSliding = false;
 
@@ -537,6 +540,7 @@ function toMenu() {
   hero.play(pick(MENU_IDLE));
   Object.assign(P, { x: 0, y: 0, lane: 1, ride: 0, dead: false });
   state = 'menu';
+  music('menu');
   for (const id of ['hud', 'over', 'paused', 'bossbar', 'ride', 'map', 'book', 'win', 'tap', 'mash', 'wardrobe', 'loading', 'grid', 'goals', 'powers', 'boyscreen']) $(id).hidden = true;
   wolf.root.visible = deerActor.root.visible = false;
   $('menu').hidden = false;
@@ -711,6 +715,7 @@ function fillPage(i) {
   $('rfolio').textContent = `${i * 2 + 2} · ${cnNum(i * 2 + 2)}`;
 }
 function turnTo(i) {
+  if (!turning && i !== page) sfx('page');
   i = (i + BOOK.length) % BOOK.length;
   if (turning || i === page || $('tome').classList.contains('closed')) return;
   const fwd = i > page, leaf = $('leaf');
@@ -793,6 +798,7 @@ function win() {
   $('winstory').textContent = EPILOG[level] || '';
   for (const id of ['hud', 'bossbar', 'ride']) $(id).hidden = true;
   $('win').hidden = false;
+  sting('win');
   endRunXP();
 }
 
@@ -1041,6 +1047,7 @@ function hurt(o) {
     sparks.emit(P.x, 1.4, P.z, 30, 0x9ad0ff, 5, 3);
     return pop('KALKAN!', { x: P.x, y: 0, z: P.z });
   }
+  sfx('hurt');
   P.hp--; P.inv = has('eymur') ? 2.4 : 1.4; shake = 0.4; combo = has('dodurga') ? Math.floor(combo / 2) : 0;
   comboUi();
   hearts();
@@ -1073,6 +1080,7 @@ function killFoe(o, how) {
     sparks.emit(at.x, 1.4, at.z + 0.4, 25, 0xfff2a0, 5, 3);
     if (how === 'arrow') { pop('KALKAN!', at); return false; }
     o.shieldBroken = true;
+    sfx('shieldbreak');
     o.actor.parts.Shield.visible = false;
     o.actor.play('Idle_Shield_Break', { loop: false, speed: 1.5, then: () => o.actor.play('Sword_Idle') });
     o.hp = 1;
@@ -1087,6 +1095,8 @@ function killFoe(o, how) {
   burst(at.x, 1.3, at.z, 1.6);
   sparks.emit(at.x, 1.3, at.z, 30, how === 'arrow' ? 0xffd23f : 0xff7a3a, 6, 3);
   if (!how) return true;
+  sfx(how === 'arrow' ? 'arrowhit' : 'hit');
+  sfx('death', { gain: 0.7 });
   kills++; combo++;
   score += (how === 'horse' ? 50 : 100) * mult();
   comboUi(true);
@@ -1149,10 +1159,11 @@ function pickup(o) {
   switch (o.kind) {
     case 'kut': {
       const n = pow.kurt > 0 && P.lane === guideLane ? 2 : 1; // kurdun yolundan gidene iki kat
-      kut += n; score += 10 * n * mult(); o.dead = true; return true;
+      kut += n; score += 10 * n * mult(); o.dead = true; sfx('kut', { gap: 0.02 }); return true;
     }
     case 'hoop': hoops++; score += 50 * mult() * (has('begdili') ? 2 : 1); sparks.emit(o.x, o.y, o.z, 20, 0xffd23f, 5, 2); o.mesh.visible = false; return true;
     case 'kimiz':
+      sfx('heal');
       o.dead = true;
       P.hp = Math.min(3, P.hp + (has('yiva') ? 2 : 1));
       hearts();
@@ -1168,10 +1179,12 @@ function pickup(o) {
       wolf.root.position.set(P.x, 0, P.z - 3);
       wolf.play('Gallop', { speed: 1.4, fade: 0 });
       banner('GÖK YELELİ KURT!');
+      sfx('howl');
       sparks.emit(o.x, 1.2, o.z, 40, 0x6ab8ff, 5, 3);
       return true;
     case 'islik': o.dead = true; volley(); return true;
     case 'gumus': case 'yay': {
+      sfx('gold');
       o.dead = true;
       const r = relicSave[level];
       if (r) { if (o.kind === 'yay') r.yay = true; else r.ok[o.ri] = true; saveRelics(); }
@@ -1182,6 +1195,7 @@ function pickup(o) {
       return true;
     }
     case 'kilic': // Tanrı Kılıcı
+      sfx('gold'); sfx('shieldbreak', { gain: 0.6 });
       o.dead = true;
       trail = null;
       pow.kilic = 12;
@@ -1197,6 +1211,7 @@ function pickup(o) {
 
 // Mete'nin ıslıklı oku: ok nereye giderse bütün ordu oraya atar — önündeki her şeye ok yağmuru
 function volley() {
+  sfx('whistle');
   banner('ISLIKLI OK! ORDU, ATEŞ!');
   slowmo(0.5, 0.5);
   rain = { t: 0, n: 0, drops: [] };
@@ -1371,6 +1386,7 @@ function tapAction() {
 function slash(target, atBoss = false) {
   if (cool > 0) return;
   cool = 0.22;
+  sfx('swing');
   swordMode(true);
   P.sword = 1.0;
   slashStep = time - lastSlash < 0.9 ? (slashStep + 1) % SLASHES.length : 0;
@@ -1397,6 +1413,7 @@ function throwArrow() {
   cool = has('yazir') ? 0.2 : 0.3;
   if (weapon !== 'bow') setWeapon('bow'); // Albastı gibi okla vurulan düşmanda yay kendiliğinden ele geçer
   hero.parts.ArrowNock.visible = true;
+  sfx('bowdraw');
   const sp = BOW_SPEED * (has('yazir') ? 1.3 : 1);
   bowStyle = (bowStyle + 1) % 2;
   if (bowStyle) hero.overlay('Bow_Shoot', { speed: sp }); // çekip bırakma (kendi klibimiz)
@@ -1406,6 +1423,7 @@ function throwArrow() {
 
 const v3 = new THREE.Vector3();
 function launchArrow() {
+  sfx('bowrelease');
   hero.parts.ArrowNock.visible = false;
   if (!bowStyle && !flying) timedOver(hero, 'MX_BowRecoil', 0.35);
   hero.bone('hand_r').getWorldPosition(v3);
@@ -1452,6 +1470,7 @@ function burst(x, y, z, size) {
 
 // --- at ---
 function mount() {
+  sfx('neigh');
   P.ride = rideTime; P.slide = 0; P.lock = 0;
   horseAway = null;
   horse.root.visible = true;
@@ -1577,6 +1596,8 @@ const B = {
 };
 
 function startBoss() {
+  sfx('roar');
+  music('boss');
   const kind = cur().boss, def = BOSSES[kind];
   const { main, extra, mount } = getBossActors(kind);
   boss = { kind, def, hp: def.hp, max: def.hp, state: 'enter', t: 0, time: 0, gz: 0, off: 0, x: 0, y: 0, lane: 1, rot: 0, n: 0, hits: 0, actor: main, extra, mount };
@@ -1627,6 +1648,7 @@ function endBoss() {
     for (const e of boss.extra) e.root.visible = false;
   }
   boss = null;
+  if (state === 'run' && regionOf(theme)) music(regionOf(theme));
   bossAt = dist() + 2000;
   holdTarget = 1;
   for (const id of ['bossbar', 'tap', 'mash']) $(id).hidden = true;
@@ -1972,6 +1994,7 @@ function update(dt) {
   if (!flying && P.y <= 0) {
     if (P.vy < -2 && !P.ride && P.lock <= 0 && P.slide <= 0) {
       hero.play('NinjaJump_Land', { loop: false, speed: 2.4, fade: 0.05 });
+      sfx('land');
       P.lock = 0.12;
       dust.emit(P.x, 0.1, P.z, 8, 0xc9a77a, 2, 1);
     }
@@ -1983,6 +2006,7 @@ function update(dt) {
   if (P.slide <= 0) P.roll = P.slideAtk = false;
   if (P.slideAtk) for (const o of objs) if (o.def.foe && o.ready && !o.dying && Math.abs(o.x - P.x) < 1.2 && P.z - o.z > 0 && P.z - o.z < 3) killFoe(o, 'sword');
   if (P.sword > 0 && (P.sword -= dt) <= 0) setWeapon(weapon); // boss'a kılıçla vurduktan sonra eldeki silaha dön
+  if (P.ride && (gallopT -= dt) <= 0) { gallopT = 0.38; sfx('gallop', { gain: 0.6 }); } // dörtnala nal sesi
   if (P.ride && (P.ride -= dt) <= 0) dismount();
   $('ridebar').style.width = (P.ride / rideTime) * 100 + '%';
   cool -= dt;
@@ -2183,6 +2207,7 @@ function gameOver() {
     f.append(row);
   }
   $('over').hidden = false;
+  sting('lose');
   endRunXP();
 }
 
@@ -2206,6 +2231,7 @@ function act(a) {
       P.lock = 0.15;
       const r = Math.random(), jc = r < 0.22 ? 'MX_FrontFlip' : r < 0.36 ? 'MX_TwistFlip' : r < 0.5 && weapon === 'sword' ? 'MX_GS_Jump' : null;
       P.flip = jc ? FLIP_T : 0;
+      sfx(jc ? 'flip' : 'jump');
       if (jc) timed(hero, jc, FLIP_T + 0.08);
       else hero.play('NinjaJump_Start', { loop: false, speed: 2, fade: 0.05 });
     }
@@ -2220,6 +2246,7 @@ function act(a) {
       else hero.play('Slide_Start', { loop: false, speed: 2, fade: 0.05 });
       P.lock = sc ? 0.6 : 0.15;
     }
+    if (P.slide <= 0) sfx('slide');
     P.slide = 0.8;
   } else if (a === 'tap') tapAction();
 }
@@ -2262,6 +2289,7 @@ addEventListener('keydown', e => {
   else if (e.key === 'Enter' && (state === 'menu' || state === 'over')) start();
   else if (e.key === 'Escape' && state === 'cine') cine.skip();
 });
+addEventListener('click', e => { if (e.target.closest('button')) sfx('click'); }, true);
 $('start').onclick = openMap;
 $('endless').onclick = () => locked('endless') || openBoylar('endless', 0);
 $('again').onclick = () => start();
@@ -2272,7 +2300,7 @@ $('boyback').onclick = openMap;
 $('bookbtn').onclick = openBook;
 $('wardbtn').onclick = openWardrobe;
 $('wardback').onclick = closeWardrobe;
-$('enter').onclick = () => playCine(JENERIK, () => playComic(PROLOG_PAGES));
+$('enter').onclick = () => { music('menu'); playCine(JENERIK, () => playComic(PROLOG_PAGES)); };
 $('skip').onclick = () => cine.skip();
 for (const id of ['mapback', 'overmenu', 'pausemenu', 'wmenu']) $(id).onclick = toMenu;
 $('bookback').onclick = closeBook;
@@ -2322,6 +2350,7 @@ renderer.setAnimationLoop(() => {
 
 // test kancası (tarayıcı konsolundan oyunu adım adım sürmek için)
 window.__game = {
+  sfx, music, sting, SOUND,
   unlockAll, addXP, levelUps, toast,
   get warnLane() { return warn.visible ? LANES.indexOf(warn.position.x) : -1; }, get flow() { return flow; }, get time() { return time; }, get dist() { return dist(); }, get level() { return level; }, get mode() { return mode; }, get kills() { return kills; }, get combo() { return combo; }, get score() { return score; }, get kut() { return kut; },
   get boss2() { return boss; }, get flying() { return flying; }, get sect() { return sect; }, startSect, get theme() { return theme; }, setTheme, LEVELS,

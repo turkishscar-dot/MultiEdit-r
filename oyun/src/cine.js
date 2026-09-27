@@ -1,6 +1,7 @@
 // Oyun motoru içinde çekilen ara sahneler: çekim listesi oynatır, alt yazıyı daktilo gibi yazar.
 // Seslendirme: vo/<kimlik>.mp3 varsa çalar (ElevenLabs ile kaydedilir, bkz. SESLENDIRME.md); yoksa sessiz geçer.
 // Her çekim: { text, dur, enter(c), update(c, k, t, dt), exit(c) }
+import { duck, vol } from './sound.js';
 const $ = id => document.getElementById(id);
 
 // Metnin kısa kimliği: metin değişirse dosya adı da değişir (eski kayıt yanlış yerde çalmaz)
@@ -14,6 +15,9 @@ let voice = null;
 function speak(text, shot) {
   voice?.pause();
   const a = (voice = new Audio(`vo/${voId(text)}.mp3`));
+  a.volume = vol.voice;
+  a.onplay = () => duck(true); // seslendirme çalarken müzik kısılır
+  a.onended = a.onpause = a.onerror = () => duck(false);
   a.onloadedmetadata = () => { if (shot === cineRef?.shot) cineRef.dur = Math.max(cineRef.dur, a.duration + 0.6); }; // ses bitmeden çekim geçmesin
   a.play().catch(() => {}); // dosya yoksa sessiz
 }

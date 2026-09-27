@@ -27,6 +27,8 @@ for (let sec = 0; sec < SECONDS; sec += 5) {
   if (last.done) break;
 }
 if (SHOT) await page.evaluate(() => { window.__game.norender = false; window.__game.tick(1 / 60); }), await page.screenshot({ path: `${OUT}/${SHOT}.png` });
+const played = await page.evaluate(() => window.__game.SOUND?.played || {});
+if (opt('sounds', false)) console.log('sesler:', JSON.stringify(played));
 console.log(JSON.stringify({ ...last, wall: Math.round((Date.now() - t0) / 1000) + 's', errors: errors.length }, null, 0));
 for (const e of errors.slice(0, 10)) console.log(e);
 await browser.close();
