@@ -28,10 +28,12 @@ if (which === 'all' || which === 'shop') {
   await shot('carsi-yukselt');
   await ev(`document.querySelector('#stabs [data-tab=gokdemir]').click();`);
   await shot('carsi-gokdemir');
-  await ev(`g.toMenu(); g.openMap(); document.querySelector('.node').click();`);
-  await ev(`for (const id of ['kimiz','kurt','nal']) g.shop.toggleRack(id); document.querySelector('#boyrack').replaceChildren(); document.querySelector('#boyback').click(); document.querySelector('.node').click();`);
+  await ev(`g.toMenu(); g.openMap(); document.querySelector('.mnode').click(); document.querySelector('#mapdetail .big').click();`);
+  await ev(`for (const id of ['kimiz','kurt','nal']) g.shop.toggleRack(id); document.querySelector('#boyrack').replaceChildren(); document.querySelector('#boyback').click(); document.querySelector('.mnode').click(); document.querySelector('#mapdetail .big').click();`);
   await shot('boy-raf');
   await ev(`document.querySelector('#boygo').click(); g.cine.skip();`);
+  await p.waitForTimeout(300);
+  await ev(`if (g.state === 'dialog') document.querySelector('#dskip').click();`);
   console.log('run', await ev(`run(0.5); return { state: g.state, hp: g.P.hp, ride: g.P.ride > 0, kurt: g.pow.kurt > 0, rack: g.shop.rack, inv: g.shop.inv };`));
 }
 if (which === 'all' || which === 'endless') {
