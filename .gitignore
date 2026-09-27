@@ -1,0 +1,6 @@
+oyun/node_modules/
+oyun/dist/
+oyun/src/assets/*.glb
+oyun/OYNA.html
+oyun/video/
+oyun/test-out/

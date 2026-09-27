@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Oğuz Kağan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&text=%E7%AA%81%E5%8E%A5%E5%82%B3%E5%91%A8%E6%9B%B8%E9%9A%8B%E5%94%90%E5%8F%AF%E6%B1%97%E9%9B%B6%E4%B8%80%E4%BA%8C%E4%B8%89%E5%9B%9B%E4%BA%94%E5%85%AD%E4%B8%83%E5%85%AB%E4%B9%9D%E5%8D%81%C2%B7&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Noto+Sans+Old+Turkic&display=swap" rel="stylesheet">
+  <style>
+    :root { --gold: #ffcf3f; --red: #d7263d; --blue: #1f4e9c; --ink: #15101c; --paper: #fffdf5; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #f4c38a; touch-action: none; user-select: none; -webkit-user-select: none; }
+    body { font-family: 'Bangers', Impact, sans-serif; color: var(--ink); letter-spacing: 1px; }
+    canvas { display: block; }
+    [hidden] { display: none !important; }
+    .ink { color: #fff; text-shadow: 3px 3px 0 var(--ink), -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink); }
+
+    /* çizgi roman paneli */
+    .panel { position: relative; background: var(--paper); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); transform: skewX(-10deg); padding: 2px 14px; font-size: 26px; min-width: 110px; text-align: right; }
+    .panel > * { display: inline-block; transform: skewX(10deg); }
+    .tag { position: absolute; left: -6px; top: -16px; background: var(--paper); border: 3px solid var(--ink); padding: 0 8px; font-size: 16px; font-weight: 400; }
+    .tag.red { background: var(--red); color: #fff; }
+
+    #hud { position: fixed; inset: 0; pointer-events: none; }
+    #tl { position: absolute; left: 16px; top: max(22px, calc(env(safe-area-inset-top) + 16px)); }
+    #tr { position: absolute; right: 16px; top: max(22px, calc(env(safe-area-inset-top) + 16px)); display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
+    #esirc { margin-top: 4px; font-size: 26px; color: #fff; }
+    #hearts { margin-top: 10px; font-size: 28px; color: var(--red); text-shadow: 2px 2px 0 var(--ink), -1px -1px 0 var(--ink), 1px -1px 0 var(--ink), -1px 1px 0 var(--ink); letter-spacing: 2px; }
+    .score { padding-right: 46px; min-width: 150px; }
+    #mult { position: absolute; right: -24px; top: 50%; margin-top: -26px; width: 52px; height: 52px; border-radius: 50%; background: var(--paper); border: 4px solid var(--red); box-shadow: 3px 3px 0 var(--ink); font-style: normal; font-size: 20px; line-height: 44px; text-align: center; color: var(--ink); }
+    .kutp { margin-right: 28px; padding-right: 40px; }
+    .vial { position: absolute; right: -10px; top: -10px; width: 22px; height: 44px; border: 3px solid var(--ink); border-radius: 8px; background: linear-gradient(90deg, #ffe680, #ffc21a 60%, #e59a00); box-shadow: 0 0 12px #ffd23f; }
+    .vial::before, .vial::after { content: ''; position: absolute; left: -3px; right: -3px; height: 7px; background: #9aa3ad; border: 3px solid var(--ink); }
+    .vial::before { top: -6px; } .vial::after { bottom: -6px; }
+
+    #combo { position: absolute; left: 18px; bottom: max(100px, calc(env(safe-area-inset-bottom) + 96px)); width: 96px; height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--gold); border: 4px solid var(--ink); clip-path: polygon(50% 0, 61% 14%, 79% 6%, 81% 25%, 100% 30%, 88% 46%, 98% 64%, 80% 70%, 78% 92%, 60% 84%, 48% 100%, 38% 84%, 18% 92%, 18% 72%, 0 64%, 12% 48%, 2% 30%, 20% 26%, 22% 6%, 38% 14%); }
+    #combo b { font-size: 38px; font-weight: 400; line-height: .9; }
+    #combo small { font-size: 16px; }
+    #combo.pop { animation: pop .25s; }
+    #praise { position: absolute; left: 60px; bottom: max(84px, calc(env(safe-area-inset-bottom) + 80px)); background: var(--ink); color: #fff; padding: 2px 12px; font-size: 22px; transform: rotate(-6deg); opacity: 0; transition: opacity .2s; }
+    #praise.show { opacity: 1; }
+    #pause { pointer-events: auto; position: absolute; left: 16px; bottom: max(16px, calc(env(safe-area-inset-bottom) + 12px)); width: 56px; height: 56px; font: 400 24px 'Bangers', sans-serif; background: var(--paper); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); border-radius: 6px; padding: 0; color: var(--ink); }
+
+    #weapon { pointer-events: auto; position: absolute; right: 16px; bottom: max(16px, calc(env(safe-area-inset-bottom) + 12px)); width: 72px; height: 72px; font-size: 36px; line-height: 1; background: var(--gold); border: 4px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); border-radius: 50%; padding: 0; }
+    #weapon.bow { background: #9ad0ff; }
+    #grid { position: fixed; left: 50%; bottom: max(64px, calc(env(safe-area-inset-bottom) + 60px)); transform: translateX(-50%); display: grid; grid-template-columns: repeat(3, 26px); gap: 4px; padding: 6px; background: rgba(21,16,28,.55); border: 3px solid var(--ink); border-radius: 8px; pointer-events: none; }
+    #grid i { height: 20px; border-radius: 4px; background: #5ad17a; border: 2px solid var(--ink); }
+    #grid i.bad { background: #e8283c; }
+    #grid i.me { outline: 3px solid var(--gold); outline-offset: 1px; box-shadow: 0 0 10px var(--gold); }
+    #goals { position: absolute; left: 50%; top: max(14px, calc(env(safe-area-inset-top) + 10px)); transform: translateX(-50%); display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 46%; }
+    #goals div { background: var(--paper); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 0 8px; font-size: 18px; transform: skewX(-8deg); white-space: nowrap; }
+    #goals div.done { background: #7fe08a; }
+    #powers { position: absolute; left: 50%; top: max(52px, calc(env(safe-area-inset-top) + 48px)); transform: translateX(-50%); font-size: 24px; color: var(--gold); white-space: nowrap; }
+    #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 6; }
+    #boyscreen { justify-content: flex-start; overflow-y: auto; padding-top: max(20px, env(safe-area-inset-top)); }
+    #boyscreen h1 { font-size: clamp(40px, 10vw, 72px); }
+    /* boy seçimi: altı Han'ın oğulları altı sütunda; simgeye dokununca gücü aşağıda görünür */
+    #boyslot { display: flex; gap: 8px; align-items: center; justify-content: center; font-size: 20px; color: #fff; margin-bottom: 10px; }
+    #boyslot i { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--ink); background: var(--paper); box-shadow: 2px 2px 0 var(--ink); }
+    #boyslot i.on { background: var(--gold); }
+    #boylist { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px 10px; width: min(760px, 100%); }
+    .col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .col > b { font-weight: 400; font-size: 15px; color: var(--gold); white-space: nowrap; }
+    .col > small { font: 700 10px system-ui, sans-serif; letter-spacing: .12em; color: #d9c7a8; margin-top: -6px; }
+    .boy { width: 100%; font: inherit; background: none; border: none; padding: 0; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .boy svg { width: 54px; height: 54px; border-radius: 50%; background: var(--paper); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 8px; }
+    .boy.on svg { background: var(--gold); box-shadow: 0 0 0 3px var(--red), 3px 3px 0 var(--ink); }
+    .boy.sel svg { outline: 3px dashed #fff; outline-offset: 3px; }
+    .boy span { font-size: 15px; text-shadow: 2px 2px 0 var(--ink); }
+    #boydetail { width: min(560px, 100%); min-height: 96px; margin-top: 14px; background: var(--paper); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 10px 14px; text-align: left; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+    #boydetail h3 { margin: 0; font-weight: 400; font-size: 26px; color: var(--red); }
+    #boydetail p { margin: 0; font: 14px/1.45 system-ui, sans-serif; letter-spacing: 0; grid-column: 1; }
+    #boydetail .ong { font: italic 13px system-ui, sans-serif; letter-spacing: 0; color: #6a5236; }
+    #boydetail button { grid-column: 2; grid-row: 1 / span 3; }
+    @media (max-width: 560px) { #boylist { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    #boyscreen .menu-buttons { margin: 16px 0 24px; }
+    .node .relic { font: 600 12px system-ui, sans-serif; letter-spacing: 0; color: #1f4e9c; min-height: 1em; }
+    #ride { position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px)); left: 50%; transform: translateX(-50%); width: min(260px, 60%); text-align: center; font-size: 18px; pointer-events: none; }
+    #ride div { height: 12px; border: 3px solid var(--ink); background: var(--paper); transform: skewX(-12deg); overflow: hidden; box-shadow: 3px 3px 0 var(--ink); }
+    #ridebar { display: block; height: 100%; width: 100%; background: linear-gradient(#ffe45c, #e59a00); }
+    /* hız çizgileri: atlıyken ve atılırken */
+    #speed { position: fixed; inset: -20%; pointer-events: none; opacity: 0; transition: opacity .25s;
+      background: repeating-conic-gradient(from 0deg at 50% 45%, rgba(255,255,255,.55) 0deg 1.2deg, transparent 1.2deg 9deg);
+      -webkit-mask: radial-gradient(circle at 50% 45%, transparent 32%, #000 70%); mask: radial-gradient(circle at 50% 45%, transparent 32%, #000 70%);
+      animation: spin 6s linear infinite; }
+    @keyframes spin { to { transform: rotate(8deg); } }
+    #mash { position: fixed; left: 50%; top: 68%; transform: translateX(-50%); width: min(320px, 70%); text-align: center; font-size: 26px; color: var(--gold); pointer-events: none; }
+    #mash div { height: 20px; border: 4px solid var(--ink); background: var(--paper); transform: skewX(-12deg); overflow: hidden; box-shadow: 4px 4px 0 var(--ink); }
+    #mashbar { display: block; height: 100%; width: 0; background: linear-gradient(#ffe45c, #ff5a1a); }
+    #bossbar { position: fixed; top: max(118px, calc(env(safe-area-inset-top) + 110px)); left: 50%; transform: translateX(-50%); width: min(420px, calc(100% - 32px)); text-align: center; font-size: 22px; pointer-events: none; }
+    #bossbar div { height: 16px; border: 3px solid var(--ink); background: #3a2020; transform: skewX(-12deg); overflow: hidden; box-shadow: 3px 3px 0 var(--ink); }
+    #bosshp { display: block; height: 100%; width: 100%; background: linear-gradient(#ff6a4a, var(--red)); transition: width .2s; }
+
+    #banner { position: fixed; top: 34%; left: 0; right: 0; text-align: center; font-size: clamp(34px, 9vw, 64px); color: var(--gold); opacity: 0; transform: scale(.6) rotate(-4deg); transition: .25s; pointer-events: none; padding: 0 16px; }
+    #banner.show { opacity: 1; transform: scale(1) rotate(-4deg); }
+    #tap { position: fixed; left: 50%; top: 74%; transform: translate(-50%, -50%); font-size: 44px; color: var(--gold); pointer-events: none; animation: pulse .5s infinite alternate; }
+
+    /* çizgi roman ses efektleri */
+    #pops { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+    .pop { position: absolute; font-size: 46px; color: var(--gold); padding: 18px 26px; background: radial-gradient(circle, #fff 0 30%, #ffe45c 31% 60%, transparent 61%); transform: translate(-50%, -50%) rotate(-10deg); animation: popout .6s forwards; }
+    @keyframes popout { 0% { transform: translate(-50%, -50%) scale(.3) rotate(-10deg); opacity: 1; } 30% { transform: translate(-50%, -50%) scale(1.15) rotate(-6deg); } 100% { transform: translate(-50%, -70%) scale(1) rotate(-6deg); opacity: 0; } }
+    @keyframes pop { 50% { transform: scale(1.25); } }
+    @keyframes pulse { to { transform: translate(-50%, -50%) scale(1.15); } }
+
+    /* ara sahne: sinema şeritleri, anlatı kutusu, başlık kartı */
+    #cine { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+    #cine .bar { position: absolute; left: 0; right: 0; height: 11vh; background: #000; }
+    #cine .bar.top { top: 0; } #cine .bar.bot { bottom: 0; }
+    #fade { position: absolute; inset: 0; background: #000; opacity: 0; }
+    #caption { position: absolute; left: 50%; bottom: calc(11vh + 16px); transform: translateX(-50%) rotate(-1deg); width: min(620px, calc(100% - 32px)); background: var(--gold); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 10px 16px; font: 600 18px/1.45 system-ui, sans-serif; letter-spacing: 0; color: var(--ink); min-height: 1.45em; }
+    #titlecard { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; gap: 10px; opacity: 0; transition: opacity .3s; }
+    #titlecard.slam { animation: slam .45s cubic-bezier(.2,1.6,.4,1); }
+    @keyframes slam { from { transform: scale(2.2) rotate(-6deg); } to { transform: scale(1) rotate(0); } }
+    #titlecard .rune { font-family: 'Noto Sans Old Turkic', serif; font-size: clamp(48px, 13vw, 110px); color: var(--gold); text-shadow: 0 0 24px #ff9a3a; letter-spacing: 8px; }
+    #titlecard .logo { font-size: clamp(40px, 9.5vw, 120px); color: var(--gold); line-height: .9; transform: rotate(-3deg); }
+    #titlecard .sub { font-size: clamp(22px, 6vw, 40px); color: #ff9a5a; }
+    #titlecard .credit { font: 600 clamp(15px, 3.6vw, 22px) system-ui, sans-serif; letter-spacing: 1px; color: #fff; }
+    #comic { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+    #cine.comic .bar, #cine.comic #caption, #cine.comic #titlecard, #cine.comic #fade { visibility: hidden; }
+    #skip { pointer-events: auto; position: absolute; right: 16px; top: calc(11vh + 12px); font: 400 22px 'Bangers', sans-serif; background: var(--paper); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 4px 16px; color: var(--ink); }
+
+    /* bölüm haritası */
+    #map { justify-content: flex-start; overflow-y: auto; padding-top: max(24px, env(safe-area-inset-top)); }
+    #maplist { width: min(720px, 100%); }
+    #maplist h3 { font-weight: 400; font-size: 24px; margin: 18px 0 8px; text-align: left; }
+    .nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .node { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; font: inherit; background: var(--paper); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 8px 12px 10px; color: var(--ink); cursor: pointer; transform: rotate(-1deg); }
+    .node:nth-child(even) { transform: rotate(1deg); }
+    .node .num { font-size: 30px; line-height: 1; color: var(--red); }
+    .node .name { font-size: 20px; }
+    .node .boss { font: 600 13px system-ui, sans-serif; letter-spacing: 0; }
+    .node .stars { color: #e59a00; font-size: 18px; min-height: 1em; }
+    .node.locked { background: #cfc4b0; color: #6b5f52; box-shadow: 2px 2px 0 var(--ink); cursor: default; }
+    .node.locked .num { color: #6b5f52; }
+
+    /* Destan Kitabı */
+    #book { position: fixed; inset: 0; pointer-events: none; }
+    #book > * { pointer-events: auto; }
+    /* Destan Kitabı: Çin iplik ciltli kitap gibi açılır; sol sayfada karakter (3B), sağda yazı; sayfa çevrilir */
+    #tome { position: absolute; left: 50%; top: 50%; width: min(94vw, 1080px, 170vh); height: min(78vh, 620px, 56vw); transform: translate(-50%, -54%); perspective: 2200px; transition: transform 1s cubic-bezier(.55,.05,.35,1); }
+    #tome.closed { transform: translate(-75%, -54%); } /* kapalı kitap ortada durur, açılırken sola kayar */
+    .page { position: absolute; top: 0; bottom: 0; width: 50%; background: #efdcb4 linear-gradient(90deg, rgba(90,60,20,.18), transparent 8%, transparent 92%, rgba(90,60,20,.12)); border: 3px solid #3a2a18; }
+    #lpage { left: 0; background: transparent; border-right: none; box-shadow: 0 0 0 200vmax rgba(24,14,22,.92), inset -18px 0 24px -12px rgba(60,35,10,.55); border-radius: 6px 0 0 6px; }
+    #rpage { right: 0; border-left: 1px solid #b89a6a; border-radius: 0 6px 6px 0; box-shadow: inset 18px 0 24px -12px rgba(60,35,10,.45), 8px 10px 0 rgba(0,0,0,.35); }
+    .folio { position: absolute; bottom: 8px; font: 700 14px serif; color: #6a4a2a; letter-spacing: 2px; }
+    #lfolio { left: 16px; color: #3a2a18; } #rfolio { right: 16px; }
+    #tome.closed #lpage, #tome.closed #rpage { visibility: hidden; }
+    #tome.closed #lpage { visibility: visible; border-color: transparent; background: #18101a; box-shadow: 0 0 0 200vmax #18101a; }
+    #tome.closing #lpage { background: #efdcb4; } /* kapanırken sol sayfa kâğıt olarak kalır, kapak üstüne kapanır */
+    #leaf { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; transform-origin: left center; transform-style: preserve-3d; pointer-events: none; display: none; }
+    #leaf > div { width: 100%; left: 0; backface-visibility: hidden; overflow: hidden; }
+    #leaf .back { transform: rotateY(180deg); }
+    #leaf.turn { display: block; animation: turn .75s cubic-bezier(.5,.05,.4,1) forwards; }
+    #leaf.turnback { display: block; animation: turn .75s cubic-bezier(.5,.05,.4,1) reverse forwards; }
+    @keyframes turn { from { transform: rotateY(0); } to { transform: rotateY(-180deg); } }
+    #cover { position: absolute; right: 0; top: -1%; bottom: -1%; width: 51%; transform-origin: left center; transform-style: preserve-3d; transition: transform 1s cubic-bezier(.55,.05,.35,1); cursor: pointer; }
+    #tome.open #cover { transform: rotateY(-180deg); pointer-events: none; }
+    #cover > div { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 4px 8px 8px 4px; }
+    #cover .front { background: #1d3552 radial-gradient(circle at 30% 20%, rgba(255,255,255,.08), transparent 60%); border: 3px solid #0c1624; box-shadow: 10px 12px 0 rgba(0,0,0,.4); overflow: hidden; }
+    #cover .back { transform: rotateY(180deg); background: #e6d2a6; border: 3px solid #3a2a18; transition: opacity .35s .95s; }
+    #tome.open #cover .back { opacity: 0; }
+    .stitch { position: absolute; left: 0; top: 0; bottom: 0; width: 38px; background: #152840; border-right: 2px solid #0c1624; display: flex; flex-direction: column; justify-content: space-around; align-items: center; }
+    .stitch i { width: 38px; height: 4px; background: #e8dcc0; box-shadow: 0 0 0 1px #0c1624; }
+    .slip { position: absolute; left: 58px; top: 7%; width: 64px; height: 62%; background: #f4ecd8; border: 2px solid #6a5a3a; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 10px; }
+    .slip b { writing-mode: vertical-rl; font: 700 44px 'Noto Serif TC', 'Songti SC', 'SimSun', 'Microsoft YaHei', serif; color: #15101c; letter-spacing: 8px; }
+    .slip small { writing-mode: vertical-rl; font: 13px 'Noto Serif TC', 'SimSun', serif; color: #6a5a3a; letter-spacing: 3px; }
+    .seal { position: absolute; left: 132px; top: 9%; width: 58px; height: 58px; border: 3px solid #b3202a; color: #b3202a; font: 700 22px 'Noto Serif TC', 'SimSun', serif; display: grid; place-items: center; writing-mode: vertical-rl; transform: rotate(-6deg); background: rgba(179,32,42,.08); }
+    .ctr { position: absolute; left: 58px; right: 20px; bottom: 16%; text-align: right; font-size: clamp(26px, 4vw, 44px); color: var(--gold); }
+    .ctr small { display: block; font: 13px/1.4 system-ui, sans-serif; letter-spacing: 0; color: #cfd8e8; text-shadow: none; margin-top: 6px; }
+    #cover .tap { position: absolute; right: 20px; bottom: 5%; font-size: 18px; color: #fff; animation: pulse .6s infinite alternate; }
+    .navbtn { position: absolute; top: 50%; width: 48px; height: 64px; margin-top: -32px; font: 400 30px 'Bangers', sans-serif; background: var(--paper); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); color: var(--ink); }
+    #bprev { left: max(6px, calc(50% - min(47vw, 540px, 85vh) - 56px)); } #bnext { right: max(6px, calc(50% - min(47vw, 540px, 85vh) - 56px)); }
+    #book.closed .navbtn, #book.closed #chips { display: none; }
+    #chips { position: absolute; bottom: max(8px, env(safe-area-inset-bottom)); left: 16px; right: 16px; display: flex; gap: 6px; overflow-x: auto; justify-content: safe center; padding-bottom: 4px; scrollbar-width: none; }
+    #chips::-webkit-scrollbar { display: none; }
+    .chip { flex: none; font: 400 15px 'Bangers', sans-serif; background: var(--paper); border: 2px solid var(--ink); padding: 2px 10px; color: var(--ink); }
+    .chip.on { background: var(--gold); }
+    .chip.locked { background: #cfc4b0; color: #6b5f52; }
+    #bookback { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 16px; width: 44px; height: 40px; font: 400 22px 'Bangers', sans-serif; background: var(--paper); border: 3px solid var(--ink); color: var(--ink); }
+    #bcard { position: absolute; inset: 22px 26px 34px 30px; overflow-y: auto; }
+    #bname { margin: 0; font-weight: 400; font-size: clamp(28px, 3.6vw, 44px); color: #9a1a22; line-height: 1; }
+    #btitle { font-size: 19px; margin: 4px 0 10px; color: #3a2a18; border-bottom: 2px solid #b89a6a; padding-bottom: 6px; }
+    #btext { font: 15px/1.65 Georgia, 'Times New Roman', serif; letter-spacing: 0; margin: 0; color: #2a1e12; }
+    #leaf #bcard { position: absolute; }
+    #block { display: inline-block; margin-top: 12px; background: var(--ink); color: #fff; padding: 2px 10px; font-size: 18px; }
+    @media (max-aspect-ratio: 1/1) {
+      #tome { width: 92vw; height: 82vh; transform: translate(-50%, -52%); }
+      .page, #leaf, #cover { width: 100%; }
+      #lpage { height: 48%; bottom: auto; border-radius: 6px 6px 0 0; border-right: 3px solid #3a2a18; }
+      #rpage { top: 48%; border-radius: 0 0 6px 6px; }
+      #leaf { top: 48%; }
+      #cover { left: 0; }
+      #tome.open #cover { transform: rotateX(180deg); transform-origin: center top; }
+      #tome.closed { transform: translate(-50%, -52%); }
+      .navbtn { top: 30%; }
+    }
+
+    /* kostümler */
+    #wardrobe { position: fixed; inset: 0; pointer-events: none; }
+    #wardrobe > * { pointer-events: auto; }
+    #wtop { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 16px; display: flex; gap: 16px; align-items: baseline; font-size: 30px; }
+    #wbank { color: var(--gold); font-size: 26px; }
+    #wardback { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 16px; width: 44px; height: 40px; font: 400 22px 'Bangers', sans-serif; background: var(--paper); border: 3px solid var(--ink); color: var(--ink); }
+    #wlist { position: absolute; right: 16px; top: 64px; bottom: 44px; width: min(420px, 44%); overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 8px 4px 4px; }
+    .wcard { background: var(--paper); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 10px 14px; cursor: pointer; }
+    .wcard.on { background: #fff4c8; box-shadow: 4px 4px 0 var(--red); }
+    .wcard h3 { margin: 0; font-weight: 400; font-size: 26px; color: var(--red); }
+    .wtitle { font-size: 16px; margin-bottom: 4px; }
+    .wcard p { font: 14px/1.5 system-ui, sans-serif; letter-spacing: 0; margin: 0 0 8px; }
+    .wcard button:disabled { opacity: .55; }
+    #wnote { position: absolute; left: 16px; right: 16px; bottom: 6px; margin: 0; font: 13px system-ui, sans-serif; letter-spacing: 0; text-align: center; }
+    @media (max-aspect-ratio: 1/1) { #wlist { left: 16px; right: 16px; width: auto; top: 56%; } }
+
+    .menu-buttons { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+    button.small { font: inherit; font-size: 22px; letter-spacing: 1px; color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 10px; padding: 5px 22px; box-shadow: 0 4px 0 var(--ink); cursor: pointer; }
+    #winstars { font-size: 56px; color: var(--gold); letter-spacing: 6px; }
+    #winstory { max-width: 460px; }
+
+    .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; background: radial-gradient(circle, rgba(20,10,30,.25), rgba(20,10,30,.75)); }
+    .screen h1 { margin: 0; font-size: clamp(56px, 16vw, 120px); color: var(--gold); font-weight: 400; line-height: .95; transform: rotate(-3deg); }
+    .screen h2 { margin: 6px 0 16px; font-size: clamp(22px, 6vw, 36px); font-weight: 400; color: #ff9a5a; }
+    .screen p { font-family: system-ui, sans-serif; font-size: 16px; line-height: 1.6; max-width: 420px; letter-spacing: 0; }
+    .kilim { width: min(360px, 80%); height: 14px; margin: 12px 0; background: repeating-linear-gradient(45deg, var(--red) 0 10px, var(--gold) 10px 14px, var(--blue) 14px 24px, var(--gold) 24px 28px); border: 2px solid var(--ink); }
+    .loadbar { width: min(300px, 70%); height: 18px; border: 3px solid var(--ink); background: var(--paper); margin: 18px 0 8px; }
+    .loadbar i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .2s; }
+    button.big { font: inherit; font-size: 34px; letter-spacing: 2px; color: var(--ink); background: var(--gold); border: 4px solid var(--ink); border-radius: 14px; padding: 8px 40px; box-shadow: 0 6px 0 var(--ink); cursor: pointer; }
+    button:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+    button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <div id="hud" hidden>
+    <div id="tl">
+      <div class="panel"><b class="tag">METRE</b><span id="dist">0</span></div>
+      <div id="hearts"></div>
+      <div id="esirc" class="ink" hidden>⛓ 0</div>
+    </div>
+    <div id="tr">
+      <div class="panel score"><b class="tag red">SKOR</b><span id="score">0</span><em id="mult">x1.0</em></div>
+      <div class="panel kutp"><span id="kut">0</span><i class="vial"></i></div>
+    </div>
+    <div id="goals" hidden></div>
+    <div id="powers" class="ink" hidden></div>
+    <div id="combo" hidden><b id="combon">1</b><small>COMBO</small></div>
+    <div id="praise"></div>
+    <button id="pause" aria-label="Duraklat">❚❚</button>
+    <button id="weapon" aria-label="Silah değiştir (Q)">⚔</button>
+  </div>
+  <div id="speed"></div>
+  <div id="grid" hidden><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div id="ride" class="ink" hidden>AT<div><i id="ridebar"></i></div></div>
+  <div id="bossbar" class="ink" hidden><span id="bossname">TEPEGÖZ</span><div><i id="bosshp"></i></div></div>
+  <div id="mash" class="ink" hidden>BİTİR!<div><i id="mashbar"></i></div></div>
+  <div id="banner" class="ink"></div>
+  <div id="tap" class="ink" hidden>DOKUN! VUR!</div>
+  <div id="pops"></div>
+  <div id="flash"></div>
+  <div id="boyscreen" class="screen" hidden>
+    <h1 class="ink">BOYUNU SEÇ</h1>
+    <div id="boyslot"></div>
+    <div id="boylist"></div>
+    <div id="boydetail"></div>
+    <div class="menu-buttons">
+      <button id="boygo" class="big">AKINA BAŞLA ▸</button>
+      <button id="boyback" class="small">◂ HARİTA</button>
+    </div>
+  </div>
+
+  <div id="loading" class="screen">
+    <h1 class="ink">OĞUZ KAĞAN</h1>
+    <div class="loadbar"><i id="loadbar"></i></div>
+    <p id="loadtext" class="ink">Yükleniyor…</p>
+    <button id="enter" class="big" hidden>DOKUN VE BAŞLA</button>
+  </div>
+
+  <div id="menu" class="screen" hidden>
+    <h1 class="ink">OĞUZ KAĞAN</h1>
+    <h2 class="ink">Ölümsüz Akıncı</h2>
+    <div class="kilim"></div>
+    <p class="ink">Kaydır: şerit değiştir · yukarı zıpla · aşağı kay<br>Dokun / sol tık: saldır · ⚔/🏹 düğmesi ya da Q: kılıç ↔ yay<br>Klavye: ← → ↑ ↓ ve Boşluk</p>
+    <div class="menu-buttons">
+      <button id="start" class="big">BAŞLA</button>
+      <button id="endless" class="small">SONSUZ AKIN</button>
+      <button id="wardbtn" class="small">KOSTÜMLER</button>
+      <button class="small tiltbtn" hidden>EĞİMLE YÖNLENDİR: KAPALI</button>
+      <button id="bookbtn" class="small">DESTAN KİTABI</button>
+      <button id="storybtn" class="small">HİKÂYE</button>
+    </div>
+  </div>
+
+  <div id="cine" hidden>
+    <div id="fade"></div>
+    <div class="bar top"></div><div class="bar bot"></div>
+    <div id="titlecard"></div>
+    <div id="caption" hidden></div>
+    <button id="skip">GEÇ ▸</button>
+  </div>
+
+  <div id="map" class="screen" hidden>
+    <h1 class="ink">AKIN HARİTASI</h1>
+    <div id="maplist"></div>
+    <p><button id="mapback" class="small">◂ MENÜ</button></p>
+  </div>
+
+  <div id="book" hidden>
+    <div id="tome" class="closed">
+      <div id="lpage" class="page"><span class="folio" id="lfolio"></span></div>
+      <div id="rpage" class="page">
+        <div id="bcard"><h2 id="bname"></h2><div id="btitle"></div><p id="btext"></p><div id="block" hidden></div></div>
+        <span class="folio" id="rfolio"></span>
+      </div>
+      <div id="leaf"><div class="front page"></div><div class="back page"></div></div>
+      <div id="cover">
+        <div class="front">
+          <div class="stitch"><i></i><i></i><i></i><i></i></div>
+          <div class="slip"><b>突厥傳</b><small>周書 · 隋書 · 唐書</small></div>
+          <div class="seal">可汗</div>
+          <div class="ctr ink">DESTAN KİTABI<small>Türklerin ilk yazılı hikâyesi Çin yıllıklarının "Türkler Bölümü"nde başlar</small></div>
+          <div class="tap ink">AÇMAK İÇİN DOKUN</div>
+        </div>
+        <div class="back"></div>
+      </div>
+    </div>
+    <button id="bprev" class="navbtn" aria-label="Önceki sayfa">◂</button>
+    <button id="bnext" class="navbtn" aria-label="Sonraki sayfa">▸</button>
+    <button id="bookback" aria-label="Kitabı kapat">✕</button>
+    <div id="chips"></div>
+  </div>
+
+  <div id="wardrobe" hidden>
+    <div id="wtop"><b class="ink">KOSTÜMLER</b><span id="wbank" class="ink">◆ 0</span></div>
+    <button id="wardback" aria-label="Kapat">✕</button>
+    <div id="wlist"></div>
+    <p id="wnote" class="ink">Şimdilik koşularda topladığın kut ile açılır. İleride mağazadan da satın alınabilecek.</p>
+  </div>
+
+  <div id="win" class="screen" hidden>
+    <h1 class="ink">BÖLÜM TAMAM!</h1>
+    <div id="winstars"></div>
+    <p id="winstats" class="ink"></p>
+    <div class="kilim"></div>
+    <p id="winstory" class="ink"></p>
+    <div class="menu-buttons">
+      <button id="wmap" class="big">HARİTA</button>
+      <button id="wagain" class="small">TEKRAR OYNA</button>
+      <button id="wmenu" class="small">MENÜ</button>
+    </div>
+  </div>
+
+  <div id="paused" class="screen" hidden>
+    <h1 class="ink">MOLA</h1>
+    <div class="kilim"></div>
+    <div class="menu-buttons">
+      <button id="resume" class="big">DEVAM</button>
+      <button id="pausemenu" class="small">MENÜ</button>
+      <button class="small tiltbtn" hidden>EĞİMLE YÖNLENDİR: KAPALI</button>
+    </div>
+  </div>
+
+  <div id="over" class="screen" hidden>
+    <h1 class="ink">YENİLDİN!</h1>
+    <div class="kilim"></div>
+    <p id="final" class="ink"></p>
+    <div class="menu-buttons">
+      <button id="again" class="big">TEKRAR</button>
+      <button id="overmenu" class="small">MENÜ</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
