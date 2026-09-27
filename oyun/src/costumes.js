@@ -71,14 +71,18 @@ export const COSTUMES = [
 const PARTS = ['Bork', 'Kavuk', 'Sarik', 'Taj', 'Collar', 'AltinBork', 'GoldPlates', 'Antlers', 'EagleHat', 'Feathers', 'BearHat',
   'ClawL', 'ClawR', 'YakutHat', 'Headband', 'Kalpak', 'HunCap', 'KulTiginTac', 'Tug'];
 
+// id: kostüm kimliği ya da doğrudan bir görünüş nesnesi { parts, colors, beard } (Yiğit Kartları)
 export function applyCostume(actor, id) {
-  const c = COSTUMES.find(x => x.id === id) || COSTUMES[0];
+  const c = typeof id === 'object' && id ? id : COSTUMES.find(x => x.id === id) || COSTUMES[0];
   for (const p of PARTS) if (actor.parts[p]) actor.parts[p].visible = c.parts.includes(p);
   actor.root.traverse(o => {
     if (!o.isMesh) return;
     if (o.name === 'Hair_Beard') o.visible = c.beard !== false;
-    const col = c.colors[o.material.name];
-    if (col != null) o.material.color.setHex(col); // malzemeler kahraman ve önizleme arasında ortak
+    const m = o.material;
+    m.userData.base ??= m.color?.getHex(); // görünüşte olmayan renk özgün hâline döner
+    const col = c.colors[m.name];
+    if (col != null) m.color.setHex(col); // malzemeler kahraman ve önizleme arasında ortak
+    else if (m.userData.base != null && m.color) m.color.setHex(m.userData.base);
   });
 }
 

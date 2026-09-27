@@ -24,6 +24,9 @@ import * as TORE from './tore.js';
 import { rec, recMax, recSet } from './tore.js';
 import { buildNodes, drawMap, isOpen, nextMain, migrate, medalsFor, thresholds, store as hStore, saveStore, COND_TEXT, REGIONS } from './harita.js';
 import { level as akinciLevel } from './akinci.js';
+import * as Y from './yigit.js';
+import * as KO from './koleksiyon.js';
+import * as EK from './ekranlar.js';
 
 const LANES = [-2.5, 0, 2.5];
 const $ = id => document.getElementById(id);
@@ -404,7 +407,7 @@ loadAssets(p => ($('loadbar').style.width = p * 100 + '%')).then(a => {
   hero = new Actor(A, 'oguz');
   hero.root.rotation.y = Math.PI; // -z yönüne koşar
   scene.add(hero.root);
-  applyCostume(hero, wallet.worn);
+  dressHero();
   swordMode(false);
   hero.play('Idle_Loop');
   for (let i = 0; i < 10; i++) {
@@ -440,6 +443,7 @@ loadAssets(p => ($('loadbar').style.width = p * 100 + '%')).then(a => {
   deerActor.root.visible = false;
   scene.add(deerActor.root);
   book = new Book(A);
+  EK.init({ setState: s => { state = s; }, book, toMenu, isUnlocked, locked, toast, sfx, levelUps, addXP, levelBar, dressHero, onCards, missingArrow });
   ctx = makeCtx();
   cine = new Cine(ctx);
   comic = new Comic(renderer.domElement);
@@ -574,12 +578,17 @@ function toMenu() {
   nodeRun = null;
   hideTip();
   music('menu');
-  for (const id of ['hud', 'over', 'paused', 'bossbar', 'ride', 'map', 'book', 'win', 'tap', 'mash', 'wardrobe', 'loading', 'grid', 'goals', 'powers', 'boyscreen', 'carsi', 'revive', 'result', 'tore']) $(id).hidden = true;
+  for (const id of ['hud', 'over', 'paused', 'bossbar', 'ride', 'map', 'book', 'win', 'tap', 'mash', 'wardrobe', 'loading', 'grid', 'goals', 'powers', 'boyscreen', 'carsi', 'revive', 'result', 'tore', 'yigit', 'kademe', 'sefer', 'koleksiyon']) $(id).hidden = true;
   wolf.root.visible = deerActor.root.visible = false;
   $('menu').hidden = false;
   menuLocks();
   levelBar();
   toreDot();
+  dressHero();
+  EK.checkCollections();
+  $('kbadge').textContent = EK.tierBadge();
+  $('mtitle').textContent = KO.titleOf() ? `“${KO.titleOf()}”` : '';
+  $('seferbtn').querySelector('.dot').hidden = !EK.seferReady();
 }
 
 // Açılmamış menü düğmeleri kilitli görünür; dokununca kaçıncı seviyede açılacağını söyler
@@ -593,6 +602,24 @@ function locked(key) {
 }
 
 const progress = (() => { try { return JSON.parse(localStorage.getItem('oguz-levels')) || {}; } catch { return {}; } })();
+
+// Koşan yiğit: liderin görünüşü; Canavarlar koleksiyonu tamamsa altın çerçeveli Tanrı Kılıcı
+let goldSwordMat = null;
+function dressHero() {
+  applyCostume(hero, Y.cardLook(Y.leader()));
+  if (KO.goldSword()) hero.parts.SwordHand.traverse(o => { if (o.isMesh) { goldSwordMat ??= Object.assign(o.material.clone(), { color: new THREE.Color(0xffd23f), emissive: new THREE.Color(0x5a3a00) }); o.material = goldSwordMat; } });
+}
+function onCards() { recMax('costumes', Y.ownedCount()); EK.checkCollections(); }
+// Seferden gelen eksik gümüş ok
+function missingArrow() {
+  for (const l of [1, 2, 3, 4, 5, 6, 7]) {
+    const r = (relicSave[l] ??= { yay: false, ok: [false, false, false] }), i = r.ok.indexOf(false);
+    if (i >= 0) { r.ok[i] = true; saveRelics(); rec('gumus'); return `${l}. bölümün gümüş oku`; }
+  }
+  return null;
+}
+Y.setHelpersCheck(() => isUnlocked('ordu'));
+KO.setRelicSource(() => relicSave);
 
 // TÖRE DEFTERİ: günlük görevler, başarımlar, giriş armağanı
 TORE.onUnlock((a, t) => toast('🏆', `${a.name} ${['I', 'II', 'III'][t - 1]}`, a.desc.replace('{n}', (a.tiers[t - 1] / a.div).toLocaleString('tr-TR')) + ' · ödülünü Töre Defteri\'nden al'));
@@ -676,14 +703,15 @@ function openMap() {
   const openOnes = [...document.querySelectorAll('.mnode:not(.locked)')]; // son açık düğüme kaydır
   openOnes.at(-1)?.scrollIntoView({ block: 'center' });
 }
+const reqCard = n => Y.CARDS.find(c => c.costume === n.req?.costume || c.id === n.req?.card);
 function reqOk(n) {
   if (n.req?.boy && !picks.list.includes(n.req.boy)) return false;
-  if (n.req?.costume && wallet.worn !== n.req.costume) return false;
+  if (n.req?.costume && Y.leader() !== reqCard(n)) return false;
   return true;
 }
 function reqText(n) {
   if (n.req?.boy) return `Bu görev ${BOYLAR.find(b => b.id === n.req.boy).name} boyundan bir yiğit ister.`;
-  if (n.req?.costume) return `Bu görev ${COSTUMES.find(c => c.id === n.req.costume).name} kostümünü ister.`;
+  if (n.req?.costume) return `Bu görevde lider ${reqCard(n).name} olmalı.`;
   return '';
 }
 function showNode(n, open) {
@@ -705,9 +733,9 @@ function showNode(n, open) {
   const close = el('button', 'small', 'KAPAT');
   close.onclick = () => { box.hidden = true; };
   row.append(go, close);
-  if (n.req?.costume && wallet.worn !== n.req.costume) {
-    const w = el('button', 'small', wallet.owned.includes(n.req.costume) ? 'KOSTÜMÜ GİY' : 'KOSTÜMLER ▸');
-    w.onclick = () => { if (wallet.owned.includes(n.req.costume)) { wallet.wear(n.req.costume); applyCostume(hero, n.req.costume); showNode(n, open); } else openWardrobe(); };
+  if (n.req?.costume && Y.leader() !== reqCard(n)) {
+    const c = reqCard(n), w = el('button', 'small', Y.owned(c.id) ? 'LİDER YAP' : 'YİĞİTLER ▸');
+    w.onclick = () => { if (Y.owned(c.id)) { Y.setLeader(c.id); dressHero(); showNode(n, open); } else EK.openYigit(c.id); };
     row.append(w);
   }
   kids.push(row);
@@ -715,7 +743,7 @@ function showNode(n, open) {
   box.hidden = false;
 }
 function playNode(n) {
-  if (n.req?.costume && wallet.worn !== n.req.costume) return toast('👘', 'Kostüm şartı', reqText(n));
+  if (n.req?.costume && !reqOk(n)) return toast('🃏', 'Yiğit şartı', reqText(n));
   nodeRun = n;
   $('mapdetail').hidden = true;
   openBoylar('level', n.lv);
@@ -731,7 +759,7 @@ function nodeDone() {
   const sc = Math.floor(score), m = medalsFor(n, sc), was = st.m, first = !was, newBest = sc > st.best && was > 0;
   st.m = Math.max(was, m); st.best = Math.max(st.best, sc);
   saveStore();
-  const runKut = Math.round(kut * (has('alkaevli') ? 1.25 : 1));
+  const runKut = Math.round(kut * (has('alkaevli') ? 1.25 : 1) * (1 + bonus.kutPct));
   wallet.deposit(runKut);
   let xp = 0, gd = runGold, bonusKut = 0;
   for (let k = was; k < m; k++) xp += MEDAL_XP[k];
@@ -978,7 +1006,7 @@ function win() {
   const r = relicSave[level];
   const full = r && r.yay && r.ok.every(Boolean) && !r.paid;
   if (full) { r.paid = true; kut += 200; saveRelics(); } // Bozok-Üçok: rüyadaki yay ve üç ok tamam
-  wallet.deposit(Math.round(kut * (has('alkaevli') ? 1.25 : 1)));
+  wallet.deposit(Math.round(kut * (has('alkaevli') ? 1.25 : 1) * (1 + bonus.kutPct)));
   const firstThree = stars === 3 && (progress[level] || 0) < 3;
   if (firstThree) wallet.addGD(3); // bir bölümü ilk kez 3 yıldızla bitirme ödülü
   progress[level] = Math.max(progress[level] || 0, stars);
@@ -1072,6 +1100,7 @@ function start(m = mode, lv = level, skipIntro = false) {
   $('hud').hidden = false;
   hearts();
   comboUi();
+  $('armym').textContent = '×' + Y.armyMult(isUnlocked('ordu')).toFixed(1); // Ordu gücü (SMU Team Power)
   if (has('alayuntli') && !flying) mount(); // Ala-yuntlı: akına at sırtında başla
   useBoosts();
   if (nodeRun?.floor > 0) { floor = nodeRun.floor - 1; nextFloor(); } // haritadan sonraki bir kısım: o kısmın girişiyle başlar
@@ -2487,8 +2516,9 @@ function update(dt) {
   time += dt;
   if (!hero) return;
   if (state === 'cine') { ctx.update(dt); cine.update(dt); sparks.update(dt); dust.update(dt); return; }
-  if (state === 'book' || state === 'wardrobe') { book.update(dt); return; }
-  if (state === 'menu' || state === 'map' || state === 'gate' || state === 'win' || state === 'boylar' || state === 'carsi' || state === 'result' || state === 'tore') { hero.update(dt); return; }
+  if (state === 'book' || state === 'wardrobe' || state === 'yigit') { book.update(dt); return; }
+  if (state === 'sefer' && Math.floor(time) !== Math.floor(time - dt)) EK.drawSefer(); // süreler akar
+  if (state === 'menu' || state === 'map' || state === 'gate' || state === 'win' || state === 'boylar' || state === 'carsi' || state === 'result' || state === 'tore' || state === 'kademe' || state === 'sefer') { hero.update(dt); return; }
   if (state === 'dying') {
     hero.update(dt);
     if ((overT -= dt) <= 0) { if (!noRevive && continues < 3) showRevive(); else gameOver(); }
@@ -2800,7 +2830,7 @@ function gameOver() {
   hideTip();
   $('over').querySelector('h1').textContent = overTitle || 'YENİLDİN!';
   overTitle = null;
-  wallet.deposit(kut);
+  wallet.deposit(Math.round(kut * (1 + bonus.kutPct)));
   let best = Math.floor(score);
   try { best = Math.max(best, +localStorage.getItem('oguz-best') || 0); localStorage.setItem('oguz-best', best); } catch {}
   const f = $('final');
@@ -2899,6 +2929,16 @@ addEventListener('click', e => { if (e.target.closest('button')) sfx('click'); }
 $('start').onclick = openMap;
 $('carsibtn').onclick = () => locked('carsi') || openShop();
 $('torebtn').onclick = openTore;
+$('yigitbtn').onclick = () => EK.openYigit();
+$('yback').onclick = EK.closeYigit;
+$('ydrum').onclick = EK.drumRoll;
+$('ybuydrum').onclick = EK.buyDrum;
+$('seferbtn').onclick = () => locked('seferler') || EK.openSefer();
+$('seferback').onclick = toMenu;
+$('kbadge').onclick = EK.openKademe;
+$('kademeback').onclick = toMenu;
+$('kolbtn').onclick = EK.openKoleksiyon;
+$('kolback').onclick = () => { $('koleksiyon').hidden = true; };
 $('toreback').onclick = toMenu;
 for (const b of document.querySelectorAll('#ttabs button')) b.onclick = () => { toreTab = b.dataset.tab; drawTore(); };
 $('carsiback').onclick = toMenu;
@@ -2937,7 +2977,7 @@ let baseFov = 55;
 function resize() {
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
-  if (state === 'book') requestAnimationFrame(bookResize); else book?.resize(innerWidth, innerHeight);
+  if (state === 'book') requestAnimationFrame(bookResize); else if (state === 'yigit') EK.resizeYigit(); else book?.resize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
   baseFov = camera.aspect < 1 ? 72 : 55; // dikey telefonda 3 şerit sığsın
   camera.fov = baseFov;
@@ -2955,7 +2995,7 @@ function frame(realDt) {
   else if (slowT > 0) { slowT -= realDt; k = slowK; }
   update(realDt * k);
   view(realDt * k, realDt);
-  const showcase = state === 'book' || state === 'wardrobe';
+  const showcase = state === 'book' || state === 'wardrobe' || state === 'yigit';
   active.scene = showcase ? book.scene : scene;
   active.camera = showcase ? book.camera : camera;
   if (!norender) composer.render();
@@ -2970,6 +3010,7 @@ renderer.setAnimationLoop(() => {
 
 // test kancası (tarayıcı konsolundan oyunu adım adım sürmek için)
 window.__game = {
+  Y, EK, KO, dressHero,
   TORE, openTore, get nodes() { return nodes(); }, playNode, hStore, get nodeRun() { return nodeRun; }, set nodeRun(v) { nodeRun = v; },
   get zone() { return zone; }, get loop() { return loop; }, nextZone, shop, openShop, showRevive, doRevive, get continues() { return continues; },
   startBoss, get objs2() { return objs; },

@@ -259,6 +259,7 @@
     .tile .dot { position: absolute; right: -5px; top: -5px; width: 14px; height: 14px; border-radius: 50%; background: var(--red); border: 2px solid var(--ink); }
     #mside .tiltbtn { grid-column: 1 / -1; font-size: 13px; padding: 4px 6px; }
     @media (max-aspect-ratio: 1/1) {
+      #mtop #mleft { width: min(300px, 80%); align-items: center; }
       #mside { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); left: 50%; right: auto; transform: translateX(-50%); grid-template-columns: repeat(4, 64px); }
       #mtop { flex-direction: column; align-items: center; }
       #mtop #lvbar { width: min(300px, 80%); text-align: center; }
@@ -400,6 +401,101 @@
     #tlist > .big { margin: 12px auto 0; }
     #toreback { margin: 12px 0 16px; flex: none; }
     @media (max-width: 520px) { .tcal { grid-template-columns: repeat(4, 1fr); } }
+
+    /* menü üst: seviye, kademe rozeti, unvan */
+    #mleft { display: flex; flex-direction: column; gap: 4px; width: min(260px, 50%); }
+    #mtop #mleft #lvbar { width: 100%; }
+    #mrow { display: flex; gap: 8px; align-items: center; }
+    #kbadge { font-size: 15px; padding: 2px 10px; }
+    #mtitle { font: italic 13px Georgia, serif; letter-spacing: 0; color: var(--gold); }
+    .armyp { font-size: 20px; min-width: 90px; margin-right: 28px; }
+    /* Yiğitler */
+    #yigit { position: fixed; inset: 0; pointer-events: none; }
+    #yigit > * { pointer-events: auto; }
+    #ytop { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 16px; right: 70px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 30px; }
+    #ydavul { font-size: 22px; }
+    #ydrum, #ybuydrum { font-size: 16px; padding: 3px 10px; }
+    #yback { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 16px; width: 44px; height: 40px; font: 400 22px 'Bangers', sans-serif; background: var(--paper); border: 3px solid var(--ink); color: var(--ink); }
+    #yarmy { position: absolute; top: 62px; left: 16px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; max-width: 48%; }
+    #yarmy > small { color: #fff; font-size: 14px; }
+    .yslot { width: 66px; height: 54px; background: var(--paper); border: 3px solid var(--ink); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font: 400 13px 'Bangers', sans-serif; padding: 0; }
+    .yslot.lead { width: 80px; box-shadow: 0 0 0 3px var(--gold); }
+    .yslot span { font-size: 11px; color: #b8860b; }
+    .ymult { color: var(--gold); font-size: 18px; text-shadow: 2px 2px 0 var(--ink); }
+    #ylist { position: absolute; right: 16px; top: 62px; bottom: 16px; width: min(440px, 46%); overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; align-content: start; padding: 4px; }
+    .ycard { position: relative; min-height: 84px; background: var(--paper); border: 4px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; font: inherit; padding: 4px; cursor: pointer; }
+    .ycard b { font-weight: 400; font-size: 16px; line-height: 1.1; }
+    .ycard small { font: 11px system-ui, sans-serif; letter-spacing: 0; }
+    .ycard.none { opacity: .55; filter: grayscale(.7); }
+    .ycard.on { outline: 3px dashed #fff; outline-offset: 2px; }
+    .ystars { color: #e59a00; font-size: 14px; letter-spacing: 0; }
+    .ytag { position: absolute; top: -8px; right: -6px; background: var(--red); color: #fff; font: 400 11px 'Bangers', sans-serif; padding: 0 5px; border: 2px solid var(--ink); font-style: normal; }
+    .ytag.sefer { background: #2a7ae0; }
+    .r3 { border-color: #7a6a58 !important; } .r4 { border-color: #3a9a4a !important; } .r5 { border-color: #2a6ad0 !important; }
+    .r6 { border-color: #8a3ac0 !important; } .r7 { border-color: #e08a1a !important; } .r8 { border-color: #d7263d !important; box-shadow: 0 0 10px #ffd23f, 3px 3px 0 var(--ink); }
+    #ypreview { position: absolute; left: 16px; top: 128px; width: min(420px, 50%); bottom: 44%; pointer-events: none; }
+    #ydetail { position: absolute; left: 16px; bottom: 16px; width: min(420px, 50%); max-height: 42%; overflow-y: auto; background: var(--paper); border: 4px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); padding: 8px 12px; }
+    .yhead { border-left: 8px solid; padding-left: 8px; }
+    .yhead h3 { margin: 0; font-weight: 400; font-size: 26px; color: var(--red); line-height: 1; }
+    .yhead small { font-size: 14px; }
+    #ydetail p { margin: 4px 0; font: 13px/1.45 system-ui, sans-serif; letter-spacing: 0; }
+    #ydetail .ylvl { font-weight: 700; }
+    .yab { display: flex; flex-direction: column; gap: 2px; margin: 4px 0; font: 13px system-ui, sans-serif; letter-spacing: 0; }
+    .yab .on { color: #2a6a2a; font-weight: 700; } .yab .off { color: #8a7a68; }
+    .ybtns { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ybtns button { font-size: 14px; padding: 3px 10px; }
+    #ydraw { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 9; background: var(--paper); border: 6px solid var(--ink); box-shadow: 8px 8px 0 var(--ink); padding: 16px 30px; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: slam .45s cubic-bezier(.2,1.6,.4,1); }
+    #ydraw h2 { margin: 0; font-size: 44px; color: var(--gold); font-weight: 400; }
+    #ydraw p { margin: 0; font-size: 22px; color: var(--red); }
+    @media (max-aspect-ratio: 1/1) {
+      #ylist { left: 16px; right: 16px; width: auto; top: 58%; }
+      #ydetail { left: 16px; right: 16px; width: auto; bottom: 43%; max-height: 22%; }
+      #ypreview { left: 16px; right: 16px; width: auto; top: 150px; bottom: 66%; }
+      #yarmy { max-width: none; right: 16px; top: 108px; }
+      #ypreview { top: 176px !important; }
+    }
+    /* Kağanlık Kademesi: aşağıdan yukarı basamaklar */
+    #kademe { background: radial-gradient(circle at 50% 20%, rgba(90,60,10,.8), rgba(15,8,20,.95)); justify-content: flex-start; padding-top: max(16px, env(safe-area-inset-top)); }
+    #kademe h1 { font-size: clamp(34px, 8vw, 64px); }
+    #kpow { margin: 0 0 8px !important; font-size: 14px !important; }
+    #klist { display: flex; flex-direction: column; gap: 6px; width: min(520px, 100%); align-items: center; }
+    .kstep { width: calc(56% + 44% * (5 - var(--i)) / 5); display: flex; align-items: center; gap: 10px; background: var(--paper); border: 4px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 4px 12px; border-image: repeating-linear-gradient(45deg, var(--red) 0 8px, var(--gold) 8px 12px, var(--blue) 12px 20px) 4; }
+    .kstep .kicon { font-size: 26px; font-weight: 400; }
+    .kstep strong { font-weight: 400; font-size: 22px; flex: 1; text-align: left; }
+    .kstep small { font: 12px system-ui, sans-serif; letter-spacing: 0; }
+    .kstep .krew { font: 700 12px system-ui, sans-serif; letter-spacing: 0; color: #6a4a8a; }
+    .kstep.past { opacity: .75; background: #e8e0c8; }
+    .kstep.me { background: var(--gold); box-shadow: 0 0 20px var(--gold), 4px 4px 0 var(--ink); transform: scale(1.04); }
+    #kademeback { margin: 12px 0; flex: none; }
+    /* Akın Seferleri: otağın önünde küçük harita */
+    #sefer { justify-content: flex-start; padding-top: max(14px, env(safe-area-inset-top)); background: radial-gradient(circle, rgba(40,30,20,.85), rgba(15,8,20,.95)); }
+    #sefer h1 { font-size: clamp(34px, 8vw, 60px); }
+    #smap { position: relative; width: min(560px, 100%); aspect-ratio: 2.2; flex: none; background: radial-gradient(circle at 50% 50%, #ecd9b0, #c9ab78); border: 4px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); }
+    .sotag { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 40px; }
+    .smark { position: absolute; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--ink); background: var(--paper); font: 400 18px 'Bangers', sans-serif; padding: 0; color: var(--red); }
+    .smark.go { background: #9ad0ff; } .smark.done { background: #7fe08a; animation: pop .6s infinite alternate; }
+    #sinfo { width: min(560px, 100%); display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .srow, .spick { background: var(--paper); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; text-align: left; }
+    .srow strong, .spick h3 { font-weight: 400; font-size: 18px; color: var(--red); margin: 0; }
+    .srow small, .spick small { font: 12px system-ui, sans-serif; letter-spacing: 0; flex-basis: 100%; }
+    .srow .stime { font-size: 18px; flex: 1; }
+    .spick { flex-direction: column; align-items: stretch; }
+    .spick p { margin: 0; font: 13px/1.4 system-ui, sans-serif; letter-spacing: 0; }
+    .scards { display: flex; flex-wrap: wrap; gap: 6px; }
+    .scards button { font-size: 14px; padding: 2px 10px; }
+    .scards button.on { background: var(--gold); }
+    #seferback { margin: 12px 0; flex: none; }
+    /* Destan Koleksiyonları (kitabın üstünde kâğıt sayfa) */
+    #kolbtn { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 70px; font-size: 16px; padding: 3px 10px; }
+    #book.closed #kolbtn { display: none; }
+    #koleksiyon { position: fixed; inset: 5% max(4%, calc(50% - 360px)); background: #efdcb4; border: 4px solid #3a2a18; box-shadow: 8px 8px 0 rgba(0,0,0,.4); padding: 12px 16px; overflow-y: auto; z-index: 4; text-align: left; }
+    #koleksiyon h2 { margin: 0 0 6px; font-weight: 400; color: #9a1a22; }
+    .kset { border-bottom: 2px solid #b89a6a; padding: 6px 0; }
+    .kset h3 { margin: 0; font-weight: 400; font-size: 22px; } .kset.done h3::after { content: ' ✓'; color: #2a7a3a; }
+    .kset small { font: 12px Georgia, serif; color: #5a3a1a; }
+    .kmem { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .kmem span { font: 12px system-ui, sans-serif; letter-spacing: 0; padding: 1px 6px; border: 2px solid #8a7a68; background: #d8d0c0; color: #8a7a68; filter: grayscale(1); }
+    .kmem span.ok { background: var(--gold); color: var(--ink); border-color: var(--ink); filter: none; }
     .menu-buttons { display: flex; flex-direction: column; gap: 12px; align-items: center; }
     button.small { font: inherit; font-size: 22px; letter-spacing: 1px; color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 10px; padding: 5px 22px; box-shadow: 0 4px 0 var(--ink); cursor: pointer; }
     #winstars { font-size: 56px; color: var(--gold); letter-spacing: 6px; }
@@ -429,6 +525,7 @@
     <div id="tr">
       <div class="panel score"><b class="tag red">SKOR</b><span id="score">0</span><em id="mult">x1.0</em></div>
       <div class="panel kutp"><span id="kut">0</span><i class="vial"></i></div>
+      <div class="panel armyp"><b class="tag">ORDU</b><span id="armym">×1.0</span></div>
     </div>
     <div id="goals" hidden></div>
     <div id="powers" class="ink" hidden></div>
@@ -478,7 +575,7 @@
 
   <div id="menu" class="screen" hidden>
     <div id="mtop">
-      <div id="lvbar"></div>
+      <div id="mleft"><div id="lvbar"></div><div id="mrow"><button id="kbadge" class="small"></button><small id="mtitle" class="ink"></small></div></div>
       <div class="moneyrow" data-money></div>
     </div>
     <div id="mcenter">
@@ -494,7 +591,9 @@
     <div id="mside">
       <button id="torebtn" class="tile"><b>🏆</b><span>TÖRE</span><i class="dot" hidden></i></button>
       <button id="carsibtn" class="tile" data-unlock="carsi"><b>🏪</b><span>ÇARŞI</span></button>
-      <button id="wardbtn" class="tile"><b>👘</b><span>KOSTÜM</span></button>
+      <button id="yigitbtn" class="tile"><b>🃏</b><span>YİĞİT</span></button>
+      <button id="seferbtn" class="tile" data-unlock="seferler"><b>⛺</b><span>SEFER</span><i class="dot" hidden></i></button>
+      <button id="wardbtn" class="tile" hidden><b>👘</b><span>KOSTÜM</span></button>
       <button id="bookbtn" class="tile"><b>📜</b><span>DESTAN</span></button>
       <button id="storybtn" class="tile"><b>🎞</b><span>HİKÂYE</span></button>
       <button class="small tiltbtn" hidden>EĞİMLE YÖNLENDİR: KAPALI</button>
@@ -561,6 +660,8 @@
     <button id="bprev" class="navbtn" aria-label="Önceki sayfa">◂</button>
     <button id="bnext" class="navbtn" aria-label="Sonraki sayfa">▸</button>
     <button id="bookback" aria-label="Kitabı kapat">✕</button>
+    <button id="kolbtn" class="small">📜 KOLEKSİYONLAR</button>
+    <div id="koleksiyon" hidden><h2>DESTAN KOLEKSİYONLARI</h2><div id="kolist"></div><button id="kolback" class="small">KAPAT</button></div>
     <div id="chips"></div>
   </div>
 
@@ -603,6 +704,31 @@
       <button id="rvno" class="small">VAZGEÇ</button>
     </div>
     <small id="rvleft" class="ink"></small>
+  </div>
+
+
+  <div id="yigit" hidden>
+    <div id="ytop"><b class="ink">YİĞİTLER</b><span data-money></span><span id="ydavul" class="ink">🥁 0</span><button id="ydrum" class="small">🥁 DAVUL ÇAL</button><button id="ybuydrum" class="small">+🥁 ⬢5</button></div>
+    <button id="yback" aria-label="Kapat">✕</button>
+    <div id="yarmy"></div>
+    <div id="ypreview"></div>
+    <div id="ydetail"></div>
+    <div id="ylist"></div>
+    <div id="ydraw" hidden></div>
+  </div>
+
+  <div id="kademe" class="screen" hidden>
+    <h1 class="ink">KAĞANLIK KADEMESİ</h1>
+    <p id="kpow" class="ink"></p>
+    <div id="klist"></div>
+    <button id="kademeback" class="small">◂ MENÜ</button>
+  </div>
+
+  <div id="sefer" class="screen" hidden>
+    <h1 class="ink">AKIN SEFERLERİ</h1>
+    <div id="smap"></div>
+    <div id="sinfo"></div>
+    <button id="seferback" class="small">◂ MENÜ</button>
   </div>
 
   <div id="win" class="screen" hidden>
