@@ -22,28 +22,17 @@ olduğu için) özellik güncellemelerini hazırlar, buraya commit'ler. Kadir'in
 
 ## Durum
 
-- [x] Oğuz Kağan projesinin kaynak kodu (`src/*.js`, `index.html`) analiz edildi (Drive üzerinden zip
-      olarak alındı, `node_modules`/`dist`/derlenmiş `OYNA.html` hariç tutuldu).
-- [x] Spiderman Unlimited ile detaylı karşılaştırma yapıldı → bkz. **`REPORT.md`**.
-- [x] 7 güncelleme paketi hazır (`updates/001`–`007`), her biri bağımsız uygulanabilir
-      (004 ve 005, 004→005 sırasıyla; 007, 004'ten sonra).
-
-## Rapor
-
-Detaylı analiz ve öneriler için **[`REPORT.md`](./REPORT.md)** dosyasına bak.
+- [x] Oğuz Kağan kaynak kodu analiz edildi, Spiderman Unlimited ile karşılaştırıldı → **`REPORT.md`**.
+- [x] **Asıl yol haritası: [`istemler/`](./istemler/README.md)**. 20 adım (00–19); sıra, bağımlılıklar ve PC'deki Claude için genel kurallar orada.
+- [ ] İsteğe bağlı eski paketler: `updates/001-alp-gucu-ultimate`, `updates/006-kovalamaca-chase`.
+- `iptal/`: yerine yeni istemler geçen eski paketler. Uygulanmayacak.
 
 ## Klasör yapısı
 
 ```
-REPORT.md                              ← detaylı analiz raporu
-updates/
-  001-alp-gucu-ultimate/TALIMAT.md      ← beceriyle dolan özel yetenek
-  002-umay-ana-canlanma/TALIMAT.md      ← kut ile canlanma (continue)
-  003-kil-payi-near-miss/TALIMAT.md     ← ucundan kaçış bonusu
-  004-alplik-unvanlari-achievements/    ← başarım sistemi
-  005-yoruk-gorevleri-daily-quests/     ← günlük görevler (004'e bağımlı)
-  006-kovalamaca-chase/TALIMAT.md       ← senaryolu takip sahnesi (en yüksek efor)
-  007-san-defteri-stats/                ← istatistik paneli (004'e bağımlı)
-applied/
-  (uygulanmış paketler buraya taşınır)
+REPORT.md          ← SMU karşılaştırma raporu
+istemler/          ← PC'deki Claude'a sırayla verilecek istemler (00–19) + README (sıra, kurallar)
+updates/           ← isteğe bağlı eski paketler (001, 006)
+iptal/             ← iptal edilen paketler, uygulanmayacak
+applied/           ← uygulanmış paketler buraya taşınır
 ```
