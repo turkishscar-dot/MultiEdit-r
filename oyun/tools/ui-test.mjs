@@ -1,0 +1,27 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'] });
+const vp = process.argv[2] === 'mobile' ? { width: 390, height: 844 } : { width: 960, height: 540 };
+const p = await b.newPage({ viewport: vp });
+const errs = []; p.on('pageerror', e => errs.push(e.message));
+await p.goto('http://localhost:5173/');
+await p.evaluate(() => localStorage.clear());
+await p.reload();
+await p.waitForFunction(() => window.__game?.state === 'gate', null, { timeout: 120000 });
+await p.evaluate(() => { const g = window.__game; g.toMenu(); });
+await p.waitForTimeout(500);
+await p.screenshot({ path: 'test-out/menu-lv1.png' });
+await p.click('#endless'); await p.waitForTimeout(400);
+await p.screenshot({ path: 'test-out/locked-toast.png' });
+// XP ver, her unvanı gör
+const r = await p.evaluate(() => { const g = window.__game; const ups = g.addXP(3100); return ups.map(u => u.level + ':' + u.title + (u.newTitle ? '*' : '') + ':' + u.unlocks.join('/')); });
+console.log(r.join(' '));
+await p.evaluate(() => { const g = window.__game; g.levelUps(g.addXP(0).concat([{ level: 5, title: 'ALP', newTitle: true, reward: { kut: 250, gd: 3 }, unlocks: ['carsi'] }])); });
+await p.waitForTimeout(600);
+await p.screenshot({ path: 'test-out/levelup.png' });
+await p.click('#levelup button');
+await p.evaluate(() => { window.__game.toMenu(); });
+await p.waitForTimeout(300);
+await p.screenshot({ path: 'test-out/menu-lv10.png' });
+const all = await p.evaluate(() => { const g = window.__game; const out = []; let tot = 0; for (const n of [0, 5000, 10000, 20000, 40000, 80000]) { } return JSON.parse(localStorage.getItem('oguz-xp')); });
+console.log('xp', all, 'errors', errs);
+await b.close();

@@ -13,6 +13,8 @@ import { JENERIK, PROLOG, PROLOG_PAGES, PARTS, EPILOG, BOOK, levelIntro } from '
 import { BOSSES } from './bosses.js';
 import { COSTUMES, applyCostume, wallet } from './costumes.js';
 import { BOYLAR, picks, has, slots } from './boylar.js';
+import { addXP, XP, isUnlocked, UNLOCKS, UNLOCK_NAMES, unlockAll } from './akinci.js';
+import { toast, fillMoney, levelBar, levelUps } from './ui.js';
 
 const LANES = [-2.5, 0, 2.5];
 const $ = id => document.getElementById(id);
@@ -336,6 +338,7 @@ let secret = 0, secretTheme = null, deer = null, deerDone = false, trail = null,
 let stageT = 0, godGlow = null, relicPlan = [], rain = null, guideLane = 1, guideT = 0, shield = 0, reviveUsed = false, smashUsed = false, rideTime = 12;
 const cur = () => LEVELS[level].floors?.[floor] ?? LEVELS[level];
 const relicSave = (() => { try { return JSON.parse(localStorage.getItem('oguz-relics')) || {}; } catch { return {}; } })();
+let runBosses = 0; // bu koşuda yenilen boss sayısı (XP için)
 let time = 0, runZ = 0, kut = 0, score = 0, combo = 0, kills = 0, nextZ = 0, bossAt = 0, cool = 0, shake = 0, bannerT = 0, overT = 0;
 let debugCam = null, camX = 0, fovKick = 0, slowK = 1, slowT = 0, stopT = 0, ambushT = 0, slashStep = 0, lastSlash = -9, wasSliding = false;
 
@@ -409,6 +412,7 @@ loadAssets(p => ($('loadbar').style.width = p * 100 + '%')).then(a => {
   cine = new Cine(ctx);
   comic = new Comic(renderer.domElement);
   state = 'gate';
+  fillMoney();
   $('loadbar').parentElement.hidden = true;
   $('loadtext').hidden = true;
   $('enter').hidden = false;
@@ -536,6 +540,18 @@ function toMenu() {
   for (const id of ['hud', 'over', 'paused', 'bossbar', 'ride', 'map', 'book', 'win', 'tap', 'mash', 'wardrobe', 'loading', 'grid', 'goals', 'powers', 'boyscreen']) $(id).hidden = true;
   wolf.root.visible = deerActor.root.visible = false;
   $('menu').hidden = false;
+  menuLocks();
+  levelBar();
+}
+
+// Açılmamış menü düğmeleri kilitli görünür; dokununca kaçıncı seviyede açılacağını söyler
+function menuLocks() {
+  for (const b of document.querySelectorAll('[data-unlock]')) b.classList.toggle('locked', !isUnlocked(b.dataset.unlock));
+}
+function locked(key) {
+  if (isUnlocked(key)) return false;
+  toast('🔒', UNLOCK_NAMES[key], `Akıncı Seviyesi ${UNLOCKS[key]}'de açılır.`);
+  return true;
 }
 
 const progress = (() => { try { return JSON.parse(localStorage.getItem('oguz-levels')) || {}; } catch { return {}; } })();
@@ -585,6 +601,7 @@ const SONS = [
 ];
 let boyAfter = null;
 function openBoylar(m, lv) {
+  if (!isUnlocked('boylar')) return start(m, lv); // Boy Seçimi Akıncı Seviyesi 3'te açılır
   state = 'boylar';
   boyAfter = () => start(m, lv);
   for (const id of ['map', 'menu', 'win', 'over']) $(id).hidden = true;
@@ -724,7 +741,6 @@ function openWardrobe() {
 
 function drawWardrobe() {
   applyCostume(book.actors.oguz, wardSel);
-  $('wbank').textContent = '◆ ' + wallet.bank;
   $('wlist').replaceChildren(...COSTUMES.map(c => {
     const card = document.createElement('div');
     card.className = 'wcard' + (c.id === wardSel ? ' on' : '');
@@ -766,14 +782,25 @@ function win() {
   const full = r && r.yay && r.ok.every(Boolean) && !r.paid;
   if (full) { r.paid = true; kut += 200; saveRelics(); } // Bozok-Üçok: rüyadaki yay ve üç ok tamam
   wallet.deposit(Math.round(kut * (has('alkaevli') ? 1.25 : 1)));
+  const firstThree = stars === 3 && (progress[level] || 0) < 3;
+  if (firstThree) wallet.addGD(3); // bir bölümü ilk kez 3 yıldızla bitirme ödülü
   progress[level] = Math.max(progress[level] || 0, stars);
   try { localStorage.setItem('oguz-levels', JSON.stringify(progress)); } catch {}
   $('winstars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
   $('winstats').textContent = `Skor ${Math.floor(score).toLocaleString('tr-TR')} · Kut ${kut} · Düşman ${kills}` + (LEVELS[level].prisoners ? ` · Kurtarılan esir ${esirs}` : '')
-    + (full ? ' · ALTIN YAY VE ÜÇ GÜMÜŞ OK TAMAM! +200 KUT' : '');
+    + (full ? ' · ALTIN YAY VE ÜÇ GÜMÜŞ OK TAMAM! +200 KUT' : '') + (firstThree ? ' · İLK ÜÇ YILDIZ! +3 GÖK DEMİR' : '')
+    + ` · +${runXP()} XP`;
   $('winstory').textContent = EPILOG[level] || '';
   for (const id of ['hud', 'bossbar', 'ride']) $(id).hidden = true;
   $('win').hidden = false;
+  endRunXP();
+}
+
+// Koşu sonu XP'si: mesafe, düşman, boss
+function runXP() { return Math.floor(dist() / XP.perMeters) + kills * XP.kill + runBosses * XP.boss; }
+function endRunXP() {
+  const ups = addXP(runXP());
+  levelUps(ups, levelBar);
 }
 
 function start(m = mode, lv = level, skipIntro = false) {
@@ -799,7 +826,7 @@ function start(m = mode, lv = level, skipIntro = false) {
   horse.root.visible = false;
   horseAway = null;
   Object.assign(P, { lane: 1, x: 0, y: 0, vy: 0, slide: 0, inv: 0, hp: 3, speed: has('kayi') ? 13.5 : 12, lock: 0, lunge: 0, ride: 0, sword: 0, dead: false, flip: 0, spin: 0, roll: false, rear: 0 });
-  time = kut = score = combo = kills = hoops = maxCombo = 0;
+  time = kut = score = combo = kills = hoops = maxCombo = runBosses = 0;
   runZ = P.z; nextZ = P.z - 35; bossAt = cur().goals ? Infinity : L.bossAt; ambushT = 6; esirs = 0;
   goalsDone = false; goalKey = ''; stageT = 0; goalBase = { kill: 0, kut: 0, esir: 0, hoop: 0 };
   pow.kurt = pow.kilic = secret = 0; deer = trail = rain = null; deerDone = godDone = islikDone = false;
@@ -1678,6 +1705,7 @@ function updateFinisher(dt) {
 
 function finishDone(b) {
   score += 2000;
+  runBosses++;
   banner(`${b.def.name} YENİLDİ!`);
   endBoss();
   fin = null;
@@ -2149,12 +2177,13 @@ function gameOver() {
   try { best = Math.max(best, +localStorage.getItem('oguz-best') || 0); localStorage.setItem('oguz-best', best); } catch {}
   const f = $('final');
   f.replaceChildren();
-  for (const [k, v] of [['Mesafe', dist() + ' m'], ['Kut', kut], ['Düşman', kills], ['Skor', Math.floor(score)], ['En iyi', best]]) {
+  for (const [k, v] of [['Mesafe', dist() + ' m'], ['Kut', kut], ['Düşman', kills], ['Skor', Math.floor(score)], ['En iyi', best], ['XP', '+' + runXP()]]) {
     const row = document.createElement('div');
     row.textContent = `${k}: ${v}`;
     f.append(row);
   }
   $('over').hidden = false;
+  endRunXP();
 }
 
 function setPaused(on) {
@@ -2234,7 +2263,7 @@ addEventListener('keydown', e => {
   else if (e.key === 'Escape' && state === 'cine') cine.skip();
 });
 $('start').onclick = openMap;
-$('endless').onclick = () => openBoylar('endless', 0);
+$('endless').onclick = () => locked('endless') || openBoylar('endless', 0);
 $('again').onclick = () => start();
 $('wagain').onclick = () => start('level', level);
 $('storybtn').onclick = () => playComic(PROLOG_PAGES);
@@ -2287,12 +2316,14 @@ function frame(realDt) {
 let frozen = false, norender = false; // test: zaman durur, sadece çizilir / çizmeden hızlı oynat
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
-  if (frozen) composer.render();
+  if (frozen) { if (!norender) composer.render(); } // test botu: dondurulmuşken kareleri kendisi ilerletir
   else frame(dt);
 });
 
 // test kancası (tarayıcı konsolundan oyunu adım adım sürmek için)
 window.__game = {
+  unlockAll, addXP, levelUps, toast,
+  get warnLane() { return warn.visible ? LANES.indexOf(warn.position.x) : -1; }, get flow() { return flow; }, get time() { return time; }, get dist() { return dist(); }, get level() { return level; }, get mode() { return mode; }, get kills() { return kills; }, get combo() { return combo; }, get score() { return score; }, get kut() { return kut; },
   get boss2() { return boss; }, get flying() { return flying; }, get sect() { return sect; }, startSect, get theme() { return theme; }, setTheme, LEVELS,
   P, get state() { return state; }, get boss() { return boss; }, get objs() { return objs; }, get fin() { return fin; },
   get hero() { return hero; }, get book() { return book; }, get weapon() { return weapon; }, setWeapon, add, pow, get relics() { return relicSave; }, volley, enterSecret, get goalsDone() { return goalsDone; }, get floor() { return floor; }, nextFloor, set cam(v) { debugCam = v; }, set frozen(v) { frozen = v; }, set norender(v) { norender = v; }, get cine() { return cine; }, get comic() { return comic; }, playComic, recordComic, wallet, openWardrobe, playCine, openBook, openMap, toMenu, start, act, tick: frame, mount, spawnAmbush,

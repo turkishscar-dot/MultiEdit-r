@@ -212,6 +212,58 @@
     #wnote { position: absolute; left: 16px; right: 16px; bottom: 6px; margin: 0; font: 13px system-ui, sans-serif; letter-spacing: 0; text-align: center; }
     @media (max-aspect-ratio: 1/1) { #wlist { left: 16px; right: 16px; width: auto; top: 56%; } }
 
+
+    /* Gök Demir simgesi: mor-mavi parlayan meteor taşı */
+    .gd { display: inline-block; width: .9em; height: .9em; vertical-align: -0.1em; background: linear-gradient(135deg, #c7a6ff, #6a4cff 45%, #2a8cff); clip-path: polygon(50% 0, 88% 22%, 100% 62%, 66% 100%, 22% 92%, 0 50%, 18% 12%); filter: drop-shadow(0 0 4px #9a7aff); }
+    .money { display: inline-flex; gap: 14px; align-items: center; font-size: 24px; color: var(--gold); }
+    .money .mg { color: #c9b8ff; }
+    .money span { display: inline-block; text-shadow: 2px 2px 0 var(--ink), -1px -1px 0 var(--ink), 1px -1px 0 var(--ink), -1px 1px 0 var(--ink); }
+    .bump { animation: bump .45s; }
+    @keyframes bump { 30% { transform: scale(1.45) rotate(-6deg); } 100% { transform: scale(1); } }
+    /* alttan kayan bildirim kartları */
+    #toasts { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 9; pointer-events: none; width: min(420px, calc(100% - 32px)); }
+    .toast { display: flex; gap: 12px; align-items: center; background: var(--paper); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 8px 14px; transform: translateY(160%); transition: transform .35s cubic-bezier(.2,1.4,.4,1); }
+    .toast.in { transform: translateY(0); }
+    .toast .ticon { font-size: 30px; font-weight: 400; }
+    .toast .tbody { display: flex; flex-direction: column; text-align: left; }
+    .toast strong { font-weight: 400; font-size: 20px; color: var(--red); }
+    .toast span { font: 13px system-ui, sans-serif; letter-spacing: 0; }
+    /* menüdeki seviye çubuğu */
+    #lvbar { width: min(300px, 80%); margin: 4px 0 6px; color: #fff; }
+    .lvhead { font-size: 20px; text-shadow: 2px 2px 0 var(--ink); }
+    .lvhead b { font-weight: 400; color: var(--gold); }
+    .lvtrack { height: 12px; border: 3px solid var(--ink); background: var(--paper); transform: skewX(-12deg); overflow: hidden; box-shadow: 3px 3px 0 var(--ink); margin: 2px 0; }
+    .lvtrack i { display: block; height: 100%; background: linear-gradient(#9ae07a, #3a9a4a); }
+    #lvbar small { font: 11px system-ui, sans-serif; letter-spacing: 0; text-shadow: 1px 1px 0 var(--ink); }
+    /* kilitli menü düğmeleri */
+    button.locked { opacity: .6; }
+    button.locked:not(.tile)::before { content: '🔒 '; }
+    /* seviye atlama ekranı */
+    #levelup { z-index: 8; background: radial-gradient(circle, rgba(90,60,10,.92), rgba(20,10,30,.97)); }
+    #levelup h1 { font-size: clamp(48px, 13vw, 110px); }
+    #levelup.slam h1 { animation: slam .45s cubic-bezier(.2,1.6,.4,1); }
+    .lvreward { display: flex; flex-direction: column; gap: 6px; font-size: 26px; color: var(--gold); margin: 10px 0 18px; text-shadow: 2px 2px 0 var(--ink); }
+    .lvunlock { color: #9ae07a; }
+    .moneyrow { margin: 6px 0 10px; }
+
+    /* ana menü: üstte seviye + para, ortada başlık ve BAŞLA, sağda simgeli düğmeler */
+    #menu { justify-content: center; }
+    #mtop { position: absolute; left: 16px; right: 16px; top: max(12px, env(safe-area-inset-top)); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    #mtop #lvbar { margin: 0; width: min(260px, 50%); text-align: left; }
+    #mcenter { display: flex; flex-direction: column; align-items: center; }
+    #mside { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: grid; grid-template-columns: repeat(2, 64px); gap: 8px; }
+    .tile { width: 64px; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 0; font: 400 12px 'Bangers', sans-serif; letter-spacing: 1px; background: var(--paper); color: var(--ink); border: 3px solid var(--ink); border-radius: 10px; box-shadow: 3px 3px 0 var(--ink); cursor: pointer; position: relative; }
+    .tile b { font-size: 26px; font-weight: 400; line-height: 1.1; }
+    .tile.locked { opacity: .55; }
+    .tile.locked::before { content: '🔒'; position: absolute; right: -6px; top: -8px; font-size: 16px; }
+    .tile .dot { position: absolute; right: -5px; top: -5px; width: 14px; height: 14px; border-radius: 50%; background: var(--red); border: 2px solid var(--ink); }
+    #mside .tiltbtn { grid-column: 1 / -1; font-size: 13px; padding: 4px 6px; }
+    @media (max-aspect-ratio: 1/1) {
+      #mside { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); left: 50%; right: auto; transform: translateX(-50%); grid-template-columns: repeat(4, 64px); }
+      #mtop { flex-direction: column; align-items: center; }
+      #mtop #lvbar { width: min(300px, 80%); text-align: center; }
+      #mcenter { margin-top: -60px; }
+    }
     .menu-buttons { display: flex; flex-direction: column; gap: 12px; align-items: center; }
     button.small { font: inherit; font-size: 22px; letter-spacing: 1px; color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 10px; padding: 5px 22px; box-shadow: 0 4px 0 var(--ink); cursor: pointer; }
     #winstars { font-size: 56px; color: var(--gold); letter-spacing: 6px; }
@@ -255,6 +307,14 @@
   <div id="banner" class="ink"></div>
   <div id="tap" class="ink" hidden>DOKUN! VUR!</div>
   <div id="pops"></div>
+  <div id="toasts"></div>
+  <div id="levelup" class="screen" hidden>
+    <h1 class="ink"></h1>
+    <h2 class="ink"></h2>
+    <div class="kilim"></div>
+    <div class="lvreward"></div>
+    <button class="big">DEVAM ▸</button>
+  </div>
   <div id="flash"></div>
   <div id="boyscreen" class="screen" hidden>
     <h1 class="ink">BOYUNU SEÇ</h1>
@@ -275,17 +335,25 @@
   </div>
 
   <div id="menu" class="screen" hidden>
-    <h1 class="ink">OĞUZ KAĞAN</h1>
-    <h2 class="ink">Ölümsüz Akıncı</h2>
-    <div class="kilim"></div>
-    <p class="ink">Kaydır: şerit değiştir · yukarı zıpla · aşağı kay<br>Dokun / sol tık: saldır · ⚔/🏹 düğmesi ya da Q: kılıç ↔ yay<br>Klavye: ← → ↑ ↓ ve Boşluk</p>
-    <div class="menu-buttons">
-      <button id="start" class="big">BAŞLA</button>
-      <button id="endless" class="small">SONSUZ AKIN</button>
-      <button id="wardbtn" class="small">KOSTÜMLER</button>
+    <div id="mtop">
+      <div id="lvbar"></div>
+      <div class="moneyrow" data-money></div>
+    </div>
+    <div id="mcenter">
+      <h1 class="ink">OĞUZ KAĞAN</h1>
+      <h2 class="ink">Ölümsüz Akıncı</h2>
+      <div class="kilim"></div>
+      <div class="menu-buttons">
+        <button id="start" class="big">BAŞLA</button>
+        <button id="endless" class="small" data-unlock="endless">SONSUZ AKIN</button>
+      </div>
+    </div>
+    <!-- sağdaki simgeli düğmeler: yeni ekranlar buraya eklenir (data-unlock ile kilitlenebilir) -->
+    <div id="mside">
+      <button id="wardbtn" class="tile"><b>👘</b><span>KOSTÜM</span></button>
+      <button id="bookbtn" class="tile"><b>📜</b><span>DESTAN</span></button>
+      <button id="storybtn" class="tile"><b>🎞</b><span>HİKÂYE</span></button>
       <button class="small tiltbtn" hidden>EĞİMLE YÖNLENDİR: KAPALI</button>
-      <button id="bookbtn" class="small">DESTAN KİTABI</button>
-      <button id="storybtn" class="small">HİKÂYE</button>
     </div>
   </div>
 
@@ -329,7 +397,7 @@
   </div>
 
   <div id="wardrobe" hidden>
-    <div id="wtop"><b class="ink">KOSTÜMLER</b><span id="wbank" class="ink">◆ 0</span></div>
+    <div id="wtop"><b class="ink">KOSTÜMLER</b><span id="wbank" data-money></span></div>
     <button id="wardback" aria-label="Kapat">✕</button>
     <div id="wlist"></div>
     <p id="wnote" class="ink">Şimdilik koşularda topladığın kut ile açılır. İleride mağazadan da satın alınabilecek.</p>
@@ -339,6 +407,7 @@
     <h1 class="ink">BÖLÜM TAMAM!</h1>
     <div id="winstars"></div>
     <p id="winstats" class="ink"></p>
+    <div class="moneyrow" data-money></div>
     <div class="kilim"></div>
     <p id="winstory" class="ink"></p>
     <div class="menu-buttons">
@@ -362,6 +431,7 @@
     <h1 class="ink">YENİLDİN!</h1>
     <div class="kilim"></div>
     <p id="final" class="ink"></p>
+    <div class="moneyrow" data-money></div>
     <div class="menu-buttons">
       <button id="again" class="big">TEKRAR</button>
       <button id="overmenu" class="small">MENÜ</button>

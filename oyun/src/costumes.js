@@ -82,19 +82,29 @@ export function applyCostume(actor, id) {
   });
 }
 
-// Kasa: her koşuda toplanan kut birikir. Tarayıcı depolaması yoksa oturum boyunca bellekte kalır.
+// Kasa: her koşuda toplanan kut birikir; Gök Demir değerli ikinci paradır (gökten düşen meteor demiri).
+// Tunç Davul: yiğit çağırma eşyası (Yiğit Kartları). Tarayıcı depolaması yoksa oturum boyunca bellekte kalır.
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const listeners = [];
 export const wallet = {
   bank: load('oguz-bank', 0),
+  gokdemir: load('oguz-gokdemir', 0),
+  tuncdavul: load('oguz-tuncdavul', 0),
   owned: load('oguz-owned', ['oguz']),
   worn: load('oguz-costume', 'oguz'),
-  deposit(n) { this.bank += n; save('oguz-bank', this.bank); },
+  onChange(fn) { listeners.push(fn); },
+  changed(kind, n) { for (const fn of listeners) fn(kind, n); },
+  deposit(n) { if (!n) return; this.bank += n; save('oguz-bank', this.bank); this.changed('kut', n); },
+  spend(n) { if (this.bank < n) return false; this.bank -= n; save('oguz-bank', this.bank); this.changed('kut', -n); return true; },
+  addGD(n) { if (!n) return; this.gokdemir += n; save('oguz-gokdemir', this.gokdemir); this.changed('gd', n); },
+  spendGD(n) { if (this.gokdemir < n) return false; this.gokdemir -= n; save('oguz-gokdemir', this.gokdemir); this.changed('gd', -n); return true; },
+  addDavul(n) { if (!n) return; this.tuncdavul += n; save('oguz-tuncdavul', this.tuncdavul); this.changed('davul', n); },
+  spendDavul(n) { if (this.tuncdavul < n) return false; this.tuncdavul -= n; save('oguz-tuncdavul', this.tuncdavul); this.changed('davul', -n); return true; },
   buy(c) {
     if (this.owned.includes(c.id) || this.bank < c.price) return false;
-    this.bank -= c.price;
+    this.spend(c.price);
     this.owned.push(c.id);
-    save('oguz-bank', this.bank);
     save('oguz-owned', this.owned);
     return true;
   },

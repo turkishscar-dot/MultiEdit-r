@@ -1,0 +1,135 @@
+// Test botunun sayfa içi beyni (tools/test-bot.mjs yükler). window.__game üzerinden oyunu kare kare oynatır.
+(() => {
+  const DT = 1 / 30;
+  const g = () => window.__game;
+  let cd = 0, god = false, stats = { hits: 0, jumps: 0, slides: 0, taps: 0, bosses: 0, floors: 0, maxDist: 0, events: {} };
+  let lastHp = 3, lastFloor = 0, sawBoss = null;
+  const ev = k => (stats.events[k] = (stats.events[k] || 0) + 1);
+
+  function act(a) { g().act(a); cd = 0.12; }
+  function laneTo(t) { const P = g().P; if (t < P.lane) act('left'); else if (t > P.lane) act('right'); }
+
+  function groundThink() {
+    const G = g(), P = G.P, objs = G.objs;
+    const react = P.speed * 0.3 + 1.2;
+    const look = 12 + P.speed * 0.5;
+    const danger = [0, 0, 0], gain = [0, 0, 0];
+    for (const o of objs) {
+      if (o.dead || o.dying || o.done) continue;
+      const a = P.z - o.z;
+      if (a < -0.5 || a > look) continue;
+      if (o.def.hit === 'block' && !o.def.foe) danger[o.lane] += 10 / Math.max(1, a);
+      if (o.def.foe && !o.bank) danger[o.lane] += 1 / Math.max(1, a);
+      if (o.kind === 'kut' || o.kind === 'nal' || o.kind === 'kimiz' || o.esir) gain[o.lane] += 0.2;
+    }
+    const wl = G.warnLane;
+    if (wl >= 0) danger[wl] += 50;
+    // şu anki şeritte yakın engel
+    const here = objs.filter(o => !o.dead && !o.dying && !o.done && o.lane === P.lane && P.z - o.z > 0 && P.z - o.z < react && o.def.hit);
+    for (const o of here) {
+      if (o.def.foe && o.ready !== false) { if (cd <= 0) { act('tap'); stats.taps++; } continue; }
+      if (o.def.hit === 'low' && P.y === 0 && cd <= 0) { act('up'); stats.jumps++; return; }
+      if (o.def.hit === 'high' && P.slide <= 0 && cd <= 0) { act('down'); stats.slides++; return; }
+    }
+    // yakın düşmana saldır
+    const foe = objs.find(o => o.def.foe && !o.dying && o.ready && Math.abs(o.x - P.x) < 1.3 && P.z - o.z > 0 && P.z - o.z < 8);
+    if (foe && cd <= 0) { act('tap'); stats.taps++; }
+    if (objs.some(o => o.bank && !o.dying && P.z - o.z > 6 && P.z - o.z < 35) && cd <= 0 && Math.random() < 0.2) act('tap');
+    if (cd > 0) return;
+    const score = [0, 1, 2].map(l => -danger[l] * 3 + gain[l] - Math.abs(l - P.lane) * 0.3);
+    const best = score.indexOf(Math.max(...score));
+    if (best !== P.lane && danger[P.lane] > 0.4) laneTo(best);
+    else if (best !== P.lane && danger[best] === 0 && gain[best] > gain[P.lane] + 0.5) laneTo(best);
+  }
+
+  function skyThink() {
+    const G = g(), P = G.P;
+    if (cd > 0) return;
+    const look = 10 + P.speed * 0.8;
+    const bad = new Set();
+    let near = Infinity;
+    for (const o of G.objs) {
+      if (o.dead || o.row == null || !o.def.hit) continue;
+      const a = P.z - o.z;
+      if (a < -1 || a > look) continue;
+      near = Math.min(near, a);
+    }
+    for (const o of G.objs) {
+      if (o.dead || o.row == null || !o.def.hit) continue;
+      const a = P.z - o.z;
+      if (a >= -1 && a <= near + 3) bad.add(o.lane + ',' + o.row);
+    }
+    const birds = G.objs.find(o => o.def.flyfoe && !o.dead && P.z - o.z > 4 && P.z - o.z < 30 && Math.abs(o.x - P.x) < 1.5);
+    if (birds) act('tap');
+    if (!bad.has(P.lane + ',' + P.row)) {
+      const hoop = G.objs.find(o => o.kind === 'hoop' && o.mesh.visible && P.z - o.z > 2 && P.z - o.z < look);
+      if (hoop && !bad.has(hoop.lane + ',' + hoop.row)) { if (hoop.lane !== P.lane) laneTo(hoop.lane); else if (hoop.row !== P.row) act(hoop.row > P.row ? 'up' : 'down'); }
+      return;
+    }
+    let best = null, bd = 99;
+    for (let l = 0; l < 3; l++) for (let r = 0; r < 3; r++) {
+      if (bad.has(l + ',' + r)) continue;
+      const d = Math.abs(l - P.lane) + Math.abs(r - P.row);
+      if (d < bd) { bd = d; best = [l, r]; }
+    }
+    if (!best) return;
+    if (best[0] !== P.lane) laneTo(best[0]);
+    else if (best[1] !== P.row) act(best[1] > P.row ? 'up' : 'down');
+  }
+
+  function bossThink() {
+    const G = g(), P = G.P, b = G.boss;
+    const tap = document.getElementById('tap');
+    const txt = tap && !tap.hidden ? tap.textContent : '';
+    const mash = document.getElementById('mash');
+    if (mash && !mash.hidden) { act('tap'); cd = 0; return true; }
+    if (b.blob && b.blob.visible !== false && cd <= 0) {
+      const lane = [-2.5, 0, 2.5].reduce((bi, x, i, a) => Math.abs(x - b.blob.position.x) < Math.abs(a[bi] - b.blob.position.x) ? i : bi, 0);
+      if (lane !== P.lane) { laneTo(lane); return true; }
+    }
+    if (!txt) return false;
+    if (cd > 0) return true;
+    if (/ZIPLA/.test(txt)) { act('up'); return true; }
+    if (/EĞİL/.test(txt)) { act('down'); return true; }
+    if (/◀ KAYDIR/.test(txt)) { act('left'); return true; }
+    if (/KAYDIR! ▶/.test(txt)) { act('right'); return true; }
+    if (/▲ KAYDIR/.test(txt)) { act('up'); return true; }
+    if (/YANA KAÇ/.test(txt)) { laneTo(P.lane === 1 ? 0 : 1); return true; }
+    if (/BEKLE/.test(txt)) return true;
+    if (/VUR|OKLA|DOKUN|GERİ ÇAL/.test(txt)) { act('tap'); stats.taps++; return true; }
+    return false;
+  }
+
+  window.__bot = {
+    stats,
+    begin(lv, endless, gd) {
+      god = gd;
+      const G = g();
+      G.frozen = true; G.norender = true;
+      G.start(endless ? 'endless' : 'level', lv, true);
+    },
+    run(sec) {
+      const G = g();
+      for (let i = 0; i < sec / DT; i++) {
+        const st = G.state;
+        if (st === 'cine') { G.cine.skip(); ev('cine'); }
+        if (st === 'win' || st === 'over') break;
+        if (window.__botHook) window.__botHook(G);
+        if (st === 'run' && !G.fin) {
+          cd -= DT;
+          if (god) G.P.inv = Math.max(G.P.inv, 0.5);
+          if (G.boss) { if (G.boss !== sawBoss) { sawBoss = G.boss; stats.bosses++; ev('boss:' + G.boss.kind); } if (!bossThink()) (G.flying ? skyThink : groundThink)(); }
+          else if (G.flying) skyThink();
+          else groundThink();
+          if (G.P.hp < lastHp) stats.hits++;
+          lastHp = G.P.hp;
+          if (G.floor !== lastFloor) { lastFloor = G.floor; stats.floors++; }
+          stats.maxDist = Math.max(stats.maxDist, G.dist);
+        }
+        G.tick(DT);
+      }
+      const st = G.state;
+      return { state: st, done: st === 'win' || st === 'over', level: G.level, floor: G.floor, dist: G.dist, hp: G.P.hp, kills: G.kills, score: Math.floor(G.score), kut: G.kut, t: Math.round(G.time), ...stats };
+    },
+  };
+})();
