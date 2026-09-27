@@ -15,5 +15,6 @@ run "yiğit/kademe/sefer" node tools/cards-test.mjs
 run "ses" node tools/sound-test.mjs
 run "olay sesleri" node tools/events-test.mjs
 run "smu sahneleri" node tools/smu2-scenes.mjs kalkan kanatlivur sur ucurum2 isin yadaat bitir
+run "kostüm vitrini" node tools/kostum-shots.mjs
 run "derleme" npx vite build
 echo "SONUÇ: $ok tamam, $bad hatalı"

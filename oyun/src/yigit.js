@@ -3,6 +3,7 @@
 // Ordu: 1 lider (koşan, yetenekleri etkin) + 3 yardımcı; dördünün gücü koşu puanı çarpanı olur.
 import { COSTUMES, wallet } from './costumes.js';
 import { addSource } from './bonus.js';
+import { clock } from './tore.js';
 
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -86,10 +87,81 @@ export const CARDS = [
     text: 'Ayı tipi şaman giysisi: ayı kafası başlık ve demir pençeli eldivenler.' },
   { id: 'kartalsaman', name: 'Kartal Şaman', title: 'Gök elçisi', stars: 3, costume: 'kartal', ab: ['kp30', 'kp1'], group: 'saman',
     text: 'Altay şamanlarının kuş tipi giysisi: kolları kanat gibi saran kartal tüyleri ve kartal başlı başlık.' },
+  // Süreli bayram yiğitleri: yalnız bayram günlerinde Gök Demirle çağrılır ve davulda çıkar; alınan kalıcıdır
+  { id: 'ergenekon', name: 'Ergenekon Demircisi', title: 'Nevruz · Demir dağı eriten', stars: 5, season: { name: 'NEVRUZ', ek: "'DA", from: [3, 14], to: [3, 28] },
+    look: look(['Kalpak'], 0x2a6a3a, 0xc0302a, 0x3a2616, { desen: { M_Kaftan: 'kilim' } }), ab: ['kt5', 'ku30'], group: 'bayram',
+    text: "Ergenekon Destanı'nda dağlarla çevrili bir vadide yüzyıllarca yaşayan Türkler, bir demircinin önerisiyle demir dağın önüne odun ve kömür yığıp körüklerle eritir, bozkurdun ardından dışarı çıkar. Çıkış günü bayram sayılır; Türkiye'de Nevruz'la birlikte anılır." },
+  { id: 'hizir', name: 'Boz Atlı Hızır', title: 'Hıdırellez · Darda kalana yetişen', stars: 5, season: { name: 'HIDIRELLEZ', ek: "'DE", from: [5, 1], to: [5, 10] },
+    look: look(['Sarik'], 0x3a8a5a, 0xe8e2d0, 0x5a5a5a, { desen: { M_Kaftan: 'rumi' } }), ab: ['kp40', 'kt4'], group: 'bayram',
+    text: "Anadolu ve Balkan inanışında darda kalana yetişen ermiş; boz atıyla gelir. 5 Mayıs'ı 6'ya bağlayan gece Hızır ile İlyas'ın buluştuğuna inanılır; Hıdırellez bu buluşmanın bahar bayramıdır." },
 ];
 export const ABILITY = A;
+
+// ---------- Görünüş efektleri (kostüm takımı): koşu izi, kılıç parıltısı, at koşumu, vitrindeki duruş, zafer pozu ----------
+// iz: arkada bırakılan parçacık rengi; kilic: kılıç parıltısı (6★ ve üstünde ya da elle verilmişse); at: eyer ve koşum rengi.
+const GFX = {
+  oguz: { iz: 0x6ab8ff, at: 0x1c3f8a, bekle: 'MX_GS_Idle', zafer: 'MX_GS_PowerUp' },
+  ogullar: { iz: 0xffd060, at: 0x7a4a24, bekle: 'Sword_Idle', zafer: 'MX_GS_Draw' },
+  hun: { iz: 0xff5a2a, at: 0x3a1a1a, bekle: 'MX_GS_Idle3', zafer: 'MX_GS_PowerUp' },
+  gokturk: { iz: 0x5ab0ff, at: 0x1f4a38, bekle: 'MX_GS_Idle2', zafer: 'MX_GS_PowerUp' },
+  destan: { iz: 0xffc040, at: 0x6a1a1a, bekle: 'MX_GS_Idle', zafer: 'MX_GS_PowerUp' },
+  dedekorkut: { iz: 0x8adf6a, at: 0x5a3a1a, bekle: 'MX_GS_Idle3', zafer: 'MX_GS_Draw' },
+  devlet: { iz: 0xff4a4a, at: 0x8a1a1a, bekle: 'MX_GS_Idle2', zafer: 'MX_Examine' },
+  saman: { iz: 0xb07aff, at: 0x3a2a1a, bekle: 'MX_GS_Idle3', zafer: 'MX_Cast' },
+  bayram: { iz: 0x7affb0, at: 0x2a6a3a, bekle: 'MX_GS_Idle', zafer: 'MX_GS_PowerUp' },
+};
+const OWN_FX = { // karta özgü renkler
+  gunhan: { iz: 0xffb020 }, ayhan: { iz: 0xdce6ff }, yildizhan: { iz: 0xfff6b0 }, gokhan: { iz: 0x6ab8ff }, daghan: { iz: 0xb09a78 }, denizhan: { iz: 0x4ad8e0 },
+  manas: { iz: 0xf0f4ff }, sogotoh: { iz: 0x9aff9a }, altin: { iz: 0xffd23f, kilic: 0xffd23f }, babur: { iz: 0x2adf8a }, ismail: { iz: 0xd7263d },
+  akoglan: { iz: 0xffffff }, attila: { kilic: 0xff3a2a },
+};
+export function cardFx(c) {
+  const f = { ...GFX[c.group] ?? GFX.oguz, ...OWN_FX[c.id], ...c.fx };
+  if (f.kilic == null && c.stars >= 6) f.kilic = f.iz; // yüksek nadirlikte kılıç parlar
+  return f;
+}
+export const RANK_COLOR = { 3: 0xb09a80, 4: 0x3aba5a, 5: 0x3a7ae0, 6: 0xa04ae0, 7: 0xf09a2a, 8: 0xe8303d };
 const byId = id => CARDS.find(c => c.id === id);
-export const cardLook = c => (c.costume ? COSTUMES.find(x => x.id === c.costume) : c.look);
+// Blender'da yapılacak kostüm parçaları (kostum/TASARIM.md). Model gelmeden de burada durur: olmayan parça yok sayılır.
+// Yeni malzemeler (M_Cape pelerin, M_Sash kuşak, M_Kurk kürk yaka) kostüme göre boyanır.
+const DETAY = {
+  oguz: { parts: ['C_Cape_Sway', 'C_Belt', 'C_BraidBack_Sway'], colors: { M_Cape: 0x1a2f66 } },
+  gunhan: { parts: ['C_Sash', 'C_Belt'], colors: { M_Sash: 0xffc040 } },
+  ayhan: { parts: ['C_Sash', 'C_Belt'], colors: { M_Sash: 0xdfe6f0 } },
+  yildizhan: { parts: ['C_Sash', 'C_Belt'], colors: { M_Sash: 0xffe68a } },
+  gokhan: { parts: ['C_Sash', 'C_BraidsSide'], colors: { M_Sash: 0x6ab8ff } },
+  daghan: { parts: ['C_FurCollar', 'C_Belt'], colors: { M_Kurk: 0x6a5a48 } },
+  denizhan: { parts: ['C_Sash', 'C_BraidsSide'], colors: { M_Sash: 0x4ad8e0 } },
+  mete: { parts: ['C_Lamellar', 'C_Belt', 'C_Mustache', 'C_BraidBack_Sway', 'C_Cape_Sway'], colors: { M_Cape: 0x5a0e0e } },
+  bumin: { parts: ['C_Lamellar', 'C_Belt', 'C_BraidBack_Sway', 'C_Cape_Sway'], colors: { M_Cape: 0x1f4a38 } },
+  bilge: { parts: ['C_KaftanLong', 'C_Belt', 'C_BraidBack_Sway', 'C_Mustache', 'C_Cape_Sway'], colors: { M_Cape: 0xb08a2a } },
+  kultigin: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_BraidBack_Sway', 'C_Mustache'] },
+  tonyukuk: { parts: ['C_KaftanLong', 'C_BeardLongWhite', 'C_Sash'], colors: { M_Sash: 0x6a5a48 } },
+  alperTunga: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_Cape_Sway', 'C_Belt'], colors: { M_Cape: 0x3a0a2a } },
+  tomris: { parts: ['C_KaftanLong', 'C_Belt', 'C_BraidsSide', 'C_Cape_Sway'], colors: { M_Cape: 0xd9b04a } },
+  attila: { parts: ['C_Lamellar', 'C_FurCollar', 'C_Cape_Sway', 'C_Mustache'], colors: { M_Cape: 0x2a1030, M_Kurk: 0x3a2a1a } },
+  basat: { parts: ['C_FurCollar', 'C_Belt'], colors: { M_Kurk: 0x8a6a48 } },
+  beyrek: { parts: ['C_KaftanLong', 'C_Belt', 'C_Mustache'] },
+  dumrul: { parts: ['C_Pauldrons', 'C_Belt', 'C_Cape_Sway'], colors: { M_Cape: 0x2a3a2a } },
+  banucicek: { parts: ['C_KaftanLong', 'C_BraidsSide', 'C_Sash'], colors: { M_Sash: 0xe8c040 } },
+  manas: { parts: ['C_KaftanLong', 'C_Belt', 'C_Cape_Sway', 'C_Mustache'], colors: { M_Cape: 0xf0ece0 } },
+  sogotoh: { parts: ['C_FurCollar', 'C_Belt', 'C_BraidBack_Sway'], colors: { M_Kurk: 0xe8e0d0 } },
+  altin: { parts: ['C_KaftanLong', 'C_Belt', 'C_Pauldrons'] },
+  fatih: { parts: ['C_KaftanLong', 'C_FurCollar', 'C_Sash', 'C_BeardLong'], colors: { M_Kurk: 0x5a3a22, M_Sash: 0xe8d8a0 } },
+  babur: { parts: ['C_KaftanLong', 'C_Sash', 'C_BeardLong'], colors: { M_Sash: 0xd9b04a } },
+  ismail: { parts: ['C_KaftanLong', 'C_Sash', 'C_Mustache'], colors: { M_Sash: 0x1a1414 } },
+  akoglan: { parts: ['C_Sash'], colors: { M_Sash: 0xffffff } },
+  geyiksaman: { parts: ['C_Fringe_Sway', 'C_ShamanMirror', 'C_Drum'] },
+  ayisaman: { parts: ['C_Fringe_Sway', 'C_ShamanMirror', 'C_FurCollar'], colors: { M_Kurk: 0x2a1f18 } },
+  kartalsaman: { parts: ['C_Fringe_Sway', 'C_ShamanMirror', 'C_Drum'] },
+  ergenekon: { parts: ['C_FurCollar', 'C_Belt', 'C_Cape_Sway'], colors: { M_Cape: 0x8a1a1a, M_Kurk: 0x3a2a1a } },
+  hizir: { parts: ['C_KaftanLong', 'C_Sash', 'C_BeardLongWhite', 'C_Cape_Sway'], colors: { M_Cape: 0x7a7a7a, M_Sash: 0x2a6a3a } },
+};
+export const CPARTS = [...new Set(Object.values(DETAY).flatMap(d => d.parts))];
+export const cardLook = c => {
+  const b = c.costume ? COSTUMES.find(x => x.id === c.costume) : c.look, d = DETAY[c.id];
+  return d ? { ...b, parts: [...b.parts, ...d.parts], colors: { ...b.colors, ...d.colors } } : b;
+};
 
 // ---------- kayıt ----------
 const st = load('oguz-yigit', null) || (() => { // ilk açılış: satın alınmış kostümler kart olur, giyilen lider olur
@@ -169,10 +241,20 @@ export function drum(rnd = Math.random) {
   if (!wallet.spendDavul(1)) return null;
   let r = rnd(), stars = 3;
   for (const [s, p] of Object.entries(DRAW)) { if (r < p) { stars = +s; break; } r -= p; }
-  const pool = CARDS.filter(c => c.stars === stars);
+  const pool = CARDS.filter(c => c.stars === stars && inSeason(c));
   const c = pool[Math.floor(rnd() * pool.length)];
   return { card: c, isNew: grant(c.id) };
 }
+// Bayram penceresi (ay, gün): clock tore.js'ten, testte günler kaydırılabilir
+const AY = ['', 'OCAK', 'ŞUBAT', 'MART', 'NİSAN', 'MAYIS', 'HAZİRAN', 'TEMMUZ', 'AĞUSTOS', 'EYLÜL', 'EKİM', 'KASIM', 'ARALIK'];
+export function inSeason(c) {
+  if (!c.season) return true;
+  const d = clock.now(), v = (d.getMonth() + 1) * 100 + d.getDate();
+  return v >= c.season.from[0] * 100 + c.season.from[1] && v <= c.season.to[0] * 100 + c.season.to[1];
+}
+export const buyable = c => inSeason(c);
+export const visible = () => true;
+export const seasonText = c => `${c.season.name}${c.season.ek} GELİR (${c.season.from[1]}–${c.season.to[1]} ${AY[c.season.to[0]]})`;
 // Kostümü olan kartlar eski fiyatıyla kut ile alınabilir; nadir olanlar Gök Demir ile
 export function buyPrice(c) {
   const cos = c.costume && COSTUMES.find(x => x.id === c.costume);
@@ -181,7 +263,7 @@ export function buyPrice(c) {
 }
 export function buy(id) {
   const c = byId(id), p = buyPrice(c);
-  if (owned(id) || (p.kut != null ? !wallet.spend(p.kut) : !wallet.spendGD(p.gd))) return false;
+  if (owned(id) || !buyable(c) || (p.kut != null ? !wallet.spend(p.kut) : !wallet.spendGD(p.gd))) return false;
   grant(id);
   return true;
 }

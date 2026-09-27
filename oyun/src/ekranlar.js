@@ -3,6 +3,7 @@
 import * as Y from './yigit.js';
 import * as SF from './seferler.js';
 import * as KO from './koleksiyon.js';
+import * as THREE from 'three';
 import { wallet, applyCostume } from './costumes.js';
 
 const $ = id => document.getElementById(id);
@@ -21,21 +22,87 @@ export function openYigit(focus) {
   U.book.pedestal(true);
   U.book.show({ id: 'oguz', model: 'oguz', anim: 'Idle_Loop', h: 1.9 });
   sel = focus || Y.leader().id;
+  lastPrev = null;
   drawYigit();
   $('yigit').hidden = false;
+  $('yvitrin').hidden = true;
+  $('yigit').classList.remove('full');
   resizeYigit();
 }
-// Model, ayrıntı kartının üstündeki boş alana (ypreview) yerleşir; arka plan koyu kalır
+// Model, ayrıntı kartının üstündeki boş alana (ypreview) ya da tam vitrinin sahnesine (yvstage) yerleşir
 export function resizeYigit() {
-  U.book.resize(innerWidth, innerHeight, $('ypreview').getBoundingClientRect());
-  U.book.scene.background = U.book.dark;
+  const full = !$('yvitrin').hidden;
+  U.book.resize(innerWidth, innerHeight, $(full ? 'yvstage' : 'ypreview').getBoundingClientRect());
+  const c = Y.CARDS.find(x => x.id === sel), col = new THREE.Color(Y.RANK_COLOR[rankOf(c)]);
+  U.book.scene.background = U.book.dark.clone().lerp(col, full ? 0.22 : 0.1); // nadirlik rengine çalan arka plan
 }
 export function closeYigit() {
+  U.book.setRank(null);
   U.dressHero();
   $('yigit').hidden = true;
   U.toMenu();
 }
-function preview(c) { applyCostume(U.book.actors.oguz, Y.cardLook(c)); U.book.actors.oguz.parts.BowHand.visible = U.book.actors.oguz.parts.ArrowNock.visible = false; }
+const rankOf = c => Y.cardState(c.id)?.stars ?? c.stars;
+let lastPrev = null;
+// Vitrin: kostüm giydirilir, nadirlik ışığı yanar, yiğide özel bekleme duruşu; kart değişince giyinme parıltısı
+function preview(c) {
+  const a = U.book.actors.oguz, fx = Y.cardFx(c);
+  applyCostume(a, Y.cardLook(c));
+  a.parts.BowHand.visible = a.parts.ArrowNock.visible = false;
+  U.book.setRank(Y.RANK_COLOR[rankOf(c)]);
+  if (lastPrev !== c.id) {
+    if (lastPrev) { U.book.transform(); U.sfx('flip', { gain: 0.5 }); }
+    U.book.pose(fx.bekle, fx.bekle);
+    lastPrev = c.id;
+  }
+}
+// Sürükleyerek döndür
+let dragX = null;
+for (const id of ['ypreview', 'yvstage']) {
+  const e = $(id);
+  e.addEventListener('pointerdown', ev => { dragX = ev.clientX; e.setPointerCapture(ev.pointerId); });
+  e.addEventListener('pointermove', ev => { if (dragX == null) return; U.book.dragBy(ev.clientX - dragX); dragX = ev.clientX; });
+  e.addEventListener('pointerup', () => { dragX = null; });
+}
+function poseRow(c) {
+  const fx = Y.cardFx(c), row = el('div', 'yposes');
+  const sword = on => { const a = U.book.actors.oguz; a.parts.SwordHand.visible = on; a.parts.SwordSheath.visible = !on; };
+  for (const [t, clip, sw] of [['BEKLE', fx.bekle, false], ['SALDIR', 'Sword_Heavy_Combo', true], ['ZAFER', fx.zafer, false]]) {
+    const b = el('button', 'small', t);
+    b.onclick = () => { sword(sw); U.book.pose(clip, fx.bekle); };
+    row.append(b);
+  }
+  return row;
+}
+// ---- tam ekran vitrin ----
+function sortedCards() { return [...Y.CARDS].filter(k => Y.visible(k)).sort((a, b) => (Y.owned(b.id) - Y.owned(a.id)) || (b.stars - a.stars)); }
+export function openVitrin() { $('yvitrin').hidden = false; $('yigit').classList.add('full'); drawVitrin(); resizeYigit(); }
+function closeVitrin() { $('yvitrin').hidden = true; $('yigit').classList.remove('full'); drawYigit(); resizeYigit(); }
+function stepVitrin(d) { const L = sortedCards(), i = L.findIndex(k => k.id === sel); sel = L[(i + d + L.length) % L.length].id; drawVitrin(); resizeYigit(); }
+function drawVitrin() {
+  const c = Y.CARDS.find(x => x.id === sel), s = Y.cardState(sel), st = rankOf(c);
+  preview(c);
+  const box = $('yvitrin');
+  box.className = RCLS[st];
+  const head = el('div', 'yvhead');
+  head.append(el('span', 'ystars', stars(st) + ' ' + Y.RANKS[st][0]), el('h2', 'ink', c.name), el('small', null, c.title));
+  if (c.season) head.append(el('i', 'ytag bayram', 'BAYRAM'));
+  const acts = el('div', 'yvacts');
+  const btn = (t, fn, dis, cls = 'small') => { const b = el('button', cls, t); b.disabled = !!dis; b.onclick = fn; acts.append(b); };
+  if (!s) {
+    const p = Y.buyPrice(c), ok = Y.buyable(c);
+    btn('▶ BİR KOŞU DENE', () => U.trial(c.id), false, 'big');
+    if (ok) btn(p.kut != null ? `◆ ${p.kut} İLE AL` : `⬢ ${p.gd} İLE ÇAĞIR`, () => { if (Y.buy(c.id)) { U.book.transform(); afterChange(); drawVitrin(); } }, p.kut != null ? wallet.bank < p.kut : wallet.gokdemir < p.gd);
+    else btn(Y.seasonText(c), () => {}, true);
+  } else if (Y.leader().id !== c.id) btn('LİDER YAP', () => { Y.setLeader(c.id); afterChange(); drawVitrin(); }, SF.busyCards().includes(c.id), 'big');
+  else acts.append(el('b', 'ink ylead', 'LİDER'));
+  const nav = el('div', 'yvnav');
+  const prev = el('button', 'small', '◀'), next = el('button', 'small', '▶'), close = el('button', 'small', '✕');
+  prev.onclick = () => stepVitrin(-1); next.onclick = () => stepVitrin(1); close.onclick = closeVitrin;
+  nav.append(prev, next, close);
+  box.replaceChildren(head, $('yvstage'), poseRow(c), acts, nav);
+}
+
 export function drawYigit() {
   const c = Y.CARDS.find(x => x.id === sel), s = Y.cardState(sel), helpers = U.isUnlocked('ordu');
   preview(c);
@@ -57,16 +124,18 @@ export function drawYigit() {
   const list = $('ylist');
   list.replaceChildren();
   const busy = SF.busyCards();
-  for (const k of [...Y.CARDS].sort((a, b) => (Y.owned(b.id) - Y.owned(a.id)) || (b.stars - a.stars))) {
+  for (const k of sortedCards()) {
     const ks = Y.cardState(k.id), own = !!ks;
     const card = el('button', 'ycard ' + RCLS[own ? ks.stars : k.stars] + (own ? '' : ' none') + (k.id === sel ? ' on' : ''));
     card.append(el('span', 'ystars', stars(own ? ks.stars : k.stars)), el('b', null, k.name), el('small', null, own ? `Sv ${ks.lvl} · Güç ${Y.power(k.id)}` : 'KİLİTLİ'));
     if (k.id === Y.leader().id) card.append(el('i', 'ytag', 'LİDER'));
     else if (Y.team().includes(k)) card.append(el('i', 'ytag', 'ORDU'));
     else if (busy.includes(k.id)) card.append(el('i', 'ytag sefer', 'SEFERDE'));
+    else if (k.season && !own) card.append(el('i', 'ytag bayram', k.season.name));
     card.onclick = () => { sel = k.id; drawYigit(); };
     list.append(card);
   }
+  $('ypbtns').replaceChildren(poseRow(c), (() => { const b = el('button', 'small', '⛶ VİTRİN'); b.onclick = openVitrin; return b; })());
   // seçili kartın ayrıntısı
   const d = $('ydetail');
   const rk = Y.RANKS[s ? s.stars : c.stars];
@@ -80,7 +149,11 @@ export function drawYigit() {
   const btn = (text, fn, dis) => { const b = el('button', 'small', text); b.disabled = !!dis; b.onclick = () => { fn(); afterChange(); }; row.append(b); };
   if (!s) {
     const p = Y.buyPrice(c);
-    btn(p.kut != null ? `◆ ${p.kut} İLE AL` : `⬢ ${p.gd} İLE ÇAĞIR`, () => Y.buy(c.id), p.kut != null ? wallet.bank < p.kut : wallet.gokdemir < p.gd);
+    if (Y.buyable(c)) btn(p.kut != null ? `◆ ${p.kut} İLE AL` : `⬢ ${p.gd} İLE ÇAĞIR`, () => Y.buy(c.id), p.kut != null ? wallet.bank < p.kut : wallet.gokdemir < p.gd);
+    else btn(Y.seasonText(c), () => {}, true);
+    const t = el('button', 'small', '▶ DENE');
+    t.onclick = () => U.trial(c.id);
+    row.append(t);
   } else {
     const isBusy = busy.includes(c.id);
     if (Y.leader().id !== c.id) btn('LİDER YAP', () => Y.setLeader(c.id), isBusy);

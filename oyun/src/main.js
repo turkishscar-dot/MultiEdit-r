@@ -11,7 +11,7 @@ import { Comic } from './comic.js';
 import { Book } from './book.js';
 import { JENERIK, PROLOG, PROLOG_PAGES, PARTS, EPILOG, BOOK, levelIntro } from './story.js';
 import { BOSSES } from './bosses.js';
-import { COSTUMES, applyCostume, wallet } from './costumes.js';
+import { COSTUMES, applyCostume, wallet, sway } from './costumes.js';
 import { BOYLAR, picks, has, slots } from './boylar.js';
 import { addXP, XP, isUnlocked, UNLOCKS, UNLOCK_NAMES, unlockAll } from './akinci.js';
 import { toast, fillMoney, levelBar, levelUps } from './ui.js';
@@ -392,6 +392,7 @@ let runHits = 0, runArrow = 0, runRide = 0, runFly = 0, nodeRun = null, runRecor
 let continues = 0, noRevive = false, maxHp = 3, bereketT = 0, reviveT = 0, endlessBosses = 0;
 let gallopT = 0, runBosses = 0, runParries = 0, runBroken = 0, runGold = 0; // bu koşuda yenilen boss sayısı (XP için)
 let time = 0, runZ = 0, kut = 0, score = 0, combo = 0, kills = 0, nextZ = 0, bossAt = 0, cool = 0, shake = 0, bannerT = 0, overT = 0;
+let trial = null; // "bir koşu dene": { id } (kostüm denemesi, ödül yok)
 let debugCam = null, camX = 0, fovKick = 0, slowK = 1, slowT = 0, stopT = 0, ambushT = 0, slashStep = 0, lastSlash = -9, wasSliding = false;
 
 const dist = () => Math.max(0, Math.floor(runZ - P.z));
@@ -464,7 +465,7 @@ loadAssets(p => ($('loadbar').style.width = p * 100 + '%')).then(a => {
   if (AY.cfg.gfx) applyGfx(AY.cfg.gfx);
   AY.init({ setState: s => { state = s; }, toMenu, gallery, applyGfx, tilt: () => tilt, setTilt: toggleTilt });
   AY.wire();
-  EK.init({ setState: s => { state = s; }, book, toMenu, isUnlocked, locked, toast, sfx, levelUps, addXP, levelBar, dressHero, onCards, missingArrow });
+  EK.init({ setState: s => { state = s; }, book, toMenu, isUnlocked, locked, toast, sfx, levelUps, addXP, levelBar, dressHero, onCards, missingArrow, trial: id => startTrial(id) });
   ctx = makeCtx();
   cine = new Cine(ctx);
   comic = new Comic(renderer.domElement);
@@ -581,6 +582,8 @@ async function playCine(shots, after = toMenu) {
 }
 
 function toMenu() {
+  if (trial) { trial = null; TORE.mute(false); }
+  for (const id of ['trialend', 'trialtag']) $(id).hidden = true;
   for (const o of objs) release(o);
   for (const a of arrows) scene.remove(a.mesh);
   objs = []; arrows = [];
@@ -660,10 +663,36 @@ function gallery() {
 }
 
 // Koşan yiğit: liderin görünüşü; Canavarlar koleksiyonu tamamsa altın çerçeveli Tanrı Kılıcı
-let goldSwordMat = null;
+// Koşan yiğit: lider (ya da denenen yiğit). Görünüşü, kılıç parıltısı, eyer rengi ve koşu izi ondan gelir.
+const runner = () => (trial ? Y.CARDS.find(c => c.id === trial.id) : Y.leader());
+let heroFx = null;
+const plainMat = new WeakMap(), tintMats = {};
+function tint(obj, color, glow) { // parçanın malzemesini renkli ve parlak kopyayla değiştirir; null: aslına döner
+  obj?.traverse(o => {
+    if (!o.isMesh) return;
+    if (!plainMat.has(o)) plainMat.set(o, o.material);
+    const base = plainMat.get(o);
+    if (color == null) { o.material = base; return; }
+    const k = base.uuid + color + glow;
+    o.material = tintMats[k] ??= Object.assign(base.clone(), { color: new THREE.Color(color), emissive: new THREE.Color(color).multiplyScalar(glow) });
+  });
+}
 function dressHero() {
-  applyCostume(hero, Y.cardLook(Y.leader()));
-  if (KO.goldSword()) hero.parts.SwordHand.traverse(o => { if (o.isMesh) { goldSwordMat ??= Object.assign(o.material.clone(), { color: new THREE.Color(0xffd23f), emissive: new THREE.Color(0x5a3a00) }); o.material = goldSwordMat; } });
+  const c = runner();
+  applyCostume(hero, Y.cardLook(c));
+  heroFx = Y.cardFx(c);
+  heroFx.rate = { 3: 6, 4: 10, 5: 15, 6: 20, 7: 26, 8: 32 }[Y.cardState(c.id)?.stars ?? c.stars];
+  if (KO.goldSword()) tint(hero.parts.SwordHand, 0xffd23f, 0.35);
+  else tint(hero.parts.SwordHand, heroFx.kilic ?? null, 0.55);
+  tint(horse?.parts.Saddle, heroFx.at, 0);
+}
+// Koşu izi: ayakların arkasında yiğidin renginde parçacıklar (nadirlik arttıkça yoğun)
+let izT = 0;
+function heroTrail(dt) {
+  if (!heroFx || flying || P.dead || state !== 'run') return;
+  if ((izT -= dt * heroFx.rate) > 0) return;
+  izT = 1;
+  sparks.emit(P.x + rand(-0.25, 0.25), (P.gy || 0) + P.y + 0.25, P.z + 0.5, 1, heroFx.iz, 0.8, 1.2, 0.45);
 }
 function onCards() { recMax('costumes', Y.ownedCount()); EK.checkCollections(); }
 // Seferden gelen eksik gümüş ok
@@ -823,6 +852,7 @@ function nodeDone() {
   const sc = Math.floor(score), m = medalsFor(n, sc), was = st.m, first = !was, newBest = sc > st.best && was > 0;
   st.m = Math.max(was, m); st.best = Math.max(st.best, sc);
   saveStore();
+  if (!flying) timed(hero, Y.cardFx(runner()).zafer, 2.2);
   const runKut = Math.round(kut * (has('alkaevli') ? 1.25 : 1) * (1 + bonus.kutPct));
   wallet.deposit(runKut);
   let xp = 0, gd = runGold, bonusKut = 0;
@@ -1083,6 +1113,7 @@ function win() {
     + ` · +${runXP()} XP`;
   $('winstory').textContent = EPILOG[level] || '';
   for (const id of ['hud', 'bossbar', 'ride']) $(id).hidden = true;
+  if (!flying) timed(hero, Y.cardFx(runner()).zafer, 2.2); // yiğide özel zafer pozu
   $('win').hidden = false;
   sting('win');
   endRunXP();
@@ -1131,6 +1162,55 @@ function tipScan(dt) {
   }
   if (!tipSeen('ucurum') && terr.some(t => t.kind === 'pit' && P.z - t.z0 > 5 && P.z - t.z0 < 24)) return void tip('ucurum', { text: 'Uçurum! Kenarında ZIPLA; düşersen bir can gider.', icon: '⛰', gesture: 'up', key: '↑' }, '', slowmo);
   for (const [id, t, f] of T_EVENT) if (!tipSeen(id) && ahead(f, 22, 4)) return void tip(id, t, '', slowmo);
+}
+
+// ================= BİR KOŞU DENE =================
+// Alınmamış yiğitle 600 m'lik deneme koşusu (Sonsuz Akın'ın ilk bölgesi). Kut, XP, Gök Demir ve Töre sayaçları işlemez.
+const TRIAL_M = 600;
+function startTrial(id) {
+  trial = { id };
+  TORE.mute(true);
+  $('yigit').hidden = true;
+  book.setRank(null);
+  dressHero();
+  start('endless', 0, true);
+  const c = runner();
+  banner('DENEME: ' + c.name);
+  $('trialtag').hidden = false;
+}
+function trialTick() {
+  $('trialtag').textContent = `DENEME · ${Math.max(0, TRIAL_M - dist())} m`;
+  if (dist() >= TRIAL_M) trialEnd();
+}
+function trialEnd() {
+  const c = runner();
+  state = 'trialend';
+  P.inv = 0; P.dead = false;
+  hideTip();
+  for (const id of ['hud', 'bossbar', 'ride', 'tap', 'mash', 'yada', 'trialtag']) $(id).hidden = true;
+  timed(hero, Y.cardFx(c).zafer, 2.2);
+  const box = $('trialend'), p = Y.buyPrice(c), ok = Y.buyable(c), owned = Y.owned(c.id);
+  box.querySelector('h2').textContent = c.name;
+  box.querySelector('p').textContent = owned ? 'Artık senin!' : `${dist()} m koştun. Beğendin mi?`;
+  const buy = $('trbuy');
+  buy.hidden = owned || !ok;
+  buy.textContent = p.kut != null ? `◆ ${p.kut} İLE AL` : `⬢ ${p.gd} İLE ÇAĞIR`;
+  buy.disabled = p.kut != null ? wallet.bank < p.kut : wallet.gokdemir < p.gd;
+  box.hidden = false;
+  sting('win');
+}
+function trialBuy() {
+  const c = runner();
+  if (!Y.buy(c.id)) return;
+  onCards();
+  trialEnd();
+  toast('★', c.name + ' ordunda!', 'Yiğitler ekranından lider yapabilirsin.');
+}
+function trialBack() {
+  const id = trial?.id;
+  $('trialend').hidden = true;
+  toMenu();
+  if (id) EK.openYigit(id);
 }
 
 // Koşu sonu istatistikleri (Töre Defteri)
@@ -1192,7 +1272,7 @@ function start(m = mode, lv = level, skipIntro = false) {
   runHits = runArrow = runRide = runFly = 0; runRecorded = false;
   for (const id of picks.list) recSet('boys', id);
   collectBonus();
-  planGold();
+  if (!trial) planGold(); else goldPlan = []; // denemede Gök Demir düşmez
   runZ = P.z; nextZ = P.z - 35; bossAt = cur().goals ? Infinity : L.bossAt; ambushT = 6; esirs = 0;
   goalsDone = false; goalKey = ''; stageT = 0; goalBase = { kill: 0, kut: 0, esir: 0, hoop: 0 };
   pow.kurt = pow.kilic = secret = 0; deer = trail = rain = null; deerDone = godDone = islikDone = false;
@@ -2970,10 +3050,10 @@ function update(dt) {
   if (state === 'cine') { ctx.update(dt); cine.update(dt); sparks.update(dt); dust.update(dt); return; }
   if (state === 'book' || state === 'wardrobe' || state === 'yigit') { book.update(dt); return; }
   if (state === 'sefer' && Math.floor(time) !== Math.floor(time - dt)) EK.drawSefer(); // süreler akar
-  if (state === 'menu' || state === 'map' || state === 'gate' || state === 'win' || state === 'boylar' || state === 'carsi' || state === 'result' || state === 'tore' || state === 'kademe' || state === 'sefer' || state === 'dialog' || state === 'ayar') { hero.update(dt); return; }
+  if (state === 'menu' || state === 'map' || state === 'gate' || state === 'win' || state === 'boylar' || state === 'carsi' || state === 'result' || state === 'tore' || state === 'kademe' || state === 'sefer' || state === 'dialog' || state === 'ayar' || state === 'trialend') { hero.update(dt); return; }
   if (state === 'dying') {
     hero.update(dt);
-    if ((overT -= dt) <= 0) { if (!noRevive && continues < 3) showRevive(); else gameOver(); }
+    if ((overT -= dt) <= 0) { if (trial) trialEnd(); else if (!noRevive && continues < 3) showRevive(); else gameOver(); }
     return;
   }
   if (state === 'revive') { reviveTick(dt); return; }
@@ -3029,6 +3109,7 @@ function update(dt) {
   }
   if (terr.length) pruneTerrain();
   if (!sect?.after) updateGoals(); // kat geçişi inişinde görevler sayılmaz
+  if (trial) { trialTick(); if (state !== 'run') return; }
   sectTick(dt);
   W.flowWater(dt);
   if (stageT > 0 && !sect && (stageT -= dt) <= 0) {
@@ -3054,6 +3135,8 @@ function update(dt) {
   heroAnim();
   if (flying) { if (sect) hero.update(dt); else flightRig(dt); skyGrid(); }
   else hero.update(dt);
+  sway(hero, dt, P.ride || flying ? P.speed * 1.2 : P.speed, P.vy);
+  heroTrail(dt);
   if (P.ride) {
     rideLegs();
     horse.update(dt * (1 + P.speed / 40));
@@ -3433,6 +3516,8 @@ $('wmap').onclick = openMap;
 $('pause').onclick = () => setPaused(true);
 $('weapon').onclick = () => act('weapon');
 $('yada').onclick = () => act('yada');
+$('trbuy').onclick = trialBuy;
+$('trback').onclick = trialBack;
 $('resume').onclick = () => setPaused(false);
 addEventListener('blur', () => setPaused(true));
 

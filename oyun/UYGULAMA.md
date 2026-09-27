@@ -11,10 +11,10 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 1. Oyun klasöründe `git status`. Git yoksa önce `git init` ve mevcut hâli commit et.
 2. **Çakışma kontrolü:** Bu repodaki ilk "baseline" commit'i (`Add working copy of the game source`), zip'teki hâldir. PC'deki `src/main.js`, `index.html`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js` o tarihten sonra değiştiyse, dosyaları üstüne yazma. Önce farkı çıkar (`git diff <baseline> -- oyun/src/main.js`) ve değişiklikleri birleştir.
 3. Değişmediyse şunları olduğu gibi kopyala:
-   - **Değişen:** `index.html`, `src/main.js`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js`, `SESLENDIRME.md`
-   - **Yeni kaynak:** `src/akinci.js`, `ui.js`, `sound.js`, `bonus.js`, `tips.js`, `carsi.js`, `tore.js`, `harita.js`, `yigit.js`, `seferler.js`, `koleksiyon.js`, `ekranlar.js`, `diyalog.js`, `diyalog-metin.js`, `ayarlar.js`, `online.js`
+   - **Değişen:** `index.html`, `src/main.js`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js`, `src/assets.js`, `src/book.js`, `SESLENDIRME.md`
+   - **Yeni kaynak:** `src/akinci.js`, `ui.js`, `sound.js`, `bonus.js`, `tips.js`, `carsi.js`, `tore.js`, `harita.js`, `yigit.js`, `seferler.js`, `koleksiyon.js`, `ekranlar.js`, `diyalog.js`, `diyalog-metin.js`, `ayarlar.js`, `online.js`, `desen.js`
    - **Belgeler:** `SES-KAYNAKLARI.md`, `CEVRIMICI.md`, `UYGULAMA.md`
-   - **Test araçları** (`tools/` içine; mevcut `bot.js`, `build_chars.py`, `vo_list.mjs` dosyalarının üstüne yazılmaz, adları farklı): `test-bot.mjs`, `bot-brain.js`, `smu2-scenes.mjs`, `regresyon.sh`, `flow-test.mjs`, `tore-test.mjs`, `cards-test.mjs`, `dialog-test.mjs`, `tips-test.mjs`, `sound-test.mjs`, `events-test.mjs`, `scenes.mjs`, `shot-menu.mjs`, `ui-test.mjs`, `fps-test.mjs`, `vo_dialog.mjs`
+   - **Test araçları** (`tools/` içine; mevcut `bot.js`, `build_chars.py`, `vo_list.mjs` dosyalarının üstüne yazılmaz, adları farklı): `test-bot.mjs`, `bot-brain.js`, `smu2-scenes.mjs`, `kostum-shots.mjs`, `regresyon.sh`, `flow-test.mjs`, `tore-test.mjs`, `cards-test.mjs`, `dialog-test.mjs`, `tips-test.mjs`, `sound-test.mjs`, `events-test.mjs`, `scenes.mjs`, `shot-menu.mjs`, `ui-test.mjs`, `fps-test.mjs`, `vo_dialog.mjs`
 4. `npm run dev`, sonra `tools/regresyon.sh` (Playwright gerekir: `npm i -D playwright`). Hepsi "tamam" çıkmalı.
 5. `npm run build` ile `OYNA.html`'i yeniden üret.
 6. `node tools/vo_list.mjs` çalıştırılırsa SESLENDIRME.md'nin eski bölümü yeniden yazılır. Diyalog bölümü `<!-- diyaloglar -->` işaretleri arasında durur. Silinirse `node tools/vo_dialog.mjs` ile geri gelir.
@@ -64,6 +64,12 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 | Boss yeteneğini koştuğumuz yere atsın | Tepegöz, Yelbegen, Çin Generali ve Kerey Han atışlarını %70 oyuncunun şeridine yapar | `bosses.js` (aim) |
 
 Bot bu mekanikleri de oynuyor (uçurumda zıplar, ışında kayar/zıplar, ▼ düşmanın altından kayar, ▲ çıkınca zıplar, Yada Taşı atar). Ekran görüntüleri: `node tools/smu2-scenes.mjs kalkan kanatli sur ucurum2 yerucurum isin kalinisin yada bitir`.
+
+## Kostüm ve görünüş paketi
+
+Ayrıntı ve Blender talimatı: repo kökündeki **`kostum/`** klasörü (`README.md`, `TASARIM.md`, `BLENDER.md`). Kod tarafı burada bitti: vitrin, "bir koşu dene", yiğide özel iz / kılıç parıltısı / eyer rengi / zafer pozu, kaftan desenleri, kenar ışığı, sallanan parçalar, iki bayram yiğidi. Blender'da yapılacak 15 parça `yigit.js` → `DETAY`'da önceden bağlı.
+
+`assets.js` ve `book.js` de değişti. PC'de bu ikisi zip'ten sonra değiştiyse birleştir.
 
 ## Bilinçli kararlar
 

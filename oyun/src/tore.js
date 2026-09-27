@@ -17,14 +17,17 @@ export const today = () => { const d = clock.now(); return `${d.getFullYear()}-$
 let notify = () => {}; // yeni başarım kademesi açılınca çağrılır (main.js alttan kayan kart gösterir)
 export function onUnlock(fn) { notify = fn; }
 export const stat = k => state.stats[k] || 0;
+let muted = false; // "bir koşu dene" sırasında sayaçlar ve görevler işlemez
+export const mute = v => { muted = v; };
 export function rec(key, n = 1) { // toplam sayaç
-  if (!n) return;
+  if (!n || muted) return;
   state.stats[key] = stat(key) + n;
   bumpDaily(key, n);
   checkAch();
   persist();
 }
 export function recMax(key, v) { // en yüksek değer
+  if (muted) return;
   if (v <= stat(key)) { bumpDailyMax(key, v); return; }
   state.stats[key] = v;
   bumpDailyMax(key, v);
@@ -32,6 +35,7 @@ export function recMax(key, v) { // en yüksek değer
   persist();
 }
 export function recSet(key, id) { // farklı öğeler kümesi (her boss, her boy...)
+  if (muted) return;
   const s = (state.sets[key] ??= []);
   if (s.includes(id)) return;
   s.push(id);

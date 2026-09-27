@@ -37,6 +37,20 @@ const PARTS = ['SwordHand', 'SwordSheath', 'BowBack', 'Quiver', 'BowHand', 'Arro
 // Üst gövde kemikleri: koşarken ok atma gibi hareketler sadece bunlara uygulanır, bacaklar koşmaya devam eder
 const UPPER = /^(spine_0[23]|neck_01|Head|clavicle_|upperarm_|lowerarm_|hand_|thumb_|index_|middle_|ring_|pinky_)/;
 
+// Kahramanın kenar ışığı: bakış açısına göre kenarları aydınlatır, karakteri arka plandan ayırır.
+// Vitrinde nadirlik rengine döner (RIM.color), koşuda ılık ve hafif.
+export const RIM = { color: { value: new THREE.Color(0xfff0d0) }, power: { value: 0.28 } };
+function addRim(m) {
+  m.onBeforeCompile = sh => {
+    sh.uniforms.rimColor = RIM.color;
+    sh.uniforms.rimPower = RIM.power;
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 rimColor;\nuniform float rimPower;')
+      .replace('#include <opaque_fragment>', 'float rimK = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);\noutgoingLight += rimColor * rimK * rimPower;\n#include <opaque_fragment>');
+  };
+  m.customProgramCacheKey = () => 'rim';
+}
+
 function toon(root, name, scenery = false) {
   root.traverse(o => {
     if (!o.isMesh) return;
@@ -59,6 +73,7 @@ function toon(root, name, scenery = false) {
       name: old.name, color, map: old.map, gradientMap: GRAD,
       transparent: old.transparent, alphaTest: old.alphaTest, side: old.side,
     });
+    if (name === 'oguz') addRim(o.material);
   });
 }
 
@@ -100,7 +115,8 @@ export class Actor {
     this.clips = clips;
     this.mixer = new THREE.AnimationMixer(this.root);
     this.parts = {};
-    this.root.traverse(o => { if (PARTS.includes(o.name)) this.parts[o.name] = o; });
+    // C_ ile başlayan adlar Blender'da eklenen kostüm parçalarıdır (kostum/BLENDER.md); adında Sway geçenler koşarken sallanır
+    this.root.traverse(o => { if (PARTS.includes(o.name) || o.name.startsWith('C_')) this.parts[o.name] = o; if (o.name.includes('Sway')) (this.sway ??= []).push(o); });
     this.mixer.addEventListener('finished', e => {
       if (e.action === this.upper) { e.action.fadeOut(0.15); return; }
       if (e.action !== this.current || !this.then) return;

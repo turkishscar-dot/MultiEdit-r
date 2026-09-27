@@ -28,6 +28,7 @@ olduğu için) özellik güncellemelerini hazırlar, buraya commit'ler. Kadir'in
   - Çevrim içi altyapı karşılaştırması (hesabı sen açacaksın): **[`oyun/CEVRIMICI.md`](./oyun/CEVRIMICI.md)**
   - Ses kaynakları ve lisans: **[`oyun/SES-KAYNAKLARI.md`](./oyun/SES-KAYNAKLARI.md)**
 - [x] **İkinci SMU paketi** (düşman simgeleri, kanatlı kul, iniş-çıkış ve uçurumlar, kam ışını, Yada Taşı, tempo, boss sırasında engeller) kodlandı; ayrıntı `oyun/UYGULAMA.md` → "İkinci SMU paketi".
+- [x] **Kostüm ve görünüş paketi (kod):** vitrin, bir koşu dene, yiğide özel efektler, desenler, bayram yiğitleri. Blender tarafı yapılacaklar listesiyle **`kostum/`** klasöründe.
 - `istemler/`: yol haritası olarak duruyor (hepsi uygulandı; 19. adımın kurulum kısmı hesap açılınca).
 - `updates/001`, `updates/006`: isteğe bağlı eski öneriler.
 - `iptal/`: yerine yeni istemler geçen eski paketler.

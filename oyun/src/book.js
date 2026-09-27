@@ -1,7 +1,7 @@
 // Destan Kitabı vitrini: seçilen karakter kilim kaplı kaide üstünde döner.
 import * as THREE from 'three';
-import { Actor, GRAD } from './assets.js';
-import { applyCostume, wallet } from './costumes.js';
+import { Actor, GRAD, RIM } from './assets.js';
+import { applyCostume, wallet, sway } from './costumes.js';
 
 export class Book {
   constructor(assets) {
@@ -22,6 +22,26 @@ export class Book {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(1.17, 0.06, 8, 48), new THREE.MeshToonMaterial({ color: 0xe3a82b, gradientMap: GRAD }));
     ring.rotation.x = Math.PI / 2;
     this.scene.add(base, ring);
+    this.ringMat = ring.material;
+    // Vitrin: nadirlik rengindeki hâle, yükselen kıvılcımlar ve giyinme parıltısı
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d'), r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.4, 'rgba(255,255,255,.35)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+    const glowTex = new THREE.CanvasTexture(c);
+    this.halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.55 }));
+    this.halo.scale.set(3.2, 4.2, 1);
+    this.halo.position.set(0, 1.1, -0.8);
+    this.flashS = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 }));
+    this.flashS.position.set(0, 1, 0.4);
+    const N = 46, pos = new Float32Array(N * 3);
+    this.motes = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 0.07, map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+    this.motes.geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    this.moteV = Array.from({ length: N }, () => ({ a: Math.random() * 6.3, r: 0.5 + Math.random() * 0.8, y: Math.random() * 2.6, v: 0.3 + Math.random() * 0.6 }));
+    for (const o of [this.halo, this.flashS, this.motes]) { o.material.userData.outlineParameters = { visible: false }; this.scene.add(o); }
+    this.setRank(null);
+    this.spin = 0; this.hold = 0;
     this.pedestal = on => { base.visible = ring.visible = on; };
     this.actors = {};
     this.current = null;
@@ -78,9 +98,47 @@ export class Book {
     this.camera.updateProjectionMatrix();
   }
 
+  // Nadirlik rengi: hâle, kıvılcımlar, kaide halkası ve kahramanın kenar ışığı. null: sade (Destan Kitabı)
+  setRank(color) {
+    const on = color != null;
+    this.halo.visible = this.motes.visible = on;
+    if (!on) { RIM.color.value.set(0xfff0d0); RIM.power.value = 0.28; this.ringMat.color.set(0xe3a82b); return; }
+    this.halo.material.color.set(color);
+    this.motes.material.color.set(color);
+    this.ringMat.color.set(color);
+    RIM.color.value.set(color); RIM.power.value = 0.55;
+  }
+  // Giyinme: kahraman hızla döner, ışık patlaması
+  transform() { this.spin = 0.55; this.flashT = 0.6; }
+  dragBy(dx) { if (this.current) { this.current.root.rotation.y += dx * 0.012; this.hold = 2.5; } }
+  pose(clip, idle) {
+    const a = this.current;
+    if (!a || !a.clips[clip]) return;
+    if (clip === idle || clip.endsWith('_Loop')) a.play(clip, { fade: 0.2 });
+    else a.play(clip, { loop: false, fade: 0.1, then: () => a.play(idle, { fade: 0.3 }) });
+  }
+
   update(dt) {
     if (!this.current) return;
-    this.current.root.rotation.y += dt * 0.5;
+    if (this.spin > 0) { this.spin -= dt; this.current.root.rotation.y += dt * 22 * Math.max(0, this.spin); }
+    if (this.flashT > 0) {
+      this.flashT -= dt;
+      const k = Math.max(0, this.flashT / 0.6);
+      this.flashS.material.opacity = k;
+      this.flashS.scale.setScalar(1 + (1 - k) * 4);
+    }
+    if (this.motes.visible) {
+      const p = this.motes.geometry.attributes.position;
+      this.moteV.forEach((m, i) => {
+        m.y += m.v * dt; m.a += dt * 0.4;
+        if (m.y > 2.8) m.y = 0;
+        p.setXYZ(i, Math.cos(m.a) * m.r, m.y, Math.sin(m.a) * m.r);
+      });
+      p.needsUpdate = true;
+      this.halo.material.opacity = 0.45 + Math.sin(performance.now() / 600) * 0.1;
+    }
+    if ((this.hold -= dt) <= 0) this.current.root.rotation.y += dt * 0.5;
     this.current.update(dt);
+    sway(this.current, dt, 1.5, 0); // vitrinde pelerin hafifçe dalgalanır
   }
 }
