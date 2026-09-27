@@ -18,7 +18,7 @@ import { toast, fillMoney, levelBar, levelUps } from './ui.js';
 import { sfx, music, sting, regionOf } from './sound.js';
 import * as SOUND from './sound.js';
 import { bonus, collect as collectBonus } from './bonus.js';
-import { tip, hideTip } from './tips.js';
+import { tip, hideTip, tipSeen, resetTips, setGate } from './tips.js';
 import { shop, upg, upgVal, drawShop, drawRack, BOOSTS } from './carsi.js';
 import * as TORE from './tore.js';
 import { rec, recMax, recSet } from './tore.js';
@@ -27,6 +27,8 @@ import { level as akinciLevel } from './akinci.js';
 import * as Y from './yigit.js';
 import * as KO from './koleksiyon.js';
 import * as EK from './ekranlar.js';
+import * as DLG from './diyalog.js';
+import * as AY from './ayarlar.js';
 
 const LANES = [-2.5, 0, 2.5];
 const $ = id => document.getElementById(id);
@@ -52,10 +54,12 @@ class OutlineRenderPass extends Pass {
   render(r, writeBuffer, readBuffer) {
     r.setRenderTarget(this.renderToScreen ? null : readBuffer);
     r.clear();
-    outline.render(active.scene, active.camera);
+    if (gfx.outline) outline.render(active.scene, active.camera);
+    else r.render(active.scene, active.camera); // düşük grafik: mürekkep çizgisi yok
   }
 }
 const active = { scene, camera };
+const gfx = { outline: true };
 const composer = new EffectComposer(renderer);
 composer.addPass(new OutlineRenderPass());
 const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.35, 0.86);
@@ -336,7 +340,7 @@ const camFromP = new THREE.Vector3(), camFromQ = new THREE.Quaternion();
 const P = { lane: 1, x: 0, y: 0, vy: 0, z: 0, slide: 0, inv: 0, hp: 3, speed: 0, lock: 0, lunge: 0, ride: 0, sword: 0, row: 1, flip: 0, flipAxis: 'x', spin: 0, roll: false, rear: 0 };
 const FLIP_T = 0.62; // zıplamanın havada kalma süresi (takla bu sürede döner)
 let state = 'loading', objs = [], arrows = [], bursts = [], pending = [], boss = null, fin = null, A = null;
-let deerActor, comic;
+let deerActor, comic, portraits, dlgShown = false;
 let hero, giant, horse, wolf, tulpar, book, cine, ctx, horseAway = null, mode = 'level', level = 1, flying = false;
 let flow = 1, holdTarget = 1, esirs = 0; // düelloda Oğuz durur: dünya akışı 0'a iner
 const foes = [];
@@ -443,6 +447,10 @@ loadAssets(p => ($('loadbar').style.width = p * 100 + '%')).then(a => {
   deerActor.root.visible = false;
   scene.add(deerActor.root);
   book = new Book(A);
+  portraits = new DLG.Portraits(A, renderer, outline);
+  if (AY.cfg.gfx) applyGfx(AY.cfg.gfx);
+  AY.init({ setState: s => { state = s; }, toMenu, gallery, applyGfx, tilt: () => tilt, setTilt: toggleTilt });
+  AY.wire();
   EK.init({ setState: s => { state = s; }, book, toMenu, isUnlocked, locked, toast, sfx, levelUps, addXP, levelBar, dressHero, onCards, missingArrow });
   ctx = makeCtx();
   cine = new Cine(ctx);
@@ -578,7 +586,7 @@ function toMenu() {
   nodeRun = null;
   hideTip();
   music('menu');
-  for (const id of ['hud', 'over', 'paused', 'bossbar', 'ride', 'map', 'book', 'win', 'tap', 'mash', 'wardrobe', 'loading', 'grid', 'goals', 'powers', 'boyscreen', 'carsi', 'revive', 'result', 'tore', 'yigit', 'kademe', 'sefer', 'koleksiyon']) $(id).hidden = true;
+  for (const id of ['hud', 'over', 'paused', 'bossbar', 'ride', 'map', 'book', 'win', 'tap', 'mash', 'wardrobe', 'loading', 'grid', 'goals', 'powers', 'boyscreen', 'carsi', 'revive', 'result', 'tore', 'yigit', 'kademe', 'sefer', 'koleksiyon', 'dialog', 'ayar']) $(id).hidden = true;
   wolf.root.visible = deerActor.root.visible = false;
   $('menu').hidden = false;
   menuLocks();
@@ -602,6 +610,41 @@ function locked(key) {
 }
 
 const progress = (() => { try { return JSON.parse(localStorage.getItem('oguz-levels')) || {}; } catch { return {}; } })();
+
+// Grafik düzeyi (Ayarlar): çözünürlük, gölge, parlama, mürekkep çizgisi
+function applyGfx(k) {
+  const G = AY.GFX[k] || AY.GFX.yuksek;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, G.ratio));
+  sun.castShadow = G.shadow;
+  bloom.enabled = G.bloom;
+  gfx.outline = G.outline;
+  resize();
+}
+// Açılışta FPS ölçülür, grafik düzeyi kendiliğinden seçilir (oyuncu seçtiyse dokunulmaz)
+const fpsProbe = { n: 0, t0: 0, done: !!AY.cfg.gfx };
+function probeFps() { // gerçek saatle (kare süresi 0.05'te kesildiği için dt'ye güvenilmez)
+  if (fpsProbe.done || !hero) return;
+  const t = performance.now();
+  fpsProbe.warm ??= t + 1500; // ilk kareler (gölgelendirici derleme) yavaştır: sayılmaz
+  if (t < fpsProbe.warm) return;
+  if (!fpsProbe.t0) fpsProbe.t0 = t;
+  fpsProbe.n++;
+  const sec = (t - fpsProbe.t0) / 1000;
+  if (sec > 2.5) { fpsProbe.done = true; fpsProbe.fps = fpsProbe.n / sec; applyGfx(AY.autoGfx(fpsProbe.fps)); }
+}
+// Ara sahne galerisi
+function gallery() {
+  const back = after => () => { toMenu(); after(); };
+  const epi = n => [{ text: EPILOG[n], dur: 7, enter(c) { c.fade(0); setTheme(LEVELS[n].floors.at(-1).theme); c.hero.play('Idle_Loop', { fade: 0 }); c.title([[`BÖLÜM ${n} SONU`, 'sub']]); c.titleAlpha(1, true); },
+    update(c, k) { c.show(c.hero, 0, 0, c.Z - 8, Math.PI); c.cam(lerp(3, 1.4, k), 2, c.Z - 12, 0, 1.5, c.Z - 8); c.titleAlpha(k < 0.25 ? 1 : 0); } }];
+  const intro = n => () => { setTheme(LEVELS[n].floors[0].theme); return levelIntro(n); };
+  return [
+    ['Jenerik', after => playCine(JENERIK, back(after))],
+    ['Prolog (çizgi roman)', after => playComic(PROLOG_PAGES, back(after))],
+    ...[1, 2, 3, 4, 5, 6, 7].map(n => [`${n}. bölüm girişi`, after => playCine(intro(n)(), back(after))]),
+    ...[1, 2, 3, 4, 5, 6, 7].map(n => [`${n}. bölüm sonu`, after => playCine(epi(n), back(after))]),
+  ];
+}
 
 // Koşan yiğit: liderin görünüşü; Canavarlar koleksiyonu tamamsa altın çerçeveli Tanrı Kılıcı
 let goldSwordMat = null;
@@ -749,6 +792,14 @@ function playNode(n) {
   openBoylar('level', n.lv);
 }
 
+function showDialog(lines, after) {
+  state = 'dialog';
+  for (const id of ['hud', 'menu', 'map', 'boyscreen', 'result']) $(id).hidden = true;
+  hero.root.visible = true;
+  hero.play('Idle_Loop', { fade: 0.2 });
+  DLG.play(lines, portraits, Y.cardLook(Y.leader()), after, sfx);
+}
+
 // GÖREV TAMAM: SMU'daki gibi sonuç ekranı; madalyalar sırayla dolar
 const MEDAL_XP = [30, 60, 100];
 function nodeDone() {
@@ -791,6 +842,8 @@ function nodeDone() {
   $('result').hidden = false;
   sting('win');
   endRunXP(xp);
+  const after = DLG.DIALOGS['son:' + n.lv];
+  if (first && !n.extra && n.last && after) { $('result').hidden = true; showDialog(after, () => { state = 'result'; $('result').hidden = false; }); } // bölüm sonu
 }
 function showNodeOnMap(n) { openMap(); showNode(n, isOpen(nodes(), n)); }
 
@@ -1022,6 +1075,50 @@ function win() {
   endRunXP();
 }
 
+// ---- eğitim ipuçları ----
+// 1. bölümün ilk kısmında sırayla ve güvenli anlarda; sonra her yeni şey ilk görüldüğünde bir kez.
+const T_TUTOR = [
+  ['goals', { text: 'Görev çiplerindeki hedefleri tamamla (mesafe, kut...). Hepsi bitince boss gelir.', icon: '🎯' }, () => time > 1.2],
+  ['lane', { text: 'Sola ya da sağa kaydırarak şerit değiştir.', icon: '⇆', gesture: 'lr', key: '← →' }, () => time > 3.5],
+  ['kut', { text: 'Kut topla: koşu sonunda kasana girer, Çarşı ve yiğitler için harcanır.', icon: '◆' }, () => ahead(o => o.kind === 'kut', 14)],
+  ['jump', { text: 'Alçak engelin üstünden zıpla: yukarı kaydır.', icon: '⤒', gesture: 'up', key: '↑' }, () => ahead(o => o.def.hit === 'low' && o.lane === P.lane, 18, 8)],
+  ['slide', { text: 'Yüksek engelin altından kay: aşağı kaydır.', icon: '⤓', gesture: 'down', key: '↓' }, () => ahead(o => o.def.hit === 'high' && o.lane === P.lane, 18, 8)],
+  ['sword', { text: 'Düşmana dokun: kılıçla vur! Yakındakilere atılarak vurursun.', icon: '⚔', gesture: 'tap', key: 'Boşluk' }, () => ahead(o => o.def.foe && o.ready && o.lane === P.lane, 18, 9)],
+  ['bow', { text: '⚔/🏹 düğmesiyle yaya geç: uzaktakileri okla vur.', icon: '🏹', key: 'Q' }, () => kills > 0],
+];
+const T_EVENT = [ // [id, ipucu, önde görülen nesne]
+  ['nal', { text: 'Altın nalı al: ata binersin, önündeki her şeyi çiğnersin.', icon: '🐎' }, o => o.kind === 'nal'],
+  ['kimiz', { text: 'Şifalı kımız bir can verir.', icon: '🍶' }, o => o.kind === 'kimiz'],
+  ['relic', { text: 'Destan eşyası! Havada durur: zıplayarak al.', icon: '🏹', gesture: 'up', key: '↑' }, o => o.kind === 'gumus' || o.kind === 'yay'],
+  ['pusu', { text: 'Ünlem: pusu! Düşman atlayacak; şerit değiştir ya da vur.', icon: '!' }, o => o.alert && !o.gold],
+  ['kurt', { text: 'Gök Yeleli Kurt: al, önden koşup güvenli yolu gösterir.', icon: '🐺' }, o => o.kind === 'kurt'],
+  ['geyik', { text: 'Ak Geyik! Yakalarsan seni kut dolu gizli yola götürür.', icon: '🦌' }, o => o.def.deer],
+  ['isabet', { text: 'Altın tamga halkasının içinden geç: İSABET kombosu.', icon: '𐰴' }, o => o.kind === 'tamga'],
+  ['kirik', { text: 'Çatlak ahşap engeli kılıçla kır, içinden kut saçılır.', icon: '📦', gesture: 'tap', key: 'Boşluk' }, o => o.def.brk],
+  ['kalkanli', { text: 'Kalkanlıya ok işlemez: önce kılıçla kalkanını kır.', icon: '🛡' }, o => o.cfg?.parts.includes('Shield')],
+];
+// 1. bölümün ilk kısmında önce 'görevler' ve 'şerit' gösterilir; o ikisi görülmeden başka ipucu çıkmaz
+setGate(id => id === 'goals' || id === 'lane' || !(level === 1 && floor === 0 && mode === 'level') || (tipSeen('goals') && tipSeen('lane')));
+const ahead = (f, far, near = 0) => objs.some(o => !o.dead && !o.done && P.z - o.z > near && P.z - o.z < far && f(o));
+const safe = () => !objs.some(o => o.def.hit && !o.dead && P.z - o.z > 0 && P.z - o.z < 10); // önü boşken
+let tipT = 0;
+function tipScan(dt) {
+  if ((tipT -= dt) > 0 || state !== 'run' || fin) return;
+  tipT = 0.2;
+  if (level === 1 && floor === 0 && mode === 'level' && !boss) { // ilk kısımda sırayla
+    const left = T_TUTOR.filter(([id]) => !tipSeen(id));
+    const first = left.slice(0, left[0]?.[0] === 'goals' || left[0]?.[0] === 'lane' ? 1 : left.length); // önce görevler ve şerit, sonra hangisi önce gelirse
+    const next = first.find(t => t[2]());
+    if (next && (['jump', 'slide', 'sword'].includes(next[0]) || safe())) return void tip(next[0], next[1], '', slowmo);
+  }
+  if (boss) {
+    const t = $('tap').hidden ? '' : $('tap').textContent;
+    if (/ZIPLA|EĞİL|KAÇ/.test(t)) tip('duel', { text: 'Düello: ekranda yazan hamleyi yap (ZIPLA / EĞİL / YANA KAÇ), sonra VUR!', icon: '⚔' }, '', slowmo);
+    return;
+  }
+  for (const [id, t, f] of T_EVENT) if (!tipSeen(id) && ahead(f, 22, 4)) return void tip(id, t, '', slowmo);
+}
+
 // Koşu sonu istatistikleri (Töre Defteri)
 function recordRun() {
   if (runRecorded) return;
@@ -1057,6 +1154,12 @@ function start(m = mode, lv = level, skipIntro = false) {
     ctx.clear();
     return playCine(levelIntro(level), () => start(m, lv, true));
   }
+  // Uluğ Türük'le görev öncesi diyalog (düğüm ilk kez oynanırken)
+  if (m === 'level' && nodeRun && !nodeRun.extra && !dlgShown && DLG.DIALOGS[nodeRun.id] && !hStore[nodeRun.id]?.m) {
+    dlgShown = true;
+    return showDialog(DLG.DIALOGS[nodeRun.id], () => start(m, lv, true));
+  }
+  dlgShown = false;
   flying = !!L.flight;
   sect = eagleAway = null; sectDone = false; sectAt = 300; hideProps();
   hero.root.visible = true;
@@ -1327,6 +1430,7 @@ function hurt(o) {
     return pop('KALKAN!', { x: P.x, y: 0, z: P.z });
   }
   sfx('hurt');
+  AY.vibrate(70);
   runHits++;
   if (nodeRun?.cond?.[0] === 'nohit') return missionFail('DARBE ALDIN!');
   P.hp--; P.inv = has('eymur') ? 2.4 : 1.4; shake = 0.4; combo = has('dodurga') ? Math.floor(combo / 2) : 0;
@@ -1762,6 +1866,7 @@ function tryParry() {
   slowmo(0.35, 0.45);
   sparks.emit(o.x, o.y + 1.3, o.z, 50, 0xffd23f, 7, 3);
   sfx('parry');
+  AY.vibrate(40);
   runParries++;
   rec('parry');
   return true;
@@ -2069,6 +2174,7 @@ function startBoss() {
   main.root.rotation.y = boss.rot;
   if (def.ranged && !flying) { setWeapon('bow'); banner('YAYINI ÇEK!'); }
   boss.esc = boss.escMax = def.escape ?? 75; // KAÇIŞ çubuğu: süre biterse boss kaçar
+  tip('kacis', { text: 'Mavi KAÇIŞ çubuğu biterse boss kaçar! Hızlı ol.', icon: '⏳' }, '', slowmo);
   $('bossname').textContent = def.name;
   $('bossbar').hidden = false;
   bossBar();
@@ -2518,7 +2624,7 @@ function update(dt) {
   if (state === 'cine') { ctx.update(dt); cine.update(dt); sparks.update(dt); dust.update(dt); return; }
   if (state === 'book' || state === 'wardrobe' || state === 'yigit') { book.update(dt); return; }
   if (state === 'sefer' && Math.floor(time) !== Math.floor(time - dt)) EK.drawSefer(); // süreler akar
-  if (state === 'menu' || state === 'map' || state === 'gate' || state === 'win' || state === 'boylar' || state === 'carsi' || state === 'result' || state === 'tore' || state === 'kademe' || state === 'sefer') { hero.update(dt); return; }
+  if (state === 'menu' || state === 'map' || state === 'gate' || state === 'win' || state === 'boylar' || state === 'carsi' || state === 'result' || state === 'tore' || state === 'kademe' || state === 'sefer' || state === 'dialog' || state === 'ayar') { hero.update(dt); return; }
   if (state === 'dying') {
     hero.update(dt);
     if ((overT -= dt) <= 0) { if (!noRevive && continues < 3) showRevive(); else gameOver(); }
@@ -2582,6 +2688,7 @@ function update(dt) {
     if (mode === 'level' && fl && floor < fl.length - 1) nextFloor(); else win();
   }
   updatePowers(dt);
+  tipScan(dt);
   if (rain) updateRain(dt);
   if (!boss && !sect && dist() > bossAt && !P.ride) startBoss();
   if (!boss && !flying && !sect && dist() > 250 && (ambushT -= dt) <= 0) { ambushT = rand(4, 8); spawnAmbush(); }
@@ -2791,6 +2898,7 @@ function showRevive() {
   $('rvleft').textContent = `${3 - continues} hakkın kaldı`;
   $('revive').hidden = false;
   $('hud').hidden = true;
+  tip('hayatsuyu', { text: 'Gök Demirle Hayat Suyu içip kaldığın yerden devam edebilirsin.', icon: '⬢' });
 }
 function reviveTick(dt) {
   hero.update(dt);
@@ -2929,6 +3037,7 @@ addEventListener('click', e => { if (e.target.closest('button')) sfx('click'); }
 $('start').onclick = openMap;
 $('carsibtn').onclick = () => locked('carsi') || openShop();
 $('torebtn').onclick = openTore;
+$('ayarbtn').onclick = () => AY.open();
 $('yigitbtn').onclick = () => EK.openYigit();
 $('yback').onclick = EK.closeYigit;
 $('ydrum').onclick = EK.drumRoll;
@@ -2990,6 +3099,7 @@ resize();
 // Ağır çekim ve vuruş donması dünya zamanını yavaşlatır; kamera ve arayüz gerçek zamanda akar
 const clock = new THREE.Clock();
 function frame(realDt) {
+  probeFps(realDt);
   let k = 1;
   if (stopT > 0) { stopT -= realDt; k = 0.03; }
   else if (slowT > 0) { slowT -= realDt; k = slowK; }
@@ -3010,6 +3120,9 @@ renderer.setAnimationLoop(() => {
 
 // test kancası (tarayıcı konsolundan oyunu adım adım sürmek için)
 window.__game = {
+  AY, applyGfx, get fps() { return fpsProbe; },
+  resetTips, tipSeen,
+  DLG, showDialog, get portraits() { return portraits; },
   Y, EK, KO, dressHero,
   TORE, openTore, get nodes() { return nodes(); }, playNode, hStore, get nodeRun() { return nodeRun; }, set nodeRun(v) { nodeRun = v; },
   get zone() { return zone; }, get loop() { return loop; }, nextZone, shop, openShop, showRevive, doRevive, get continues() { return continues; },

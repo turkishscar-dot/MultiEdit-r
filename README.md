@@ -23,16 +23,24 @@ olduğu için) özellik güncellemelerini hazırlar, buraya commit'ler. Kadir'in
 ## Durum
 
 - [x] Oğuz Kağan kaynak kodu analiz edildi, Spiderman Unlimited ile karşılaştırıldı → **`REPORT.md`**.
-- [x] **Asıl yol haritası: [`istemler/`](./istemler/README.md)**. 20 adım (00–19); sıra, bağımlılıklar ve PC'deki Claude için genel kurallar orada.
-- [ ] İsteğe bağlı eski paketler: `updates/001-alp-gucu-ultimate`, `updates/006-kovalamaca-chase`.
-- `iptal/`: yerine yeni istemler geçen eski paketler. Uygulanmayacak.
+- [x] **`istemler/` klasöründeki 16 özelliğin hepsi bu repoda kodlandı ve test edildi** → oyunun güncel kodu **`oyun/`** klasöründe.
+  - Bilgisayardaki oyuna nasıl aktarılacağı, neyin burada yapılamadığı: **[`oyun/UYGULAMA.md`](./oyun/UYGULAMA.md)**
+  - Çevrim içi altyapı karşılaştırması (hesabı sen açacaksın): **[`oyun/CEVRIMICI.md`](./oyun/CEVRIMICI.md)**
+  - Ses kaynakları ve lisans: **[`oyun/SES-KAYNAKLARI.md`](./oyun/SES-KAYNAKLARI.md)**
+- `istemler/`: yol haritası olarak duruyor (hepsi uygulandı; 19. adımın kurulum kısmı hesap açılınca).
+- `updates/001`, `updates/006`: isteğe bağlı eski öneriler.
+- `iptal/`: yerine yeni istemler geçen eski paketler.
 
 ## Klasör yapısı
 
 ```
 REPORT.md          ← SMU karşılaştırma raporu
-istemler/          ← PC'deki Claude'a sırayla verilecek istemler (00–19) + README (sıra, kurallar)
-updates/           ← isteğe bağlı eski paketler (001, 006)
-iptal/             ← iptal edilen paketler, uygulanmayacak
-applied/           ← uygulanmış paketler buraya taşınır
+oyun/              ← oyunun güncel kaynak kodu (3B modeller hariç) + test araçları
+  UYGULAMA.md      ← PC'deki oyuna aktarma talimatı
+  CEVRIMICI.md     ← Firebase / Supabase karşılaştırması
+  SES-KAYNAKLARI.md
+  src/             ← oyun kodu
+  tools/           ← test botu ve test betikleri (regresyon.sh hepsini çalıştırır)
+istemler/          ← 00–19 yol haritası
+updates/, iptal/   ← eski paketler
 ```

@@ -139,6 +139,7 @@
       for (let i = 0; i < sec / DT; i++) {
         const st = G.state;
         if (st === 'cine') { G.cine.skip(); ev('cine'); }
+        if (st === 'dialog') { document.getElementById('dskip').click(); ev('dialog'); }
         if (st === 'win' || st === 'over' || st === 'result') break;
         if (window.__botHook) window.__botHook(G);
         if (st === 'run' && !G.fin) {
