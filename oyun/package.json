@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build"
+    "build": "vite build",
+    "build:web": "node tools/web-paket.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

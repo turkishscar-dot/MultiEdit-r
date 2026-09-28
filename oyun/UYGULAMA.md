@@ -65,6 +65,12 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 
 Bot bu mekanikleri de oynuyor (uçurumda zıplar, ışında kayar/zıplar, ▼ düşmanın altından kayar, ▲ çıkınca zıplar, Yada Taşı atar). Ekran görüntüleri: `node tools/smu2-scenes.mjs kalkan kanatli sur ucurum2 yerucurum isin kalinisin yada bitir`.
 
+## Telefonda açmak
+
+- **En kolayı:** claude.ai'de yayınlanan sürüm (özel bağlantı, yalnız senin hesabınla açılır): https://claude.ai/artifact/EhXmC3e9XCYgj3JuVJKTxz
+- **Kendi bilgisayarından (aynı Wi-Fi):** `npm run dev` (zaten `--host` ile açılır), terminalde yazan `Network: http://192.168.x.x:5173` adresini telefonun tarayıcısına yaz.
+- **Web paketi:** `npm run build:web` → `dist-web/` klasörü (modeller ve sesler ayrı dosya, telefonda önbelleğe alınır). Herhangi bir barındırmaya (GitHub Pages, Netlify, Cloudflare Pages) olduğu gibi yüklenebilir. Not: `OYNA.html` 51 MB tek dosya olduğu için telefonda yavaş açılır ve gerçek sesleri yükleyemez.
+
 ## Geri bildirim düzeltmeleri (28 Eylül)
 
 | Şikâyet | Ne yapıldı |
