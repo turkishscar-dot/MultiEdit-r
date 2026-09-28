@@ -191,9 +191,6 @@ const flagTex = f => tex(128, 256, (g, w, h) => {
   g.lineWidth = 8;
   g.lineCap = g.lineJoin = 'round';
   EMBLEM[f.emblem](g);
-  g.font = 'bold 17px Impact, sans-serif';
-  g.textAlign = 'center';
-  g.fillText(f.name, 64, 196);
   g.globalCompositeOperation = 'destination-out'; // kırlangıç kuyruğu
   g.beginPath(); g.moveTo(0, h + 1); g.lineTo(w / 2, h - 36); g.lineTo(w, h + 1); g.fill();
 });

@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
-import { ayrintila, aoYukle, kadinBicimi } from './ayrinti.js';
+import { ayrintila, aoYukle } from './ayrinti.js';
 import oguzUrl from './assets/oguz.glb?url';
 import kormosUrl from './assets/kormos.glb?url';
 import tepegozUrl from './assets/tepegoz.glb?url';
@@ -153,7 +153,6 @@ export async function loadAssets(onProgress) {
     toon(out[k].scene, k);
     templates[k] = out[k].scene;
   }
-  kadinBicimi(templates.oguz); // kadın yiğitler için geometri kopyası (gölge boşluğu özniteliğiyle birlikte)
   const clipMap = gltf => Object.fromEntries(gltf.animations.map(c => [c.name, c]));
   // çevre modelleri: ada göre (doğa: ağaç, çalı, kaya · kale: kule, sur)
   const env = {};

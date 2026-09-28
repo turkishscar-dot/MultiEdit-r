@@ -2,7 +2,7 @@
 import { chromium } from 'playwright';
 import { execFileSync } from 'child_process';
 const YAKIN = process.argv.includes('--yakin'), argv = process.argv.slice(2).filter(a => a !== '--yakin');
-const ids = argv.length ? argv : ['bilge', 'kultigin', 'fatih', 'geyiksaman', 'tonyukuk', 'tomris', 'gokhan', 'daghan'];
+const ids = argv.length ? argv : ['bilge', 'kultigin', 'fatih', 'geyiksaman', 'tonyukuk', 'gokhan', 'daghan'];
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await b.newPage({ viewport: { width: 520, height: 640 } });
 const errs = []; p.on('pageerror', e => errs.push(e.message));

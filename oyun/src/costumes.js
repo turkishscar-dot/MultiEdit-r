@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { KADIN, ERKEK } from './ayrinti.js';
 import { desen } from './desen.js';
 
 // Kostümler: Oğuz'un modelindeki başlık/gövde parçalarını açıp kapatır, kaftan-şalvar-çizme renklerini değiştirir.
@@ -94,10 +93,6 @@ export function applyCostume(actor, id) {
   for (const [n, o] of Object.entries(actor.parts)) if (PARTS.includes(n) || n.startsWith('C_')) o.visible = c.parts.includes(n);
   actor.root.traverse(o => {
     if (!o.isMesh) return;
-    if (o.isSkinnedMesh) { // kadın yiğitte kadın biçimli geometri (src/ayrinti.js)
-      const e = ERKEK.get(o.geometry) || o.geometry, k = KADIN.get(e), g = c.kadin && k ? k : e;
-      if (o.geometry !== g) o.geometry = g;
-    }
     if (o.name === 'Hair_Beard') o.visible = c.beard !== false;
     for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
       m.userData.base ??= m.color?.getHex(); // görünüşte olmayan renk özgün hâline döner

@@ -53,7 +53,6 @@ Her parçayı bitirince `node tools/kostum-shots.mjs` çalıştır ve `test-out/
 
 - Başı %6–8, elleri %8–10 büyütmek karakteri çizgi roman gibi okunur yapar. **Kemiğe ölçek verme** (bütün başlıklar kayar). Yüz ve el meshini düzenle, sonra her başlığın (Bork, Kavuk, Sarik, Taj, Kalpak, HunCap, KulTiginTac, AltinBork, EagleHat, BearHat, Antlers, YakutHat, Headband) başa oturduğunu tek tek kontrol et.
 - Kaşları biraz kalınlaştır, gözlere beyaz vurgu ekle. Uzaktan yüz ifadesi okunsun.
-- Kadın yiğitler (Tomris, Banu Çiçek) için sakalsız yüzde daha ince kaş ve uzun saç ayrı model olabilir. Şimdilik `beard: false` ile sakal gizleniyor.
 
 ## 4. Dışa aktarma
 

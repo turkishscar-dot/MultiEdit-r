@@ -80,55 +80,6 @@ function aoEkle(geo, model) {
   return true;
 }
 
-// ---- kadın biçimi: şablonun iskelete giydirilmiş örgülerine köşe başına kayma (bağlanma duruşunda) ----
-// Kollar ve bacaklar kemik eksenine doğru incelir, bel daralır, kalça biraz genişler, kaşlar incelir. Baş, eller, başlıklar
-// değişmez (başlıklar kaymasın). Her örgünün kadın biçimli geometri kopyası tutulur; kostüm giyilirken (costumes.js)
-// geometri değiştirilir. Böylece kontur çizgisi ve gölge de aynı biçimi görür.
-export const KADIN = new WeakMap(), ERKEK = new WeakMap();
-export function kadinBicimi(sablon) {
-  sablon.updateMatrixWorld(true);
-  const V = THREE.Vector3, bas = {};
-  sablon.traverse(o => { if (o.isBone) bas[o.name] = o; });
-  const kafa = /^(Head|neck_01|hand_|index_|middle_|ring_|pinky_|thumb_)/;
-  sablon.traverse(s => {
-    if (!s.isSkinnedMesh || KADIN.has(s.geometry)) return;
-    const g = s.geometry, pos = g.attributes.position, si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
-    if (!si || !sw) return;
-    const bones = s.skeleton.bones, bind = s.bindMatrix, binv = new THREE.Matrix4().copy(bind).invert();
-    const bw = bones.map((b, i) => new V().setFromMatrixPosition(new THREE.Matrix4().copy(s.skeleton.boneInverses[i]).invert()));
-    const ucu = i => { const b = bones[i]; const c = b.children.find(x => x.isBone); return c ? bw[bones.indexOf(c)] ?? null : null; };
-    const ofs = new Float32Array(pos.count * 3), p = new V(), d = new V(), a = new V(), t = new V();
-    const kas = s.name === 'Eyebrows' || /Eyebrow/.test(s.name);
-    let km = null;
-    if (kas) { km = new V(); for (let k = 0; k < pos.count; k++) km.add(p.fromBufferAttribute(pos, k).applyMatrix4(bind)); km.multiplyScalar(1 / pos.count); }
-    for (let k = 0; k < pos.count; k++) {
-      p.fromBufferAttribute(pos, k).applyMatrix4(bind); d.set(0, 0, 0);
-      if (kas) { d.set(0, (km.y - p.y) * 0.45, 0); }
-      else {
-        let top = 0;
-        for (let j = 0; j < 4; j++) {
-          const w = sw.getComponent(k, j); if (w <= 0) continue;
-          const bi = si.getComponent(k, j), ad = bones[bi]?.name || '';
-          if (kafa.test(ad)) continue;
-          let e = null;
-          if (/^(upperarm|lowerarm)_/.test(ad)) e = 0.2;            // kollar %20 incelir
-          else if (/^(thigh|calf)_/.test(ad)) e = 0.1;              // bacaklar %10
-          if (e != null) { const u = ucu(bi); if (!u) continue; a.copy(bw[bi]); t.copy(u).sub(a).normalize();
-            const proj = a.clone().add(t.clone().multiplyScalar(p.clone().sub(a).dot(t))); d.add(proj.sub(p).multiplyScalar(e * w)); top += w; continue; }
-          if (/^(spine_02|spine_03|clavicle_)/.test(ad)) { d.x += -p.x * 0.1 * w; d.z += -(p.z - bw[bi].z) * 0.05 * w; }  // göğüs ve sırt daralır
-          else if (/^spine_01$/.test(ad)) d.x += -p.x * 0.14 * w;   // bel
-          else if (/^pelvis$/.test(ad)) d.x += p.x * 0.04 * w;      // kalça
-        }
-      }
-      t.copy(d).applyMatrix3(new THREE.Matrix3().setFromMatrix4(binv));
-      ofs[k * 3] = t.x; ofs[k * 3 + 1] = t.y; ofs[k * 3 + 2] = t.z;
-    }
-    const gk = g.clone(), kp = gk.attributes.position;
-    for (let k = 0; k < kp.count; k++) kp.setXYZ(k, kp.getX(k) + ofs[k * 3], kp.getY(k) + ofs[k * 3 + 1], kp.getZ(k) + ofs[k * 3 + 2]);
-    KADIN.set(g, gk); ERKEK.set(gk, g);
-  });
-}
-
 export const AYAR = { ao: { value: 0.75 }, detay: { value: 1 }, parlak: { value: 1 }, boya: { value: 0.85 } }; // ayarlardan kısılabilir (düşük grafik)
 
 // m: MeshToonMaterial, geo: parçanın geometrisi, model: 'oguz' gibi, rim: { color, power } (yalnız Oğuz),

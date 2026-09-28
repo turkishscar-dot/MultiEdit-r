@@ -55,18 +55,14 @@ export const CARDS = [
     text: "Göktürklerin veziri ve komutanı; İlteriş Kutluk, Kapgan ve Bilge Kağan'a danışmanlık etti. Kendi ağzından yazdırdığı yazıt (720 dolayı) Türkçenin ilk yazılı metinlerindendir." },
   { id: 'alperTunga', name: 'Alp Er Tunga', title: 'Turan hükümdarı', stars: 5, look: look(['AltinBork'], 0x7a1a4a, 0x2a1a2a, 0xd9a520), ab: ['kp2', 'bp50'], group: 'destan',
     text: "Türk destan kahramanı; İran kaynaklarında Afrasiyab diye geçer. Kaşgarlı Mahmud'un Divanü Lugati't-Türk'ünde onun ölümüne yakılmış sagu yer alır: 'Alp Er Tunga öldü mü...'" },
-  { id: 'tomris', name: 'Tomris Hatun', title: 'Massaget kraliçesi', stars: 5, look: look(['Headband'], 0x6a1a2a, 0xd9b04a, 0x3a1a10, { beard: false }), ab: ['bp50', 'fk'], group: 'destan',
-    text: "Heredot'a göre Massagetlerin kraliçesi; MÖ 530'da kendi yurduna giren Pers kralı Kiros'un ordusunu yendi. Bozkır halklarının en ünlü kadın hükümdarlarındandır." },
   { id: 'attila', name: 'Attila', title: 'Tanrının Kılıcı', stars: 6, costume: 'attila', ab: ['bp65', 'kp50'], group: 'hun',
     text: "Avrupa Hun hükümdarı (434–453). Doğu ve Batı Roma'yı haraca bağladı. Rivayete göre bir çobanın bulduğu kutsal kılıcı dünyaya hükmetme işareti saydı." },
   { id: 'basat', name: 'Basat', title: 'Tepegöz\'ün yenicisi', stars: 4, look: look(['Kalpak', 'ClawL', 'ClawR'], 0x8a6a2a, 0x4a3a22, 0x2a1c12), ab: ['bp65', 'kp1'], group: 'dedekorkut',
     text: "Dede Korkut Kitabı'nda Aruz Koca'nın oğlu. Bebekken kaybolup aslan sütüyle büyüdü. Oğuz'u haraca bağlayan Tepegöz'ün tek gözünü kör edip onu kendi kılıcıyla öldürdü." },
   { id: 'beyrek', name: 'Bamsı Beyrek', title: 'Boz aygırlı', stars: 4, look: look(['Bork', 'Collar'], 0x2f6e4a, 0x8a1a1a, 0x3a2410), ab: ['kt5', 'kp30'], group: 'dedekorkut',
-    text: "Dede Korkut Kitabı'nda Kam Püre'nin oğlu, Banu Çiçek'in nişanlısı. Düğün gecesi tutsak düştü, on altı yıl sonra kaçıp ozan kılığında döndü ve nişanlısını kurtardı." },
+    text: "Dede Korkut Kitabı'nda Kam Püre'nin oğlu. Düğün gecesi tutsak düştü, on altı yıl sonra kaçıp ozan kılığında döndü ve nişanlısını kurtardı." },
   { id: 'dumrul', name: 'Deli Dumrul', title: 'Azrail\'e meydan okuyan', stars: 4, look: look(['HunCap'], 0x1a1a1a, 0x3a1a1a, 0x1a1414), ab: ['kp2', 'kt3'], group: 'dedekorkut',
     text: "Dede Korkut Kitabı'nda kuru çayın üstüne köprü kurup geçenden haraç alan yiğit. Azrail'e meydan okudu; eşi canını onun için vermeye razı olunca ikisine de yüz kırk yıl ömür verildi." },
-  { id: 'banucicek', name: 'Banu Çiçek', title: 'Bay Bican\'ın kızı', stars: 4, look: look(['Headband', 'Feathers'], 0xb3304a, 0xf0d8c0, 0x6a1a1a, { beard: false }), ab: ['kp40', 'kp1'], group: 'dedekorkut',
-    text: "Dede Korkut Kitabı'nda Bay Bican'ın kızı. Bamsı Beyrek'le ok atmada, at yarışında ve güreşte yarıştı; onu yenen yiğitle evleneceğini söylemişti." },
   { id: 'manas', name: 'Manas', title: 'Kırgız alpı', stars: 5, costume: 'manas', ab: ['fk', 'bp40'], group: 'destan',
     text: "Kırgızların büyük destan kahramanı. Kırk yiğidiyle akınlar yapar; Manas Destanı dünyanın en uzun destanlarından sayılır." },
   { id: 'sogotoh', name: 'Er-Sogotoh', title: 'İlk insan', stars: 6, costume: 'sogotoh', ab: ['ku30', 'fk1'], group: 'destan',
@@ -138,12 +134,10 @@ const DETAY = {
   kultigin: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_BraidBack_Sway', 'C_Mustache'] },
   tonyukuk: { parts: ['C_KaftanLong', 'C_BeardLongWhite', 'C_Sash'], colors: { M_Sash: 0x6a5a48 } },
   alperTunga: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_Cape_Sway', 'C_Belt'], colors: { M_Cape: 0x3a0a2a } },
-  tomris: { kadin: true, parts: ['C_KaftanLong', 'C_Belt', 'C_BraidsSide', 'C_BraidBack_Sway', 'C_Cape_Sway', 'C_HairTop'], colors: { M_Cape: 0xd9b04a } },
   attila: { parts: ['C_Lamellar', 'C_FurCollar', 'C_Cape_Sway', 'C_Mustache'], colors: { M_Cape: 0x2a1030, M_Kurk: 0x3a2a1a } },
   basat: { parts: ['C_FurCollar', 'C_Belt'], colors: { M_Kurk: 0x8a6a48 } },
   beyrek: { parts: ['C_KaftanLong', 'C_Belt', 'C_Mustache'] },
   dumrul: { parts: ['C_Pauldrons', 'C_Belt', 'C_Cape_Sway'], colors: { M_Cape: 0x2a3a2a } },
-  banucicek: { kadin: true, parts: ['C_KaftanLong', 'C_BraidsSide', 'C_BraidBack_Sway', 'C_Sash', 'C_HairTop'], colors: { M_Sash: 0xe8c040 } },
   manas: { parts: ['C_KaftanLong', 'C_Belt', 'C_Cape_Sway', 'C_Mustache'], colors: { M_Cape: 0xf0ece0 } },
   sogotoh: { parts: ['C_FurCollar', 'C_Belt', 'C_BraidBack_Sway'], colors: { M_Kurk: 0xe8e0d0 } },
   altin: { parts: ['C_KaftanLong', 'C_Belt', 'C_Pauldrons'] },
@@ -160,7 +154,7 @@ const DETAY = {
 export const CPARTS = [...new Set(Object.values(DETAY).flatMap(d => d.parts))];
 export const cardLook = c => {
   const b = c.costume ? COSTUMES.find(x => x.id === c.costume) : c.look, d = DETAY[c.id];
-  return d ? { ...b, parts: [...b.parts, ...d.parts], colors: { ...b.colors, ...d.colors }, kadin: !!d.kadin } : b;
+  return d ? { ...b, parts: [...b.parts, ...d.parts], colors: { ...b.colors, ...d.colors } } : b;
 };
 
 // ---------- kayıt ----------
@@ -172,6 +166,9 @@ const st = load('oguz-yigit', null) || (() => { // ilk açılış: satın alınm
   return { cards, leader: worn?.id || 'oguz', team: [] };
 })();
 const persist = () => save('oguz-yigit', st);
+for (const id of Object.keys(st.cards)) if (!CARDS.some(c => c.id === id)) delete st.cards[id]; // kaldırılan yiğitler eski kayıttan silinir
+st.team = st.team.filter(id => CARDS.some(c => c.id === id));
+if (!st.cards[st.leader]) st.leader = 'oguz';
 persist();
 export const owned = id => !!st.cards[id];
 export const cardState = id => st.cards[id];

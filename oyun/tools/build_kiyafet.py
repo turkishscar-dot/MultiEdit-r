@@ -433,7 +433,7 @@ for k in range(8):
     dv.append(kure('dz', p + Vector((0.2 * math.cos(a), -0.02, 0.2 * math.sin(a))), (0.012, 0.012, 0.012), 'M_Iron', seg=6, ring=4))
 davul = birlestir('C_Drum', dv); kemige_bagla(davul, 'spine_03'); PARCALAR.append(davul)
 
-# 15. C_HairTop: başlıksız yiğitlerde (Tomris, Banu Çiçek, Ak Oğlan) başın tepesini örten saç.
+# 15. C_HairTop: başlıksız yiğitlerde (Ak Oğlan ve benzerleri) başın tepesini örten saç.
 # Kafanın kendi yüzeyinden, saç çizgisinin üstü kesilir (alında yüksek, arkada ense hizası; kulaklar açık), dışa kalınlaştırılır.
 def sac_cizgisi(y):  # ön -Y: alında 1.755, arkada 1.66
     t = min(1.0, max(0.0, (y + 0.06) / 0.08)); return 1.755 + (1.66 - 1.755) * t

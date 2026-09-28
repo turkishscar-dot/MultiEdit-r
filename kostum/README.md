@@ -19,7 +19,7 @@ Amaç: yiğitler (kostümler) güzel görünsün, oyuncu almak istesin. İki tar
 - [x] **Blender parçaları kodda bağlı:** 15 parçanın hangi yiğitte görüneceği ve rengi `oyun/src/yigit.js` → `DETAY` içinde yazılı. Model gelince kendiliğinden görünür.
 - [x] Telefonda Yiğitler ekranındaki üst üste binen düğmeler düzeltildi.
 - [x] **Karakter ayrıntısı:** kumaş, deri, kürk, metal ve altın dokuları, parlama, gölge boşlukları, yapay zekâ boyalı ayrıntı (`oyun/src/ayrinti.js`).
-- [x] **Kadın yiğitler:** Tomris ve Banu Çiçek için ince gövde, saç tepesi, örgüler.
+- [x] Kadın yiğitler (Tomris, Banu Çiçek) oyundan kaldırıldı.
 
 ### Blender (PC'de, sırayla)
 - [ ] 1. Kaftan ve şalvara düzgün UV (desenler için).

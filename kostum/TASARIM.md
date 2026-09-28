@@ -55,22 +55,15 @@ Altısı bir aile gibi görünmeli: aynı kesim, farklı simge rengi.
 - **Parçalar:** AltinBork · C_Lamellar, C_Pauldrons, C_Cape_Sway, C_Belt. Çizmeler altın.
 - **Not:** Divanü Lugati't-Türk'teki sagu kederli bir havası olduğunu gösterir. Koyu mor bunun için seçildi.
 
-### Tomris Hatun (5★, destan)
-- **Arkadan:** altın sarısı pelerin, iki yanda örgü, uzun kaftan.
-- **Renkler:** bordo, altın.
-- **Parçalar:** Headband · C_KaftanLong, C_Belt, C_BraidsSide, C_Cape_Sway. Sakal kapalı.
-- **Not:** Massaget kraliçesi (Herodot). Kadın yüz ve saç modeli (BLENDER.md §3) en çok burada fark yaratır.
-
 ### Attila (6★, Hun)
 - **Arkadan:** kürk yakalı mor-siyah pelerin, sivri başlık.
 - **Parçalar:** HunCap · C_Lamellar, C_FurCollar, C_Cape_Sway, C_Mustache. Kaftan deseni: pul. Kılıç kızıl parlar.
 - **Not:** "Tanrının Kılıcı" rivayeti kılıcı öne çıkarır. Zafer pozunda kılıcı kaldırması yakışır.
 
-### Dede Korkut: Basat, Bamsı Beyrek, Deli Dumrul (4★), Banu Çiçek (4★)
+### Dede Korkut: Basat, Bamsı Beyrek, Deli Dumrul (4★)
 - **Basat:** kürk yaka, pençe eldiven, kalpak. Aslan sütüyle büyüdüğü anlatılır, iri ve yabani görünsün.
 - **Beyrek:** yeşil uzun kaftan, bordo şalvar, bıyık, yaka. Boz aygırlı, ata binince eyer rengi öne çıksın.
 - **Deli Dumrul:** kapkara kaftan, koyu yeşil pelerin, omuzluk. Köprü başında duran, ürkütücü bir siluet.
-- **Banu Çiçek:** kırmızı uzun kaftan, tüylü başlık, iki yanda örgü, altın kuşak. Ok atan, at yarıştıran bir savaşçı. Süslü ama hafif.
 
 ### Manas (5★, destan)
 - **Arkadan:** ak pelerin ve ak kalpak (Kırgız ak kalpağı), kızıl uzun kaftan.
