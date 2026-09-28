@@ -122,6 +122,19 @@
     else if (best[1] !== P.row) act(best[1] > P.row ? 'up' : 'down');
   }
 
+  // Yada küresi: şeridine geç, erime gelince vur
+  function orbThink() {
+    const G = g(), P = G.P;
+    const o = G.objs.find(o => o.kind === 'yada' && !o.dead && P.z - o.z > -0.5 && P.z - o.z < 30);
+    if (!o) return false;
+    const d = P.z - o.z;
+    if (o.lane === P.lane && d < 4.6) { if (G.tryOrb()) { ev('orb'); cd = 0.1; } return true; }
+    if (o.lane !== P.lane && cd <= 0 && d > 4) {
+      const danger = G.objs.some(x => x.def.hit && !x.dead && x.lane === o.lane && P.z - x.z > 0 && P.z - x.z < d + 1);
+      if (!danger) { laneTo(o.lane); return true; }
+    }
+    return false;
+  }
   function bossThink() {
     const G = g(), P = G.P, b = G.boss;
     const tap = document.getElementById('tap');
@@ -172,7 +185,7 @@
           if (G.boss) {
             if (G.boss !== sawBoss) { if (sawBoss) logBoss(); sawBoss = G.boss; bossT0 = G.time; stats.bosses++; ev('boss:' + G.boss.kind); }
             sawBoss.minEsc = Math.min(sawBoss.minEsc ?? 999, G.boss.esc);
-            if (G.yada > 0 && !G.fin) { G.act('yada'); ev('yada'); }
+            if (!G.fin && orbThink()) {} else
             if (!(cd <= 0 && parryThink()) && !bossThink()) (G.flying ? skyThink : groundThink)();
           } else if (sawBoss) { logBoss(); sawBoss = null; }
           else if (G.flying) skyThink();

@@ -183,7 +183,7 @@ const DEF = {
   catlak: { make: W.makeCatlak, hit: 'low' }, buzkule: { make: W.makeBuzkule, hit: 'block' },
   // SMU'daki lazer: yol kenarındaki kam toteminden üç şeridi kapatan ışın. İnce: kay ya da zıpla. Kalın: yalnız zıpla.
   isin: { beam: true, hit: 'mid' }, kalinisin: { beam: true, thick: true, hit: 'thick' },
-  yada: { make: W.makeYada }, // boss savaşında toplanan Yada Taşı
+  yada: { make: W.makeYada }, // boss savaşında yolda süzülen Yada Küresi: kılıçla vurulunca boss'a uçar
 };
 const HELL = ['bones', 'cage', 'lavarock', 'spikes', 'chain'];
 const THEMES = {
@@ -1190,7 +1190,7 @@ function trialEnd() {
   state = 'trialend';
   P.inv = 0; P.dead = false;
   hideTip();
-  for (const id of ['hud', 'bossbar', 'ride', 'tap', 'mash', 'yada', 'trialtag']) $(id).hidden = true;
+  for (const id of ['hud', 'bossbar', 'ride', 'tap', 'mash', 'trialtag']) $(id).hidden = true;
   timed(hero, Y.cardFx(c).zafer, 2.2);
   const box = $('trialend'), p = Y.buyPrice(c), ok = Y.buyable(c), owned = Y.owned(c.id);
   box.querySelector('h2').textContent = c.name;
@@ -1865,14 +1865,6 @@ function pickup(o) {
       const n = (pow.kurt > 0 && P.lane === guideLane ? 2 : 1) * (time < bereketT ? 2 : 1); // kurdun yolundan gidene iki kat; Bereket Muskası
       kut += n; score += 10 * n * mult(); o.dead = true; sfx('kut', { gap: 0.02 }); return true;
     }
-    case 'yada':
-      yada++;
-      o.dead = true;
-      sfx('gold', { gain: 0.6 });
-      sparks.emit(o.x, P.gy + 1.4, o.z, 30, 0x9ad0ff, 5, 3);
-      pop('YADA TAŞI!', at);
-      yadaUi();
-      return true;
     case 'tamga':
       addCombo('isabet', 75);
       pop('İSABET!', at);
@@ -2139,6 +2131,23 @@ function updateFlyer(o, dt, ahead) {
       if (o.actor.parts.Spear) o.actor.parts.Spear.visible = false;
       add('spear', P.lane, o.z + 1, { vz: 14 });
     }
+  } else if (o.phase === 'strike') { // kul Oğuz'un kılıcına doğru dalar, havada buluşurlar
+    o.pt += dt;
+    o.vz = 0;
+    const k = Math.min(1, o.pt / 0.3);
+    o.x = lerp(o.sx, P.x, k);
+    o.y = lerp(o.sy, (P.gy || 0) + P.y + 0.9 - (o.gy || 0), k); // kılıcın ucu: başının biraz üstü
+    o.z = lerp(o.sz, P.z - 1.1, k);
+    if (k >= 1) {
+      o.fall = true;
+      killFoe(o, 'sword');
+      const at = o.mesh.position;
+      burst(at.x, at.y + 1, at.z, 2.2);
+      sparks.emit(at.x, at.y + 1, at.z, 40, 0xffc040, 7, 3);
+      pop('HAVADA İNDİRDİ!', at);
+      slowmo(0.3, 0.3);
+      fovKick = -8;
+    }
   } else if (o.phase === 'away') {
     o.pt += dt;
     o.vz = -P.vz * 1.4;
@@ -2146,19 +2155,16 @@ function updateFlyer(o, dt, ahead) {
     if (o.pt > 2) o.dead = true;
   }
 }
-function skyStrike(o) { // zıplayınca kulun üstüne sıçrayıp kılıçla indirir
+function skyStrike(o) { // zıplayınca Oğuz sıçrar, kul ona doğru dalar; kılıç havada değer
   if (o.icon) { scene.remove(o.icon); o.icon = null; }
-  P.vy = Math.max(P.vy, 15);
+  P.vy = Math.max(P.vy, 14);
   P.flip = 0;
   swordMode(true);
-  timed(hero, 'MX_GS_JumpAttack', 0.55);
-  P.lock = 0.5;
-  P.sword = 0.7;
-  o.fall = true; // vurulunca düşer
-  killFoe(o, 'sword');
-  pop('HAVADA İNDİRDİ!', o.mesh.position);
-  slowmo(0.3, 0.35);
-  fovKick = -8;
+  timed(hero, 'MX_GS_JumpAttack', 0.6);
+  P.lock = 0.55;
+  P.sword = 0.8;
+  Object.assign(o, { phase: 'strike', pt: 0, sx: o.x, sy: o.y, sz: o.z });
+  o.actor.play('Hit_Chest', { loop: false, speed: 1, fade: 0.05 });
   rec('skystrike');
 }
 
@@ -2181,7 +2187,7 @@ function land(o) {
 // Dokunma / sol tık: elde kılıç varsa kombo (yakındaki düşmana atılarak), yay varsa ok. Tepegöz sersemken kılıçla vurulur.
 function tapAction() {
   if (P.dead || fin) return;
-  if (tryParry()) return;
+  if (tryOrb() || tryParry()) return;
   if (boss && boss.def.tap(B, boss)) return;
   if (sect?.S.fly) return; // eller kartalın pençesinde / düşerken
   if (flying || weapon === 'bow') return throwArrow(); // havada kılıç yok
@@ -2197,7 +2203,7 @@ function tapAction() {
 
 // Geri çalma: boss'un altın parlayan mermisi Oğuz'a 0.3 sn kala kılıçla vurulursa boss'a geri seker
 function tryParry() {
-  if (!boss || (weapon !== 'sword' && !flying)) return false;
+  if (!boss) return false;
   const o = objs.find(o => o.parry && !o.parried && !o.done && !o.dead && Math.abs(o.x - P.x) < 1.4 && (o.row == null || o.row === P.row)
     && P.z - o.z > -0.3 && (P.z - o.z) / Math.max(1, o.vz + P.vz) <= 0.3);
   if (!o) return false;
@@ -2484,6 +2490,7 @@ const B = {
   hold(on) { holdTarget = on ? 0 : 1; },
   mash(v) { $('mash').hidden = v == null; if (v != null) $('mashbar').style.width = Math.min(1, v) * 100 + '%'; },
   hitBoss: () => hitBoss(),
+  difficulty: () => zorluk(),
   arm: w => setWeapon(w),
   prop(make) { const m = W[make](); scene.add(m); return m; }, // boss sahnesine ait nesne (Erlik'in örsü)
   unprop(m) { scene.remove(m); },
@@ -2516,9 +2523,8 @@ function startBoss() {
   main.root.rotation.set(0, 0, 0);
   def.start(B, boss);
   main.root.rotation.y = boss.rot;
-  if (def.ranged && !flying) { setWeapon('bow'); banner('YAYINI ÇEK!'); }
   boss.esc = boss.escMax = def.escape ?? 75; // KAÇIŞ çubuğu: süre biterse boss kaçar
-  yada = 0; yadaT = def.duel ? 0.5 : 3; boss.rowT = 2.5;
+  yadaT = 2.5; boss.rowT = 2.5;
   tip('kacis', { text: 'Mavi KAÇIŞ çubuğu biterse boss kaçar! Hızlı ol.', icon: '⏳' }, '', slowmo);
   $('bossname').textContent = def.name;
   $('bossbar').hidden = false;
@@ -2534,47 +2540,65 @@ function flap(root, speed, axis = 'z', base = 0) {
   R.rotation[axis] = -a;
 }
 
-// ================= YADA TAŞI (SMU'daki kalkan küresinin yerine) =================
-// Boss savaşında yolda mavi Yada Taşları belirir. Toplanan taş boss'a fırlatılır (düğme ya da F):
-// kamların yağmur-fırtına taşı Tengri'nin şimşeğini indirir, boss 1 can yitirir, KAÇIŞ süresine +4 sn eklenir.
-let yada = 0, yadaT = 3, yadaFly = null, bolts = [];
-function yadaUi() {
-  const b = $('yada');
-  b.hidden = !boss || yada <= 0 || flying || !!fin;
-  b.querySelector('b').textContent = yada;
+// ================= ZORLUK =================
+// Güçlü yiğitler açıldıkça oyun da zorlaşır: ordu gücüne göre 1.0 (başlangıç) → 1.8.
+// Sıra sıklığı, düşman oranı, pusu, boss canı ve saldırı hızı buna göre artar. Deneme koşusunda 1.
+function zorluk() {
+  if (trial) return 1;
+  const p = Y.armyPower(isUnlocked('ordu'));
+  return 1 + Math.min(0.8, Math.max(0, (p - 100) / 1500));
 }
-function throwYada() {
-  const b = boss;
-  if (!b || yada <= 0 || fin || yadaFly || b.hp <= 0 || !b.actor.root.visible || flying || state !== 'run') return;
-  yada--;
-  yadaUi();
+// ================= YADA KÜRESİ (SMU'daki kalkan küresi) =================
+// Boss savaşında yolda mavi küreler süzülür. Küre kılıcın erimine gelince DOKUN: Oğuz vurur, küre boss'a uçar,
+// Tengri'nin şimşeği iner. Hasar yalnız böyle (ve altın mermiyi geri çalarak) verilir. Toplanmaz, sayılmaz.
+let yadaT = 3, flies = [], bolts = [];
+const ORB_REACH = 5.2;
+function tryOrb() {
+  if (!boss || flying || fin || boss.hp <= 0) return false;
+  const o = objs.find(o => o.kind === 'yada' && !o.dead && Math.abs(o.x - P.x) < 1.6 && P.z - o.z > -0.6 && P.z - o.z < ORB_REACH);
+  if (!o) return false;
+  o.dead = true;
+  cool = 0;
+  swordMode(true);
+  P.sword = 0.8;
+  slash(null);
   const m = W.makeYada();
   m.userData.stone.position.y = 0;
   scene.add(m);
-  yadaFly = { m, t: 0, from: new THREE.Vector3(P.x, P.gy + P.y + 1.7, P.z - 0.4) };
-  timedOver(hero, 'OverhandThrow', 0.45);
-  sfx('bowrelease');
+  flies.push({ m, t: 0, from: new THREE.Vector3(o.x, (o.gy || 0) + 1.3, o.z) });
+  sparks.emit(o.x, (o.gy || 0) + 1.3, o.z, 40, 0x9ad0ff, 7, 3);
+  pop('VURDU!', o.mesh.position);
+  sfx('parry');
+  slowmo(0.35, 0.3);
+  AY.vibrate(35);
   rec('yada');
+  return true;
 }
 function updateYada(dt) {
   const b = boss;
-  if (b && !flying && !fin && flow > 0.8 && b.hp > 0 && (yadaT -= dt) <= 0) {
-    yadaT = rand(5, 7.5);
-    const l = Math.floor(Math.random() * 3), z = b.off > 14 ? b.gz + 3 : P.z - 22;
+  if (b && !flying && !fin && b.hp > 0 && b.state !== 'enter' && (yadaT -= dt) <= 0) {
+    yadaT = rand(2.6, 3.8);
+    const l = Math.random() < 0.5 ? P.lane : Math.floor(Math.random() * 3), z = Math.min(P.z - 12, b.gz + 3);
     if (!objs.some(o => o.lane === l && Math.abs(o.z - z) < 5 && o.def.hit)) add('yada', l, z);
-    tip('yada', { text: 'Mavi YADA TAŞI! Topla, sonra boss\'a fırlat: Tengri\'nin şimşeği çarpar.', icon: '⚡', key: 'F' }, '', slowmo);
+    tip('yada', { text: 'Mavi küre! Şeridine geç, yanına gelince VUR: küre boss\'a uçar.', icon: '⚡', gesture: 'tap', key: 'Boşluk' });
+  }
+  for (const o of objs) if (o.kind === 'yada' && !o.dead) { // erimdeyse parlar: "şimdi vur"
+    const d = P.z - o.z, near = d > -0.6 && d < ORB_REACH && Math.abs(o.x - P.x) < 1.6;
+    o.mesh.userData.stone.scale.setScalar(near ? 1.35 + Math.sin(o.t * 30) * 0.1 : 1);
   }
   for (const L of bolts) { L.t += dt; L.m.visible = L.t < 0.35 && Math.floor(L.t * 30) % 3 !== 2; if (L.t > 0.4) scene.remove(L.m); }
   bolts = bolts.filter(L => L.t <= 0.4);
-  const f = yadaFly;
-  if (!f) return;
-  f.t += dt;
-  if (!b || fin) { scene.remove(f.m); yadaFly = null; return; }
-  const k = Math.min(1, f.t / 0.55), to = new THREE.Vector3(b.x, (b.def.hitY || 2) + (b.y || 0), b.gz + 0.6);
-  f.m.position.lerpVectors(f.from, to, k);
-  f.m.position.y += Math.sin(k * Math.PI) * 3;
-  f.m.userData.anim(f.t * 3);
-  if (k >= 1) { scene.remove(f.m); yadaFly = null; yadaStrike(b, to); }
+  for (const f of flies) {
+    f.t += dt;
+    if (!b || fin) { f.done = true; continue; }
+    const k = Math.min(1, f.t / 0.45), to = new THREE.Vector3(b.x, (b.def.hitY || 2) + (b.y || 0), b.gz + 0.6);
+    f.m.position.lerpVectors(f.from, to, k);
+    f.m.position.y += Math.sin(k * Math.PI) * 2;
+    f.m.userData.anim(f.t * 4);
+    if (k >= 1) { f.done = true; yadaStrike(b, to); }
+  }
+  for (const f of flies) if (f.done) scene.remove(f.m);
+  flies = flies.filter(f => !f.done);
 }
 function lightning(x, z) {
   const L = W.makeLightning();
@@ -2590,7 +2614,6 @@ function yadaStrike(b, at) {
   sparks.emit(at.x, at.y, at.z, 60, 0x9ad0ff, 8, 4);
   pop('TENGRİ ÇARPTI!', at);
   b.esc = Math.min(b.escMax, b.esc + 4);
-  if (b.def.yada) return b.def.yada(B, b);
   hitBoss('yada');
 }
 
@@ -2606,7 +2629,7 @@ function hitBoss(src) {
   shake = 0.2;
   stopT = 0.07;
   bossBar();
-  if (src === 'yada') { if (b.hp > 0) return b.actor.overlay('Hit_Chest', { speed: 1.4 }); } // şimşek: sarsılır, koşusu bozulmaz
+  if (src === 'yada') { if (b.hp > 0 && !b.def.flying) b.actor.overlay('Hit_Chest', { speed: 1.4 }); } // şimşek: sarsılır, koşusu bozulmaz
   else if (b.hp > 1 && (pow.kilic > 0 || (has('becene') && Math.random() < 0.25))) { b.hp--; pop('ÇİFT!', at); bossBar(); } // Tanrı Kılıcı / Beçene
   if (b.hp > 0) return b.def.hit(B, b);
   if (!b.def.beforeFinish?.(B, b)) startFinisher();
@@ -2624,10 +2647,10 @@ function endBoss() {
   if (state === 'run' && regionOf(theme)) music(regionOf(theme));
   bossAt = dist() + 2000;
   holdTarget = 1;
-  for (const id of ['bossbar', 'tap', 'mash', 'yada']) $(id).hidden = true;
+  for (const id of ['bossbar', 'tap', 'mash']) $(id).hidden = true;
   warn.visible = false;
-  yada = 0;
-  if (yadaFly) { scene.remove(yadaFly.m); yadaFly = null; }
+  for (const f of flies) scene.remove(f.m);
+  flies = [];
 }
 
 function updateBoss(dt) {
@@ -2692,7 +2715,9 @@ function bossEscape() {
   hero.play('Idle_Loop', { fade: 0.3 });
 }
 
-// Boss bitirişi: ağır çekim, kamera etrafında döner, Oğuz ağır kombo ile son darbeyi vurur. Uçan boss spiral çizerek düşer.
+// Boss bitirişi (yerdeki boss'lar): ağır çekim; boss durur, döner, sendeler. Oğuz dibine atılır (vuruş erimi
+// boss'un boyuna göre hesaplanır, kılıç gövdeye değer), üç vuruş: bacak/gövde, sıçrayıp göğüs, son ağır darbe + şimşek.
+// Uçan boss spiral çizerek düşer.
 function startFinisher() {
   const b = boss;
   fin = { t: 0, hits: 0 };
@@ -2702,19 +2727,40 @@ function startFinisher() {
   b.state = 'dying';
   for (const e of b.extra) e.root.visible = false;
   if (b.def.flying) { slowmo(0.4, 1.4); banner(b.def.name + ' DÜŞÜYOR!'); return; }
+  const s = b.def.scale || 1.4;
+  hero.root.visible = true;
+  P.inv = 0;
+  if (b.mount) b.mount.root.visible = false; // atlı boss attan iner
+  b.y = 0;
+  b.rot = 0;
+  b.actor.root.rotation.set(0, 0, 0);
+  b.actor.play('MX_GS_Impact', { loop: false, speed: 0.7, fade: 0.1 });
+  // vuruş noktaları: boss'un önündeki yüzey, alçak (diz-gövde) ve yüksek (göğüs)
+  const face = b.gz + 0.28 * s;
+  fin.low = new THREE.Vector3(b.x, (b.def.hitY || 2.2) * 0.42, face);
+  fin.high = new THREE.Vector3(b.x, (b.def.hitY || 2.2) * 0.85, face);
+  fin.stand = face + 0.95; // Oğuz'un durduğu z: kılıç erimi ~0.95 m
+  fin.from = new THREE.Vector3(P.x, P.gy || 0, P.z);
+  fin.lift = Math.max(0, fin.high.y - 1.45); // göğse ulaşmak için sıçrama yüksekliği
   swordMode(true);
-  $('yada').hidden = true;
-  fin.kind = pick(['combo', 'leap', 'spin']); // üç bitiriş: ağır kombo, sıçrayıp tepeden, dönerek
-  if (fin.kind === 'combo') hero.play('Sword_Heavy_Combo', { loop: false, speed: 1.15, fade: 0.08 });
-  else timed(hero, fin.kind === 'leap' ? 'MX_GS_JumpAttack' : 'MX_GS_Spin', 1.5);
-  b.actor.play('Hit_Chest', { loop: false, speed: 0.6 });
-  slowmo(0.45, 1.6);
-  banner('BİTİR ONU!');
+  timed(hero, 'Sword_Dash', 0.35);
+  slowmo(0.45, 2);
+  pop('BİTİR!', new THREE.Vector3(b.x, (b.def.hitY || 2) + 0.8, b.gz));
+}
+
+function finHit(b, at, big) {
+  burst(at.x, at.y, at.z + 0.2, big ? 3.4 : 2.4);
+  sparks.emit(at.x, at.y, at.z + 0.2, big ? 80 : 50, 0xffc040, big ? 10 : 8, 4);
+  pop(pick(['ŞAK!', 'ÇAT!', 'GÜM!']), at);
+  shake = big ? 0.45 : 0.25;
+  stopT = 0.08;
+  sfx('hit');
+  if (!big) b.actor.play('Hit_Chest', { loop: false, speed: 1.2, fade: 0.05 });
 }
 
 function updateFinisher(dt) {
   fin.t += dt;
-  const b = boss, gz = b.gz, s = b.def.scale / 2.5;
+  const b = boss, gz = b.gz;
   if (b.def.flying) {
     b.y -= dt * (2 + fin.t * 5);
     b.actor.root.rotation.z += dt * 4;
@@ -2730,23 +2776,31 @@ function updateFinisher(dt) {
     if (fin.t > 2.6) finishDone(b);
     return;
   }
-  const lungeTo = Math.min(1, fin.t / 0.35) * (b.off - 2.4 * Math.max(1, s));
-  const lift = fin.kind === 'leap' ? Math.sin(Math.min(1, fin.t / 1.4) * Math.PI) * 2.6 * Math.max(1, s) : 0; // tepeden iner
-  hero.root.position.set(lerp(P.x, b.x, Math.min(1, fin.t / 0.35)), (P.gy || 0) + lift, P.z - lungeTo);
-  if (fin.hits < 3 && fin.t > 0.45 + fin.hits * 0.5) {
-    fin.hits++;
-    const y = (b.def.hitY || 2) * (0.75 + fin.hits * 0.15);
-    burst(b.x, y, gz + 1, 3);
-    sparks.emit(b.x, y, gz + 1, 60, 0xffc040, 9, 4);
-    pop(['ŞAK!', 'ÇAT!', 'GÜM!'][fin.hits - 1], new THREE.Vector3(b.x, y, gz));
-    shake = 0.3;
-    if (fin.hits === 3) { b.actor.play('Death01', { loop: false, speed: 0.9, fade: 0.1 }); lightning(b.x, gz); pop('TENGRİ ŞAHİT!', new THREE.Vector3(b.x, y + 1, gz)); }
+  const t = fin.t;
+  // Oğuz'un yeri: 0-0.35 sn atılış, sonra boss'un önünde; ikinci vuruşta göğüs hizasına sıçrar
+  const k = Math.min(1, t / 0.35), e = k * k * (3 - 2 * k);
+  let y = lerp(fin.from.y, 0, e), z = lerp(fin.from.z, fin.stand, e);
+  if (t > 0.95 && t < 1.75) { const u = (t - 0.95) / 0.8; y += Math.sin(u * Math.PI) * (fin.lift + 0.6); z -= Math.sin(u * Math.PI) * 0.3; }
+  hero.root.position.set(lerp(fin.from.x, b.x, e), y, z);
+  hero.root.rotation.set(0, Math.PI, 0);
+  if (fin.hits === 0 && t > 0.35) { timed(hero, 'Sword_Regular_A', 0.45); fin.hits = 0.5; }
+  if (fin.hits === 0.5 && t > 0.58) { fin.hits = 1; finHit(b, fin.low); }
+  if (fin.hits === 1 && t > 0.95) { timed(hero, 'MX_GS_JumpAttack', 0.8); fin.hits = 1.5; }
+  if (fin.hits === 1.5 && t > 1.38) { fin.hits = 2; finHit(b, fin.high); }
+  if (fin.hits === 2 && t > 1.8) { timed(hero, 'Sword_Heavy_Combo', 0.9); fin.hits = 2.5; }
+  if (fin.hits === 2.5 && t > 2.3) {
+    fin.hits = 3;
+    finHit(b, fin.high.clone().lerp(fin.low, 0.4), true);
+    b.actor.play('Death01', { loop: false, speed: 0.8, fade: 0.1 });
+    lightning(b.x, gz);
+    pop('TENGRİ ŞAHİT!', new THREE.Vector3(b.x, fin.high.y + 1, gz));
   }
-  if (fin.t > 2.1 && fin.t - dt <= 2.1) dust.emit(b.x, 0.3, gz - 3, 80, 0xc9a77a, 10, 5);
-  b.actor.root.position.set(b.x, b.y || 0, gz);
+  if (t > 2.9 && t - dt <= 2.9) dust.emit(b.x, 0.3, gz - 2, 80, 0xc9a77a, 10, 5);
+  b.actor.root.position.set(b.x, 0, gz);
+  b.actor.root.rotation.y = 0;
   b.actor.update(dt);
   hero.update(dt);
-  if (fin.t > 3.2) finishDone(b);
+  if (t > 3.6) finishDone(b);
 }
 
 function finishDone(b) {
@@ -3061,7 +3115,7 @@ function update(dt) {
   }
   if (state === 'revive') { reviveTick(dt); return; }
   if (state !== 'run') return;
-  if (fin) { updateFinisher(dt); sparks.update(dt); dust.update(dt); return; }
+  if (fin) { updateFinisher(dt); if (boss && (flies.length || bolts.length)) updateYada(dt); sparks.update(dt); dust.update(dt); return; }
 
   if (!boss) P.speed = mode === 'endless' // Sonsuz Akın: her bölgede ve her turda daha hızlı
     ? Math.min(24 + loop * 3, (has('kayi') ? 13.5 : 12) + loop * 2.5 + zone * 0.4 + (dist() - zoneStart) * 0.004)
@@ -3129,7 +3183,7 @@ function update(dt) {
   for (const o of objs) updateObj(o, dt);
   for (const a of arrows) updateArrow(a, dt);
   if (boss) updateBoss(dt);
-  if (boss || yadaFly || bolts.length) updateYada(dt);
+  if (boss || flies.length || bolts.length) updateYada(dt);
   for (const o of objs) if (o.dead) release(o);
   for (const a of arrows) if (a.dead) scene.remove(a.mesh);
   objs = objs.filter(o => !o.dead);
@@ -3234,10 +3288,17 @@ function view(dt, realDt) {
     camera.position.set(1.4, 1.7, P.z - 4.2);
     camera.lookAt(0, 1.25, P.z);
   } else if (fin && boss) {
-    const gz = P.z - boss.off, mid = (P.z + gz) / 2;
-    const a = lerp(0.35, 1.5, Math.min(1, fin.t / 3));
-    camera.position.set(boss.x + Math.sin(a) * 9, 3.2, mid + Math.cos(a) * 9);
-    camera.lookAt(boss.x, 2.4, mid);
+    const gz = boss.gz, s = boss.def.scale || 1.4, mid = gz + 1;
+    if (boss.def.flying) {
+      const a = lerp(0.35, 1.5, Math.min(1, fin.t / 3));
+      camera.position.set(boss.x + Math.sin(a) * 9, 3.2, mid + Math.cos(a) * 9);
+      camera.lookAt(boss.x, 2.4, mid);
+    } else { // yolun içinde, Oğuz'un arkasından çapraz: surlar görüşü kesmez, kılıç gövdeye değerken görünür
+      const side = boss.x > 0.5 ? -1 : 1, k = Math.min(1, fin.t / 3.2);
+      const hy = (boss.def.hitY || 2) * 0.62;
+      camera.position.set(boss.x + side * (2.6 + k * 0.6), hy + 0.9 + s * 0.35, mid + 4.2 + s * 1.3 - k * 0.8);
+      camera.lookAt(boss.x - side * 0.3, hy, mid - 0.3);
+    }
   } else if (sect?.kind === 'dive') { // kuyuya yukarıdan bakış
     camera.position.set(camX * 0.7 + rand(-s, s), P.y + 3.1, P.z + 6.4);
     camera.lookAt(camX * 0.7, P.y + 1.3, P.z - 12);
@@ -3431,7 +3492,6 @@ function act(a) {
     if (P.slide <= 0) sfx('slide');
     P.slide = 0.8; P.slideAt = time;
   } else if (a === 'tap') tapAction();
-  else if (a === 'yada') throwYada();
 }
 
 // Telefonu eğerek yönlendirme (isteğe bağlı, varsayılan kapalı): bölümlerde sola/düz/sağa eğim = sol/orta/sağ şerit
@@ -3465,7 +3525,7 @@ addEventListener('pointermove', e => {
   sx = null;
 });
 addEventListener('pointerup', () => { if (sx !== null) act('tap'); sx = null; });
-const KEYS = { ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right', ArrowUp: 'up', w: 'up', ArrowDown: 'down', s: 'down', ' ': 'tap', q: 'weapon', e: 'weapon', f: 'yada', r: 'yada' };
+const KEYS = { ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right', ArrowUp: 'up', w: 'up', ArrowDown: 'down', s: 'down', ' ': 'tap', q: 'weapon', e: 'weapon' };
 addEventListener('keydown', e => {
   if (KEYS[e.key]) { e.preventDefault(); act(KEYS[e.key]); }
   else if (e.key === 'Escape' || e.key === 'p') setPaused(state === 'run');
@@ -3520,7 +3580,6 @@ $('bnext').onclick = () => turnTo(page + 1);
 $('wmap').onclick = openMap;
 $('pause').onclick = () => setPaused(true);
 $('weapon').onclick = () => act('weapon');
-$('yada').onclick = () => act('yada');
 $('trbuy').onclick = trialBuy;
 $('trback').onclick = trialBack;
 $('resume').onclick = () => setPaused(false);
@@ -3571,7 +3630,7 @@ window.__game = {
   TORE, openTore, get nodes() { return nodes(); }, playNode, hStore, get nodeRun() { return nodeRun; }, set nodeRun(v) { nodeRun = v; },
   get zone() { return zone; }, get loop() { return loop; }, nextZone, shop, openShop, showRevive, doRevive, get continues() { return continues; },
   startBoss, get objs2() { return objs; },
-  get terr() { return terr; }, groundAt, terrAt, buildTerrain, clearTerrain, get yada() { return yada; }, set yada(v) { yada = v; yadaUi(); }, throwYada, get overPit() { return overPit; },
+  get terr() { return terr; }, groundAt, terrAt, buildTerrain, clearTerrain, tryOrb, get overPit() { return overPit; },
   get runCounts() { return runCounts; }, get bonus() { return bonus; }, spawnGold, get runStats() { return { parries: runParries, broken: runBroken, gold: runGold, bosses: runBosses }; },
   sfx, music, sting, SOUND,
   unlockAll, addXP, levelUps, toast,
