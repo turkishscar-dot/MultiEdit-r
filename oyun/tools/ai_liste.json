@@ -243,6 +243,38 @@
     },
     "cimen": {
       "istem": "lush green meadow grass ground with small clover and tiny wildflowers"
+    },
+    "detay_kumas": {
+      "istem": "extreme close-up of coarse hand-woven wool fabric, clearly visible criss-cross weave threads, uniform, no folds",
+      "detay": true
+    },
+    "detay_deri": {
+      "istem": "extreme close-up of worn leather surface with fine pebbled grain, small creases and a few scratches, uniform, no seams",
+      "detay": true
+    },
+    "detay_kurk": {
+      "istem": "extreme close-up of thick dense animal fur, many soft strands all flowing downward, uniform coverage",
+      "detay": true
+    },
+    "detay_kece": {
+      "istem": "extreme close-up of thick wool felt material, fuzzy matted fibers, subtle mottled surface",
+      "detay": true
+    },
+    "detay_ahsap": {
+      "istem": "extreme close-up of oiled hardwood grain, long straight vertical grain lines and a few small knots",
+      "detay": true
+    },
+    "detay_metal": {
+      "istem": "extreme close-up of hand-forged iron metal surface, fine hammer dents, small scratches and pits",
+      "detay": true
+    },
+    "detay_altin": {
+      "istem": "extreme close-up of engraved gold metal plate with fine ornamental steppe scroll and swirl engraving pattern covering the whole surface",
+      "detay": true
+    },
+    "detay_kemik": {
+      "istem": "extreme close-up of old weathered bone surface, fine pores, tiny cracks and faint stains",
+      "detay": true
     }
   }
 }

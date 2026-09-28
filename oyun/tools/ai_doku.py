@@ -30,9 +30,13 @@ if __name__ == '__main__':
         d = doseme(im.resize((BOY, BOY), Image.LANCZOS))
         if 'doygunluk' in LISTE[i]: d = ImageEnhance.Color(d).enhance(LISTE[i]['doygunluk'])  # fazla canlı rengi soldur
         yol = os.path.join(KOK, 'src', 'assets', 'doku', i + '.jpg')
-        d.save(yol, quality=86)
+        if LISTE[i].get('detay'):  # karakter ayrıntı dokusu: gri, ortalama 0.5, sabit karşıtlık (kostüm rengini çarpar)
+            g = np.asarray(d.convert('L'), dtype=np.float32) / 255
+            g = np.clip(0.5 + (g - g.mean()) / (g.std() + 1e-5) * 0.22, 0, 1)
+            d = Image.fromarray((g * 255).astype(np.uint8)).resize((256, 256), Image.LANCZOS)
+        d.save(yol, quality=88)
         # 2x2 döşeme denetimi
-        t = Image.new('RGB', (BOY * 2, BOY * 2))
-        for p in [(0, 0), (BOY, 0), (0, BOY), (BOY, BOY)]: t.paste(d, p)
+        B = d.width; t = Image.new('RGB', (B * 2, B * 2))
+        for p in [(0, 0), (B, 0), (0, B), (B, B)]: t.paste(d, p)
         t.resize((BOY, BOY)).save(os.path.join(KOK, 'ai-kaynak', 'doku', i, 'doseme.png'))
         print(i, '->', yol, os.path.getsize(yol) // 1024, 'KB')

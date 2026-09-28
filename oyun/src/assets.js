@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
+import { ayrintila, aoYukle } from './ayrinti.js';
 import oguzUrl from './assets/oguz.glb?url';
 import kormosUrl from './assets/kormos.glb?url';
 import tepegozUrl from './assets/tepegoz.glb?url';
@@ -41,16 +42,6 @@ const UPPER = /^(spine_0[23]|neck_01|Head|clavicle_|upperarm_|lowerarm_|hand_|th
 // Kahramanın kenar ışığı: bakış açısına göre kenarları aydınlatır, karakteri arka plandan ayırır.
 // Vitrinde nadirlik rengine döner (RIM.color), koşuda ılık ve hafif.
 export const RIM = { color: { value: new THREE.Color(0xfff0d0) }, power: { value: 0.28 } };
-function addRim(m) {
-  m.onBeforeCompile = sh => {
-    sh.uniforms.rimColor = RIM.color;
-    sh.uniforms.rimPower = RIM.power;
-    sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 rimColor;\nuniform float rimPower;')
-      .replace('#include <opaque_fragment>', 'float rimK = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);\noutgoingLight += rimColor * rimK * rimPower;\n#include <opaque_fragment>');
-  };
-  m.customProgramCacheKey = () => 'rim';
-}
 
 function toon(root, name, scenery = false) {
   root.traverse(o => {
@@ -74,7 +65,7 @@ function toon(root, name, scenery = false) {
       name: old.name, color, map: old.map, gradientMap: GRAD,
       transparent: old.transparent, alphaTest: old.alphaTest, side: old.side,
     });
-    if (name === 'oguz') addRim(o.material);
+    if (!scenery) ayrintila(o.material, o.geometry, name, name === 'oguz' ? RIM : null); // ayrıntı dokusu, parlama, gölge boşluğu
   });
 }
 
@@ -115,7 +106,11 @@ async function loadModel(loader, url) {
   return loader.parseAsync(b.buffer, '');
 }
 
+// Gölge boşlukları (tools/karakter_ao.py): dosya yoksa ya da inmezse ayrıntısız devam
+const AO_URL = Object.values(import.meta.glob('./assets/ao.json', { eager: true, query: '?url', import: 'default' }))[0];
+
 export async function loadAssets(onProgress) {
+  if (AO_URL) try { const r = await fetch(AO_URL); if (r.ok) aoYukle(await r.json()); } catch { /* ayrıntısız devam */ }
   const loader = new GLTFLoader();
   loader.register(p => new BitmapTextures(p));
   loader.pluginCallbacks.unshift(loader.pluginCallbacks.pop()); // hazır WebP eklentisinden önce çalışsın

@@ -10,7 +10,7 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 
 1. Oyun klasöründe `git status`. Git yoksa önce `git init` ve mevcut hâli commit et.
 2. **Çakışma kontrolü:** Bu repodaki ilk "baseline" commit'i (`Add working copy of the game source`), zip'teki hâldir. PC'deki `src/main.js`, `index.html`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js` o tarihten sonra değiştiyse, dosyaları üstüne yazma. Önce farkı çıkar (`git diff <baseline> -- oyun/src/main.js`) ve değişiklikleri birleştir.
-3. Değişmediyse şunları olduğu gibi kopyala (ayrıca `public/ses/` klasörünün tamamı, yeni `src/assets/karakus.glb`, yapay zekâ paketi `src/assets/dunya.glb` ve `src/assets/doku/` klasörü):
+3. Değişmediyse şunları olduğu gibi kopyala (ayrıca `public/ses/` klasörünün tamamı, yeni `src/assets/karakus.glb`, yapay zekâ paketi `src/assets/dunya.glb`, `src/assets/doku/` klasörü ve karakter gölgeleri `src/assets/ao.json`):
    - **Değişen:** `index.html`, `src/main.js`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js`, `src/assets.js`, `src/book.js`, `SESLENDIRME.md`
    - **Yeni kaynak:** `src/simge.js`, `src/akinci.js`, `ui.js`, `sound.js`, `bonus.js`, `tips.js`, `carsi.js`, `tore.js`, `harita.js`, `yigit.js`, `seferler.js`, `koleksiyon.js`, `ekranlar.js`, `diyalog.js`, `diyalog-metin.js`, `ayarlar.js`, `online.js`, `desen.js`
    - **Belgeler:** `SES-KAYNAKLARI.md`, `CEVRIMICI.md`, `UYGULAMA.md`
@@ -109,6 +109,14 @@ Engeller, yol kenarı dekoru ve zemin dokuları Replicate'te yapay zekâyla üre
 - **Eski hâlinde kalanlar (yapay zekâ bozdu):** gerili ip (ince ip kayboldu), karlı devrik çam (gövde kayboldu), ölü ağaçlar (ince dallar), ikinci huş ve yosunlu kaya (şekil bozuldu), kar dokusu.
 - **Telefon bütçesi:** engel 3–4 bin, ağaç 1000, çalı 1500, kaya 500, kule 1500 üçgen. Ormanda sahne 500 binden 209 bin üçgene indi. Paket 5,5 MB.
 - **Görüntüler:** `node tools/ai-bolge.mjs <önek> [bölüm...]`, `node tools/ai-oncesonra.mjs <boş.glb> [bölüm...]`, `node tools/ai-onizle.mjs <çıktı> <açı> <glb,...>`.
+
+## Karakter ayrıntısı (28 Eylül)
+
+Modellere dokunmadan karakterlerin yüzeyi zenginleştirildi (`src/ayrinti.js`, `src/assets.js` → `toon()`):
+- **Ayrıntı dokuları:** kumaş, deri, kürk, keçe, ahşap, metal, altın, kemik (`src/assets/doku/detay_*.jpg`, yapay zekâyla üretilip gri tona çevrildi). Malzeme adına göre eşlenir (`M_Leather`, `M_Gold`, `Steel`...). Gri oldukları için kostüm rengini bozmaz. Parçaların çoğunda UV yok: doku, iskelet öncesi konuma göre üç eksenden izdüşürülür (triplanar), koşarken gövdeye yapışık kalır.
+- **Parlama:** metal, altın, mücevher ve cilada çizgi film tarzı ışık lekesi.
+- **Gölge boşlukları (AO):** kol altı, yaka altı, kıvrımlar. `python3 tools/karakter_ao.py` (Blender Python modülü) 21 modelin hepsini ~30 sn'de hesaplar → `src/assets/ao.json` (409 KB). Anahtar köşe sayısı + ilk köşe konumu olduğundan model değişirse o parça kendiliğinden gölgesiz kalır. **`build_chars.py` ile bir karakter yeniden üretilirse bu komutu tekrar çalıştır.**
+- Önce/sonra: `node tools/karakter-yakin.mjs oguz model:tepegoz` → `test-out/yakin-*.png`. `window.__game.AYR` ile ayrıntı, parlama ve gölge kısılabilir.
 
 ## Bilinçli kararlar
 

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { AYAR as AYRINTI } from './ayrinti.js';
 import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { Pass } from 'three/addons/postprocessing/Pass.js';
@@ -3774,6 +3775,7 @@ renderer.setAnimationLoop(() => {
 
 // test kancası (tarayıcı konsolundan oyunu adım adım sürmek için)
 window.__game = {
+  AYR: AYRINTI, // karakter ayrıntısı ayarları (önce/sonra görüntüleri için)
   AY, applyGfx, get fps() { return fpsProbe; },
   resetTips, tipSeen,
   DLG, showDialog, get portraits() { return portraits; },
