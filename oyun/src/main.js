@@ -986,16 +986,10 @@ const cnNum = n => n <= 10 ? CN[n] : n < 20 ? '十' + CN[n - 10] : CN[Math.floor
 function openBook() {
   state = 'book';
   $('menu').hidden = true;
-  $('chips').replaceChildren(...BOOK.map((e, i) => {
-    const b = document.createElement('button');
-    b.className = 'chip' + (e.locked ? ' locked' : '');
-    b.textContent = e.name;
-    b.onclick = () => turnTo(i);
-    return b;
-  }));
   $('tome').className = 'closed';
   $('book').className = 'closed';
   $('book').hidden = false;
+  page = -1; // kitap İçindekiler'den açılır
   fillPage(page);
   book.current && (book.current.root.visible = false);
   book.pedestal(false);
@@ -1005,8 +999,10 @@ function openCover() {
   if (!$('tome').classList.contains('closed')) return;
   $('tome').className = 'open';
   $('book').className = '';
-  setTimeout(() => { bookResize(); book.pedestal(true); book.show(BOOK[page]); }, 700);
+  sfx('page');
+  setTimeout(() => { bookResize(); showModel(page); }, 700);
 }
+const showModel = i => { if (i < 0 || BOOK[i].locked) { book.current && (book.current.root.visible = false); book.pedestal(false); } else { book.pedestal(true); book.show(BOOK[i]); } };
 function closeBook() {
   if ($('tome').classList.contains('closed')) return toMenu();
   book.current && (book.current.root.visible = false);
@@ -1020,31 +1016,117 @@ function bookResize() {
   const r = $('lpage').getBoundingClientRect();
   book.resize(innerWidth, innerHeight, r);
 }
+// İçindekiler: iki sayfaya bölünmüş, gruplu, tıklanınca o sayfaya gidilir
+function drawToc() {
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const groups = [];
+  BOOK.forEach((e, i) => { let g = groups.find(x => x.name === e.group); if (!g) groups.push(g = { name: e.group || 'Diğer', list: [] }); g.list.push([e, i]); });
+  const half = Math.ceil(BOOK.length / 2);
+  let n = 0;
+  const L = [el('h2', 'toch', 'İçindekiler')], R = [];
+  for (const g of groups) {
+    const col = n < half - 2 ? L : R;
+    col.push(el('div', 'tocg', g.name));
+    for (const [e, i] of g.list) {
+      const b = el('button', 'toce' + (e.locked ? ' locked' : ''));
+      b.append(el('span', null, e.name), el('span', 'dots'), el('span', 'pg', String(i * 2 + 4)));
+      b.onclick = () => turnTo(i);
+      col.push(b);
+      n++;
+    }
+  }
+  $('ltoc').replaceChildren(...L);
+  $('rtoc').replaceChildren(...R);
+}
 function fillPage(i) {
+  const toc = i < 0;
+  $('ltoc').hidden = $('rtoc').hidden = !toc;
+  $('lpage').classList.toggle('toc', toc);
+  $('bcard').hidden = toc;
+  $('btocbtn').hidden = toc;
+  if (toc) { drawToc(); $('lfolio').textContent = cnNum(1); $('rfolio').textContent = `2 · ${cnNum(2)}`; return; }
   const e = BOOK[i];
-  [...$('chips').children].forEach((c, j) => c.classList.toggle('on', i === j));
   $('bname').textContent = e.name;
   $('btitle').textContent = e.title;
   $('btext').textContent = e.text;
   $('block').hidden = !e.locked;
   $('block').textContent = e.locked ? `YAKINDA · ${e.locked}` : '';
-  $('lfolio').textContent = cnNum(i * 2 + 1);
-  $('rfolio').textContent = `${i * 2 + 2} · ${cnNum(i * 2 + 2)}`;
+  $('lfolio').textContent = cnNum(i * 2 + 3);
+  $('rfolio').textContent = `${i * 2 + 4} · ${cnNum(i * 2 + 4)}`;
+}
+// Sayfa çevirme: yaprak N şeride bölünür; her şerit bir öncekinin ucuna bağlıdır. Yaprak ortadan döner,
+// şeritler arası küçük açı kâğıdın kıvrılmasını verir; açı arttıkça gölge koyulaşır.
+const STRIPS = 12;
+function buildLeaf(front, back) { // front: sağ sayfanın görünüşü, back: arka yüz (yeni sol sayfa)
+  const leaf = $('leaf'), W = $('rpage').clientWidth, sw = W / STRIPS;
+  leaf.replaceChildren();
+  let parent = leaf;
+  const strips = [];
+  for (let k = 0; k < STRIPS; k++) {
+    const st = document.createElement('div');
+    st.className = 'strip';
+    st.style.width = sw + 'px';
+    st.style.left = k ? sw + 'px' : '0';
+    for (const [cls, src, off] of [['f', front, -k * sw], ['b', back, -(STRIPS - 1 - k) * sw]]) {
+      const face = document.createElement('div');
+      face.className = cls;
+      const inner = document.createElement('div');
+      inner.className = 'inner';
+      inner.style.width = W + 'px';
+      inner.style.left = off + 'px';
+      inner.append(src.cloneNode(true));
+      const sh = document.createElement('div');
+      sh.className = 'sh';
+      face.append(inner, sh);
+      st.append(face);
+    }
+    parent.append(st);
+    strips.push(st);
+    parent = st;
+  }
+  return strips;
+}
+function pageShot(sel) { // sayfanın içeriğinin kopyası (3B model hariç: sol sayfa kâğıt)
+  const d = document.createElement('div');
+  d.style.cssText = 'position:absolute;inset:0;background:#efdcb4 linear-gradient(90deg, rgba(90,60,20,.18), transparent 8%, transparent 92%, rgba(90,60,20,.12))';
+  for (const n of document.querySelector(sel).children) if (!n.hidden && n.id !== 'btocbtn') d.append(n.cloneNode(true));
+  return d;
 }
 function turnTo(i) {
-  if (!turning && i !== page) sfx('page');
-  i = (i + BOOK.length) % BOOK.length;
+  if (i < -1) i = BOOK.length - 1;
+  if (i >= BOOK.length) i = -1;
   if (turning || i === page || $('tome').classList.contains('closed')) return;
-  const fwd = i > page, leaf = $('leaf');
+  sfx('page');
+  const fwd = i > page;
   turning = true;
-  // ileri: sağ sayfanın kopyası sola kıvrılır; geri: boş yaprak soldan sağa kapanır, yeni yazıyı taşır
-  leaf.children[0].replaceChildren($('bcard').cloneNode(true), $('rfolio').cloneNode(true));
+  const oldR = pageShot('#rpage'), oldL = pageShot('#lpage');
   page = i;
-  if (fwd) fillPage(i);
-  else { const tmp = $('bcard').cloneNode(true); fillPage(i); leaf.children[0].replaceChildren($('bcard').cloneNode(true)); void tmp; }
-  leaf.className = fwd ? 'turn' : 'turnback';
-  setTimeout(() => book.show(BOOK[i]), fwd ? 600 : 50);
-  setTimeout(() => { leaf.className = ''; turning = false; }, 760);
+  fillPage(i);
+  const newR = pageShot('#rpage'), newL = pageShot('#lpage');
+  // ileri: eski sağ sayfa kalkar, arkasında yeni sol sayfa; geri: yeni sağ sayfa soldan kapanır, arkasında eski sol
+  const strips = fwd ? buildLeaf(oldR, newL) : buildLeaf(newR, oldL);
+  const leaf = $('leaf');
+  leaf.className = 'on';
+  if (!fwd) showModel(-1); // geri çevirirken sol sayfadaki model yaprağın altında kalmasın
+  else setTimeout(() => showModel(i), 420);
+  const t0 = performance.now(), D = 850;
+  const step = now => {
+    const p = Math.min(1, (now - t0) / D), e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
+    const q = fwd ? e : 1 - e; // q: 0 = sağda düz, 1 = solda düz
+    const bend = Math.sin(q * Math.PI) * (fwd ? -7 : 7) * (0.6 + 0.4 * Math.sin(p * Math.PI)); // uç önde kalkar
+    strips.forEach((st, k) => {
+      const a = k === 0 ? -180 * q + bend * 0.5 : bend * (k / STRIPS + 0.3);
+      st.style.transform = `rotateY(${a}deg)`;
+      const shade = Math.abs(Math.sin(q * Math.PI)) * (0.15 + 0.35 * k / STRIPS);
+      for (const sh of st.querySelectorAll(':scope > div > .sh')) sh.style.background = `rgba(40,20,5,${shade.toFixed(3)})`;
+    });
+    if (p < 1) return requestAnimationFrame(step);
+    leaf.className = '';
+    leaf.replaceChildren();
+    turning = false;
+    if (!fwd) showModel(i);
+  };
+  requestAnimationFrame(step);
 }
 function showEntry(i) { turnTo(i); }
 
@@ -3646,6 +3728,7 @@ $('bookback').onclick = closeBook;
 $('cover').onclick = openCover;
 $('bprev').onclick = () => turnTo(page - 1);
 $('bnext').onclick = () => turnTo(page + 1);
+$('btocbtn').onclick = () => turnTo(-1);
 $('wmap').onclick = openMap;
 $('pause').onclick = () => setPaused(true);
 $('weapon').onclick = () => act('weapon');

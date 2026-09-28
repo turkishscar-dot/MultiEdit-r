@@ -43,6 +43,7 @@ export class Book {
     this.setRank(null);
     this.spin = 0; this.hold = 0;
     this.pedestal = on => { base.visible = ring.visible = on; };
+    this.baseVisible = () => base.visible;
     this.actors = {};
     this.current = null;
     this.h = 2;
@@ -80,9 +81,11 @@ export class Book {
     this.aspect = w / h;
     this.camera.aspect = this.aspect;
     this.scene.background = rect ? this.paper : this.dark;
+    this.wf = 0.9; // kaidenin sığması gereken ekran genişliği payı
     if (rect) {
       this.camera.setViewOffset(w, h, w / 2 - (rect.left + rect.width / 2), h / 2 - (rect.top + rect.height / 2), w, h);
       this.fill = 0.7 * rect.height / h;
+      this.wf = 0.86 * rect.width / w;
     } else {
       if (this.aspect >= 1) this.camera.setViewOffset(w, h, w * 0.2, 0, w, h);
       else this.camera.setViewOffset(w, h, 0, h * 0.2, w, h);
@@ -92,7 +95,9 @@ export class Book {
   }
 
   frame() {
-    const d = (this.h / this.fill) / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)));
+    const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    const base = this.baseVisible() ? 2.75 : 0; // kaidenin çapı (1.3 yarıçap + halka): taşmasın
+    const d = Math.max((this.h / this.fill) / (2 * tan), base / (this.wf * 2 * tan * this.aspect));
     this.camera.position.set(0, this.h * 0.75, d + 1);
     this.camera.lookAt(0, this.h * 0.45, 0);
     this.camera.updateProjectionMatrix();

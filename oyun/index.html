@@ -156,12 +156,26 @@
     #tome.closed #lpage, #tome.closed #rpage { visibility: hidden; }
     #tome.closed #lpage { visibility: visible; border-color: transparent; background: #18101a; box-shadow: 0 0 0 200vmax #18101a; }
     #tome.closing #lpage { background: #efdcb4; } /* kapanırken sol sayfa kâğıt olarak kalır, kapak üstüne kapanır */
-    #leaf { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; transform-origin: left center; transform-style: preserve-3d; pointer-events: none; display: none; }
-    #leaf > div { width: 100%; left: 0; backface-visibility: hidden; overflow: hidden; }
-    #leaf .back { transform: rotateY(180deg); }
-    #leaf.turn { display: block; animation: turn .75s cubic-bezier(.5,.05,.4,1) forwards; }
-    #leaf.turnback { display: block; animation: turn .75s cubic-bezier(.5,.05,.4,1) reverse forwards; }
-    @keyframes turn { from { transform: rotateY(0); } to { transform: rotateY(-180deg); } }
+    /* sayfa çevirme: yaprak şeritlere bölünür, her şerit bir öncekine göre biraz döner: kâğıt kıvrılır */
+    #leaf { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; transform-style: preserve-3d; pointer-events: none; display: none; }
+    #leaf.on { display: block; }
+    .strip { position: absolute; top: 0; height: 100%; transform-origin: left center; transform-style: preserve-3d; }
+    .strip > .f, .strip > .b { position: absolute; inset: 0 -1px 0 0; overflow: hidden; backface-visibility: hidden; background: #efdcb4; }
+    .strip > .b { transform: rotateY(180deg); }
+    .strip .sh { position: absolute; inset: 0; pointer-events: none; }
+    .strip .inner { position: absolute; top: 0; height: 100%; }
+    #leafshade { position: absolute; top: 0; bottom: 0; width: 50%; pointer-events: none; opacity: 0; background: linear-gradient(90deg, rgba(40,20,5,.45), transparent 70%); }
+    /* İçindekiler */
+    #ltoc, #rtoc { position: absolute; inset: 22px 26px 34px 30px; overflow-y: auto; text-align: left; }
+    #lpage.toc { background: #efdcb4 linear-gradient(90deg, rgba(90,60,20,.18), transparent 8%, transparent 92%, rgba(90,60,20,.12)); }
+    .toch { margin: 0 0 6px; font-weight: 400; font-size: clamp(26px, 3.4vw, 40px); color: #9a1a22; line-height: 1; border-bottom: 2px solid #b89a6a; padding-bottom: 6px; }
+    .tocg { font: italic 700 13px Georgia, serif; color: #6a4a2a; margin: 10px 0 2px; letter-spacing: .5px; }
+    .toce { display: flex; align-items: baseline; gap: 6px; width: 100%; background: none; border: none; padding: 3px 2px; font: 15px Georgia, serif; color: #2a1e12; cursor: pointer; text-align: left; letter-spacing: 0; }
+    .toce:hover, .toce:focus-visible { color: #9a1a22; }
+    .toce .dots { flex: 1; border-bottom: 2px dotted #b89a6a; transform: translateY(-4px); }
+    .toce .pg { font: 700 13px serif; color: #6a4a2a; }
+    .toce.locked { color: #9a8a78; }
+    #btocbtn { position: absolute; top: -3px; right: 22px; z-index: 2; background: #9a1a22; color: #f8ecd0; border: none; font: 400 14px 'Bangers', sans-serif; letter-spacing: 1px; padding: 6px 10px 12px; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%); cursor: pointer; }
     #cover { position: absolute; right: 0; top: -1%; bottom: -1%; width: 51%; transform-origin: left center; transform-style: preserve-3d; transition: transform 1s cubic-bezier(.55,.05,.35,1); cursor: pointer; }
     #tome.open #cover { transform: rotateY(-180deg); pointer-events: none; }
     #cover > div { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 4px 8px 8px 4px; }
@@ -179,18 +193,14 @@
     #cover .tap { position: absolute; right: 20px; bottom: 5%; font-size: 18px; color: #fff; animation: pulse .6s infinite alternate; }
     .navbtn { position: absolute; top: 50%; width: 48px; height: 64px; margin-top: -32px; font: 400 30px 'Bangers', sans-serif; background: var(--paper); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); color: var(--ink); }
     #bprev { left: max(6px, calc(50% - min(47vw, 540px, 85vh) - 56px)); } #bnext { right: max(6px, calc(50% - min(47vw, 540px, 85vh) - 56px)); }
-    #book.closed .navbtn, #book.closed #chips { display: none; }
-    #chips { position: absolute; bottom: max(8px, env(safe-area-inset-bottom)); left: 16px; right: 16px; display: flex; gap: 6px; overflow-x: auto; justify-content: safe center; padding-bottom: 4px; scrollbar-width: none; }
-    #chips::-webkit-scrollbar { display: none; }
-    .chip { flex: none; font: 400 15px 'Bangers', sans-serif; background: var(--paper); border: 2px solid var(--ink); padding: 2px 10px; color: var(--ink); }
-    .chip.on { background: var(--gold); }
-    .chip.locked { background: #cfc4b0; color: #6b5f52; }
+    #book.closed .navbtn { display: none; }
     #bookback { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 16px; width: 44px; height: 40px; font: 400 22px 'Bangers', sans-serif; background: var(--paper); border: 3px solid var(--ink); color: var(--ink); }
     #bcard { position: absolute; inset: 22px 26px 34px 30px; overflow-y: auto; }
     #bname { margin: 0; font-weight: 400; font-size: clamp(28px, 3.6vw, 44px); color: #9a1a22; line-height: 1; }
     #btitle { font-size: 19px; margin: 4px 0 10px; color: #3a2a18; border-bottom: 2px solid #b89a6a; padding-bottom: 6px; }
     #btext { font: 15px/1.65 Georgia, 'Times New Roman', serif; letter-spacing: 0; margin: 0; color: #2a1e12; }
-    #leaf #bcard { position: absolute; }
+    #leaf #bcard, #leaf #rtoc { position: absolute; }
+    #bcard { padding-top: 22px; }
     #block { display: inline-block; margin-top: 12px; background: var(--ink); color: #fff; padding: 2px 10px; font-size: 18px; }
     @media (max-aspect-ratio: 1/1) {
       #tome { width: 92vw; height: 82vh; transform: translate(-50%, -52%); }
@@ -541,7 +551,7 @@
     .scards button.on { background: var(--gold); }
     #seferback { margin: 12px 0; flex: none; }
     /* Destan Koleksiyonları (kitabın üstünde kâğıt sayfa) */
-    #kolbtn { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 70px; font-size: 16px; padding: 3px 10px; }
+    #kolbtn { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 16px; font-size: 16px; padding: 3px 10px; }
     #book.closed #kolbtn { display: none; }
     #koleksiyon { position: fixed; inset: 5% max(4%, calc(50% - 360px)); background: #efdcb4; border: 4px solid #3a2a18; box-shadow: 8px 8px 0 rgba(0,0,0,.4); padding: 12px 16px; overflow-y: auto; z-index: 4; text-align: left; }
     #koleksiyon h2 { margin: 0 0 6px; font-weight: 400; color: #9a1a22; }
@@ -740,12 +750,14 @@
 
   <div id="book" hidden>
     <div id="tome" class="closed">
-      <div id="lpage" class="page"><span class="folio" id="lfolio"></span></div>
+      <div id="lpage" class="page"><div id="ltoc" hidden></div><span class="folio" id="lfolio"></span></div>
       <div id="rpage" class="page">
         <div id="bcard"><h2 id="bname"></h2><div id="btitle"></div><p id="btext"></p><div id="block" hidden></div></div>
+        <div id="rtoc" hidden></div>
+        <button id="btocbtn" hidden>☰ İÇİNDEKİLER</button>
         <span class="folio" id="rfolio"></span>
       </div>
-      <div id="leaf"><div class="front page"></div><div class="back page"></div></div>
+      <div id="leaf"></div>
       <div id="cover">
         <div class="front">
           <div class="stitch"><i></i><i></i><i></i><i></i></div>
@@ -760,9 +772,8 @@
     <button id="bprev" class="navbtn" aria-label="Önceki sayfa">◂</button>
     <button id="bnext" class="navbtn" aria-label="Sonraki sayfa">▸</button>
     <button id="bookback" aria-label="Kitabı kapat">✕</button>
-    <button id="kolbtn" class="small">📜 KOLEKSİYONLAR</button>
+    <button id="kolbtn" class="small">KOLEKSİYONLAR</button>
     <div id="koleksiyon" hidden><h2>DESTAN KOLEKSİYONLARI</h2><div id="kolist"></div><button id="kolback" class="small">KAPAT</button></div>
-    <div id="chips"></div>
   </div>
 
   <div id="wardrobe" hidden>

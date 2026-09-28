@@ -264,91 +264,91 @@ export function levelIntro(lv) {
 // Destan Kitabı. model: assets.js şablonu; locked: henüz oyunda değil.
 export const BOOK = [
   {
-    id: 'oguz', name: 'Oğuz Kağan', title: 'Ölümsüz Akıncı', model: 'oguz', anim: 'Sword_Idle', sword: true, h: 1.9,
+    id: 'oguz', group: 'Kahramanlar', name: 'Oğuz Kağan', title: 'Ölümsüz Akıncı', model: 'oguz', anim: 'Sword_Idle', sword: true, h: 1.9,
     text: "Oğuz Kağan Destanı'na göre Ay Kağan'ın oğludur. Kırk günde büyüyüp yürümüş, halkını kıran Kıyant canavarını tek başına öldürmüş, gök yeleli bir kurdun rehberliğinde dört bir yana akın ederek Oğuz boylarını birleştirmiştir. Bu destanda Oğuz, Türk yurduna saldıran kötülükleri yenerek ölümsüzlük kazanır. Kimseye söylemeden yüzyıllar boyunca Türk'ü gözetir; başı derde girdiğinde savaşın ortasında çıkagelir.",
   },
   {
-    id: 'kurt', name: 'Gök Yeleli Kurt', title: 'Yol gösteren', model: 'wolf', anim: 'Idle', scale: 0.34, h: 1.1,
+    id: 'kurt', group: 'Kutlu hayvanlar', name: 'Gök Yeleli Kurt', title: 'Yol gösteren', model: 'wolf', anim: 'Idle', scale: 0.34, h: 1.1,
     text: "Destanda bir ışığın içinden gök tüylü, gök yeleli büyük bir erkek kurt çıkar ve Oğuz'a: \"Ordunun önünde ben yürüyeceğim\" der. Türklerin kutlu yol göstericisidir; Ergenekon'dan çıkışta da yolu bir bozkurt gösterir.",
   },
   {
-    id: 'at', name: 'Yağız At', title: "Türk'ün kanadı", model: 'horse', anim: 'Idle', scale: 0.48, h: 2.3,
+    id: 'at', group: 'Kutlu hayvanlar', name: 'Yağız At', title: "Türk'ün kanadı", model: 'horse', anim: 'Idle', scale: 0.48, h: 2.3,
     text: "\"At, Türk'ün kanadıdır.\" Bozkırda akınlar, göçler ve destanlar at sırtında yazıldı. Oyunda altın nalı toplayınca Oğuz ata biner: hızı artar, önündeki her şeyi çiğner. Ama at da yorulur; süresi dolunca Oğuz'u indirip geride kalır.",
   },
   {
-    id: 'kormos', name: 'Körmösler', title: "Erlik Han'ın kulları", model: 'kormos', anim: 'Idle_Shield_Loop', parts: ['Axe', 'Shield'], h: 2,
+    id: 'kormos', group: 'Düşmanlar', name: 'Körmösler', title: "Erlik Han'ın kulları", model: 'kormos', anim: 'Idle_Shield_Loop', parts: ['Axe', 'Shield'], h: 2,
     text: "Altay inanışında Körmösler, yeraltı hükümdarı Erlik Han'ın hizmetindeki kötü ruhlardır; ölülerin ruhlarını yeraltına sürükler, insanlara hastalık ve felaket getirirler. Beş türleri vardır: Baltacı · Kalkanlı (ok işlemez, önce kalkanını kılıçla kır) · Mızrakçı (mızrağın altından kay) · Pusucu (surlardan aniden atlar) · Yeraltı kulu (yerden fırlar).",
   },
   {
-    id: 'tepegoz', name: 'Tepegöz', title: 'Tek gözlü dev', model: 'tepegoz', anim: 'Idle_Loop', h: 2.1,
+    id: 'tepegoz', group: 'Devler ve hükümdarlar', name: 'Tepegöz', title: 'Tek gözlü dev', model: 'tepegoz', anim: 'Idle_Loop', h: 2.1,
     text: "Dede Korkut Kitabı'nda bir çoban ile peri kızının oğludur; yüzünde göz yoktur, tek gözü başının tepesindedir; ona ok da kılıç da işlemez. Oğuz yurdunu haraca bağlamış, her gün insan ve koyun istemiştir. Aruz Koca'nın oğlu Basat onu tek gözünü kör ederek yenmiştir. Oyunda da ona ok işlemez: topuzuyla yeri dövüp sersemlediğinde kılıçla vur!",
   },
   {
-    id: 'albasti', name: 'Albastı', title: 'Al karısı', model: 'albasti', anim: 'Idle_Loop', h: 2,
+    id: 'albasti', group: 'Devler ve hükümdarlar', name: 'Albastı', title: 'Al karısı', model: 'albasti', anim: 'Idle_Loop', h: 2,
     text: "Türk halk inanışında lohusa kadınlara ve yeni doğan bebeklere musallat olan, uzun sarı saçlı kötü ruhtur; Al Karısı da denir. Sisin içinde kılık değiştirir. Oyunda üç kopyaya bölünür: gerçeğinin gölgesi vardır, onu okla vur! Kılıç işlemez; çığlık dalgalarından şerit değiştirerek kaç.",
   },
   {
-    id: 'yelbegen', name: 'Yelbegen', title: 'Çok başlı dev', model: 'yelbegen', anim: 'Sword_Idle', h: 2.1,
+    id: 'yelbegen', group: 'Devler ve hükümdarlar', name: 'Yelbegen', title: 'Çok başlı dev', model: 'yelbegen', anim: 'Sword_Idle', h: 2.1,
     text: 'Altay ve Türk masallarında çok başlı, insan yiyen devdir; Ak-Han masalında Sarı Yelbegen yedi başlıdır ve kahraman onu başlarını tek tek keserek yener (Ögel, s.315). Oyunda başları sırayla şeritlere saldırır. Sonra ekranda çıkan yöne kaydır ve o yandaki başları kes! Geç kalırsan ısırır.',
   },
   {
-    id: 'tulpar', name: 'Tulpar', title: 'Kanatlı at', model: 'tulpar', anim: 'Idle', scale: 0.48, h: 2.4,
+    id: 'tulpar', group: 'Kutlu hayvanlar', name: 'Tulpar', title: 'Kanatlı at', model: 'tulpar', anim: 'Idle', scale: 0.48, h: 2.4,
     text: 'Türk mitolojisinde kanatlı, yere basmadan koşan kutlu attır; kahramanları göklere taşır. Gök Yolu bölümünde Oğuz\'u sırtında taşır: sağa-sola ve yukarı-aşağı kaydırarak fırtına bulutlarından kaç, kara kuşları okla düşür.',
   },
   {
-    id: 'karakus', name: 'Dev Kara Kuş', title: "Erlik'in kanadı", model: 'karakus', scale: 1.4, h: 1.6,
+    id: 'karakus', group: 'Devler ve hükümdarlar', name: 'Dev Kara Kuş', title: "Erlik'in kanadı", model: 'karakus', scale: 1.4, h: 1.6,
     text: 'Göklerde Erlik\'e hizmet eden dev kara kuş. Tüylerini ok gibi yağdırır, sürüler salar. Arada dönüp çığlık attığında gözü açıkta kalır: o an okla vur!',
   },
   {
-    id: 'erlik', name: 'Erlik Han', title: 'Yeraltının hükümdarı', model: 'erlik', anim: 'Sword_Idle', h: 2.3,
+    id: 'erlik', group: 'Devler ve hükümdarlar', name: 'Erlik Han', title: 'Yeraltının hükümdarı', model: 'erlik', anim: 'Sword_Idle', h: 2.3,
     text: 'Türk-Altay inanışında yeraltı dünyasının ve ölümün hükümdarıdır. Kara sakalı dizine iner, boynuzları ağaç kökleri gibi kıvrıktır; kibri yüzünden yeraltına sürülmüş, oradan insanlara kötülük salar. Oyunda alevde kaybolup belirir, ateş sütunları ve balyoz dalgaları yollar. Diz çöktüğünde kılıçla vur, sonunda hızlı hızlı dokunarak bitir!',
   },
   {
-    id: 'tang', name: 'Tang Askerleri', title: 'İmparatorluk ordusu', model: 'cinli', anim: 'Sword_Idle', parts: ['Dao', 'Shield'], h: 2,
+    id: 'tang', group: 'Düşmanlar', name: 'Tang Askerleri', title: 'İmparatorluk ordusu', model: 'cinli', anim: 'Sword_Idle', parts: ['Dao', 'Shield'], h: 2,
     text: "630 yılında Doğu Göktürk Kağanlığı Tang İmparatorluğu'na yenildi; Türkler elli yıl Çin egemenliğinde yaşadı. Kutluk Kağan'ın 682'deki ayaklanmasıyla bağımsızlık yeniden kazanıldı; Orhun Yazıtları bu acıyı anlatır. Oyunda askerler kılıçlı, kalkanlı, mızrakçı ve surlardan atlayan pusucu olarak dört türdür.",
   },
   {
-    id: 'cin', name: 'Çin Generali', title: 'Kalkanlı komutan', model: 'general', anim: 'Idle_Shield_Loop', parts: ['Dao', 'Shield'], h: 2.1,
+    id: 'cin', group: 'Devler ve hükümdarlar', name: 'Çin Generali', title: 'Kalkanlı komutan', model: 'general', anim: 'Idle_Shield_Loop', parts: ['Dao', 'Shield'], h: 2.1,
     text: "Türkleri esir alan imparatorluk ordusunun komutanı. Önce atıyla kaçar; surlardaki okçular ok yağdırır, atı demir diken döker. Sonra kalkanıyla karşına dikilir: kalkanlıyken vuruşun işlemez. Saldırısında ekrana bak: ▲ ZIPLA ya da ▼ EĞİL. Doğru hamleyle kaçarsan dengesi bozulur; o an vur!",
   },
   {
-    id: 'geyik', name: 'Ak Geyik', title: 'Gizli yolun kılavuzu', model: 'stag', anim: 'Idle', scale: 0.42, h: 2.2,
+    id: 'geyik', group: 'Kutlu hayvanlar', name: 'Ak Geyik', title: 'Gizli yolun kılavuzu', model: 'stag', anim: 'Idle', scale: 0.42, h: 2.2,
     text: "Türk ve Macar efsanelerinde avcıları bilinmeyen yurtlara götüren kutlu geyik: Hun avcıları bir dişi geyiği kovalayarak Meotis bataklığını aşıp yeni topraklar bulmuş, Kutrigur ile Utigur kardeşler de bir geyiğin ardından denizi geçmiştir (Ögel, s.578–582). Oyunda nadiren önünden koşar; yakalarsan seni altın yapraklı kayın korusundaki gizli yola, kut dolu yola götürür.",
   },
   {
-    id: 'sulu', name: 'Sulu', title: 'Bataklık ölüsü', model: 'sulu', anim: 'Zombie_Idle_Loop', h: 2,
+    id: 'sulu', group: 'Düşmanlar', name: 'Sulu', title: 'Bataklık ölüsü', model: 'sulu', anim: 'Zombie_Idle_Loop', h: 2,
     text: "Kara Bataklık'ın dibinde bekleyen, yosun bağlamış ölüler. Suyun altında durur, yaklaşınca birden yükselirler. İki vuruşta düşerler; oka bir kez dayanırlar.",
   },
   {
-    id: 'albis', name: 'Albıslar', title: 'Albastı\'nın soyu', model: 'albasti', anim: 'Idle_Loop', scale: 0.8, h: 1.7,
+    id: 'albis', group: 'Düşmanlar', name: 'Albıslar', title: 'Albastı\'nın soyu', model: 'albasti', anim: 'Idle_Loop', scale: 0.8, h: 1.7,
     text: "Altay yaratılış anlatısında Erlik, örsüne her vuruşta bir yaratık doğurur; bunlardan biri Albıs'tır (Ögel, s.461–462). Oyunda yerden hafifçe süzülür ve son anda senin şeridine kayar: gözün üstünde olsun!",
   },
   {
-    id: 'almas', name: 'Almas', title: 'Altay\'ın yaban adamı', model: 'almas', anim: 'Idle_Loop', h: 2.1,
+    id: 'almas', group: 'Düşmanlar', name: 'Almas', title: 'Altay\'ın yaban adamı', model: 'almas', anim: 'Idle_Loop', h: 2.1,
     text: "Altay ve Moğol dağlarında yaşadığına inanılan, baştan ayağa kıllı yaban adam. Oyunda uzaktan buz kayası yuvarlar: şerit değiştirerek kaç; iki vuruşta düşer.",
   },
   {
-    id: 'sulmus', name: 'Şulmuslar', title: 'Erlik\'in iblisleri', model: 'sulmus', anim: 'Zombie_Idle_Loop', h: 2,
+    id: 'sulmus', group: 'Düşmanlar', name: 'Şulmuslar', title: 'Erlik\'in iblisleri', model: 'sulmus', anim: 'Zombie_Idle_Loop', h: 2,
     text: "Altay yaratılış destanında Erlik'in örsünde doğan kötü ruhlar arasında sayılır (Ögel, s.461). Kızıl derili, kara boynuzludurlar; seni görünce koşarak üstüne atılırlar.",
   },
   {
-    id: 'kerey', name: 'Kerey Han', title: 'Erlik\'in oğlu', model: 'kerey', anim: 'Sword_Idle', h: 2.2,
+    id: 'kerey', group: 'Devler ve hükümdarlar', name: 'Kerey Han', title: 'Erlik\'in oğlu', model: 'kerey', anim: 'Sword_Idle', h: 2.2,
     text: "Altay anlatısında Erlik'in oğlu ve insan dünyasının cehennemi Kara-Teş'in hükümdarıdır; burun kemiği bakırdandır (Ögel, s.458). Oyunda Yeraltı'nın birinci katının boss'u: balyozuyla şok dalgası yollar, sonra bakır burnunu şeridine saplar. Burnu toprağa gömülüyken kılıçla vur!",
   },
   {
-    id: 'demirhane', name: "Erlik'in Demirhanesi", title: 'Yeraltının ikinci katı', model: 'erlik', anim: 'Punch_Cross', h: 2.3,
+    id: 'demirhane', group: 'Devler ve hükümdarlar', name: "Erlik'in Demirhanesi", title: 'Yeraltının ikinci katı', model: 'erlik', anim: 'Punch_Cross', h: 2.3,
     text: "Erlik yeraltında körük, kıskaç ve çekiç yapar; örse her vuruşunda bir kurbağa, yılan, ayı, domuz, Albıs, Şulmus doğar. Ülgen demirhaneyi yakınca alevden Kordoy, kıskaçtan Yalban kuşları çıkar (Ögel, s.461–462). Oyunda örsten doğan iblisleri biç; örs akkor kesilince okla vur!",
   },
   {
-    id: 'matman', name: 'Haydut Matman', title: 'Tüpken Kara Tamu\'nun hükümdarı', model: 'sulmus', anim: 'MX_GS_Idle2', h: 2.2,
+    id: 'matman', group: 'Devler ve hükümdarlar', name: 'Haydut Matman', title: 'Tüpken Kara Tamu\'nun hükümdarı', model: 'sulmus', anim: 'MX_GS_Idle2', h: 2.2,
     text: "Altay anlatısında dokuz dünyanın her birinin ayrı bir cehennemi vardır; en derin kara cehennem Tüpken Kara Tamu'yu 'Haydut' lakaplı Matman-Karakçı yönetir (Ögel, s.435). Oyunda Yeraltı'nın üçüncü katının başbuğudur: şeridine atılır, savuruşlarından eğilip zıplayarak kaç, sendeleyince vur!",
   },
   {
-    id: 'itbarak', name: 'İt-Barak', title: 'Karanlık Ülke\'nin it başlıları', model: 'itbarak', anim: 'Sword_Idle', parts: ['Axe', 'Shield'], h: 2,
+    id: 'itbarak', group: 'Düşmanlar', name: 'İt-Barak', title: 'Karanlık Ülke\'nin it başlıları', model: 'itbarak', anim: 'Sword_Idle', parts: ['Axe', 'Shield'], h: 2,
     text: "Oğuz destanında kuzeyin 'Karanlıklar Ülkesi'nde yaşayan, erkekleri it başlı, çok kıllı bir kavim; Farsça metinlerde Kıl-Barak diye geçer. 'Barak' adı 'hızlı gitmek' anlamından gelir (Ögel, s.185–195). Oyunda koşarak üstüne atılırlar ve oklardan yana kaçarlar; kılıcı yakından çal!",
   },
   {
-    id: 'boyali', name: 'İt-Barak Pehlivanı', title: 'Üç kat boyalı', model: 'boyali', anim: 'Idle_Loop', h: 2.4,
+    id: 'boyali', group: 'Devler ve hükümdarlar', name: 'İt-Barak Pehlivanı', title: 'Üç kat boyalı', model: 'boyali', anim: 'Idle_Loop', h: 2.4,
     text: "Destana göre İt-Barak pehlivanları savaştan önce siyah ve beyaz iki sıvıyı karıştırıp vücutlarına üç kat sürer, böylece oklar onlara işlemezdi; Oğuz'un ilk akını bu yüzden yenilgiyle bitti (Ögel, s.186). Oyunda saldırısından yana kaç, dengesi bozulunca kılıçla vur: her vuruş bir kat boyayı kırar. Boyası dökülünce okla bitir!",
   },
 ];
