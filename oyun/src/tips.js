@@ -40,8 +40,8 @@ export function tip(id, t, icon = '', slow = null) {
   }
   box.hidden = false;
   box.classList.remove('in'); void box.offsetWidth; box.classList.add('in');
-  slow?.(0.3, 0.6); // 0.6 sn ağır çekim
+  // ağır çekim yok: ipucu yolu kapatmaz, oyunu durdurmaz (üstte küçük bant)
   clearTimeout(hideT);
-  hideT = setTimeout(() => { box.hidden = true; }, 2800);
+  hideT = setTimeout(() => { box.hidden = true; }, 3200);
   return true;
 }

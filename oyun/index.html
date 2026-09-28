@@ -249,7 +249,7 @@
     #lvbar small { font: 11px system-ui, sans-serif; letter-spacing: 0; text-shadow: 1px 1px 0 var(--ink); }
     /* kilitli menü düğmeleri */
     button.locked { opacity: .6; }
-    button.locked:not(.tile)::before { content: '🔒 '; }
+    button.locked:not(.tile):not(.mtab):not(.mnode)::before { content: '🔒 '; }
     /* seviye atlama ekranı */
     #levelup { z-index: 8; background: radial-gradient(circle, rgba(90,60,10,.92), rgba(20,10,30,.97)); }
     #levelup h1 { font-size: clamp(48px, 13vw, 110px); }
@@ -291,12 +291,13 @@
     #escbar div { flex: 1; height: 7px !important; border-width: 2px !important; background: #10203a !important; }
     #esc { display: block; height: 100%; width: 100%; background: linear-gradient(#9ad0ff, #2a7ae0); transition: width .2s; }
     /* eğitim ipucu kutusu */
-    #hint { position: fixed; left: 50%; top: 44%; transform: translate(-50%, -50%) rotate(-2deg); z-index: 7; width: max-content; max-width: min(460px, 86vw); display: flex; gap: 12px; align-items: center; background: var(--gold); border: 4px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); padding: 10px 16px; font: 600 17px/1.35 system-ui, sans-serif; letter-spacing: 0; color: var(--ink); pointer-events: none; }
-    #hint.in { animation: hintin .35s cubic-bezier(.2,1.6,.4,1); }
-    @keyframes hintin { from { transform: translate(-50%, -50%) scale(1.8) rotate(-6deg); } to { transform: translate(-50%, -50%) rotate(-2deg); } }
-    #hint .hicon { font: 400 34px 'Bangers', sans-serif; }
+    #hint { position: fixed; left: 50%; top: max(76px, calc(env(safe-area-inset-top) + 70px)); transform: translateX(-50%); z-index: 7; width: max-content; max-width: min(420px, 78vw); display: flex; gap: 10px; align-items: center; background: rgba(255, 210, 63, .94); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 6px 12px; font: 600 14px/1.3 system-ui, sans-serif; letter-spacing: 0; color: var(--ink); pointer-events: none; }
+    #hint.in { animation: hintin .25s ease-out; }
+    @keyframes hintin { from { transform: translate(-50%, -12px); opacity: 0; } to { transform: translateX(-50%); opacity: 1; } }
+    @media (max-aspect-ratio: 1/1) { #hint { top: max(150px, calc(env(safe-area-inset-top) + 144px)); font-size: 13px; } }
+    #hint .hicon { font: 400 22px 'Bangers', sans-serif; }
     #hint kbd { font: 700 15px system-ui, sans-serif; background: var(--paper); border: 3px solid var(--ink); border-bottom-width: 5px; border-radius: 6px; padding: 2px 8px; white-space: nowrap; }
-    .hgest { font-style: normal; font-size: 30px; display: inline-block; }
+    .hgest { font-style: normal; font-size: 20px; display: inline-block; }
     .g-lr { animation: glr .9s ease-in-out infinite alternate; } @keyframes glr { from { transform: translateX(-14px); } to { transform: translateX(14px); } }
     .g-up { animation: gup .8s ease-in-out infinite; } @keyframes gup { from { transform: translateY(10px); } to { transform: translateY(-12px); opacity: .3; } }
     .g-down { animation: gdn .8s ease-in-out infinite; } @keyframes gdn { from { transform: translateY(-10px); } to { transform: translateY(12px); opacity: .3; } }
@@ -351,32 +352,42 @@
     #final .stamp:empty { display: none; }
     #final .rec { color: var(--gold); }
 
-    /* Akın Haritası: parşömen, mürekkep yol, düğümler */
-    #map { padding: 0; }
-    #mapwrap { width: min(760px, 100%); margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px 80px; background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.35), transparent 40%), radial-gradient(circle at 80% 70%, rgba(120,80,30,.18), transparent 50%), repeating-linear-gradient(0deg, rgba(90,60,20,.05) 0 2px, transparent 2px 7px), #ecd9b0; border-left: 6px double #6a4a2a; border-right: 6px double #6a4a2a; min-height: 100%; box-shadow: 0 0 0 200vmax rgba(20,10,30,.6); }
-    #mapwrap h1 { font-size: clamp(40px, 9vw, 70px); margin-bottom: 4px; }
-    .region { margin-top: 10px; }
-    .rhead { display: flex; align-items: baseline; gap: 10px; border-bottom: 3px solid #3a2a18; padding-bottom: 2px; }
-    .rhead .ricon { font-size: 30px; font-weight: 400; }
-    .rhead h3 { margin: 0; font-weight: 400; font-size: 28px; color: #7a1a1a; }
-    .rhead small { font: italic 14px Georgia, serif; color: #5a3a1a; }
-    .rfield { position: relative; }
-    .rfield svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-    .rfield path { fill: none; stroke: #3a2a18; stroke-width: 3; stroke-dasharray: 8 7; vector-effect: non-scaling-stroke; }
-    .mnode { position: absolute; transform: translate(-50%, -32px); display: flex; flex-direction: column; align-items: center; background: none; border: none; padding: 0; cursor: pointer; font: inherit; color: var(--ink); }
-    .mnode .nicon { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; font-size: 28px; font-weight: 400; background: var(--paper); border: 4px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
-    .mnode.boss .nicon { background: #f2c0b0; width: 70px; height: 70px; border-color: #7a1a1a; }
-    .mnode.extra .nicon { width: 48px; height: 48px; font-size: 22px; background: #cfe0f0; border-style: dashed; }
+    /* Akın Haritası: bölge sekmeleri, çizilmiş manzara, yol üstünde düğümler */
+    #map { padding: 0; justify-content: flex-start; overflow: hidden; background: linear-gradient(#1a1024, #2a1a30); }
+    #mapwrap { display: flex; flex-direction: column; width: 100%; height: 100%; padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); gap: 8px; }
+    #mapwrap h1 { font-size: clamp(30px, 5vw, 48px); margin: 0; line-height: 1; padding-left: 170px; text-align: left; }
+    #maplist { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+    .mtabs { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+    .mtab { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px; background: #2e2238; border: 3px solid #4a3a58; border-radius: 10px; padding: 4px 8px 3px; color: #e8dcc8; font: inherit; cursor: pointer; min-width: 78px; }
+    .mtab small { font: 400 12px 'Bangers', sans-serif; letter-spacing: .5px; white-space: nowrap; }
+    .mtab.on { background: var(--paper); color: var(--ink); border-color: var(--gold); box-shadow: 0 0 0 2px var(--ink), 0 0 14px rgba(255,210,63,.5); }
+    .mtab.locked { opacity: .45; filter: grayscale(.8); }
+    .mcap { display: flex; align-items: baseline; gap: 10px; color: #fff; padding: 0 4px; }
+    .mcap h3 { margin: 0; font-weight: 400; font-size: 26px; color: var(--gold); text-shadow: 2px 2px 0 var(--ink); }
+    .mcap small { font: 13px system-ui, sans-serif; letter-spacing: 0; color: #d8c8b0; }
+    .mscene { position: relative; flex: 1; min-height: 0; border: 4px solid var(--ink); border-radius: 12px; overflow: hidden; box-shadow: 5px 5px 0 var(--ink); }
+    .mscene .mbg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .mroad { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .mroad path { fill: none; stroke: #f8ecd0; stroke-width: 9; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: .85; }
+    .mnode { position: absolute; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; background: none; border: none; padding: 0; cursor: pointer; font: inherit; color: var(--ink); z-index: 1; }
+    .mnode .nicon { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--paper); border: 4px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); transition: transform .12s; }
+    .mnode:hover .nicon, .mnode:focus-visible .nicon { transform: scale(1.08); }
+    .mnode.boss .nicon { width: 76px; height: 76px; background: #f8d8c8; border-color: #7a1a1a; box-shadow: 3px 3px 0 var(--ink), 0 0 0 4px rgba(179,32,42,.35); }
+    .mnode.extra .nicon { width: 52px; height: 52px; background: #d8e8f8; border-style: dashed; }
     .mnode.done .nicon { background: var(--gold); }
-    .mnode.locked { opacity: .55; cursor: pointer; }
-    .mnode.locked .nicon { filter: grayscale(1); }
-    .nlab { display: flex; flex-direction: column; align-items: center; margin-top: 2px; background: rgba(236,217,176,.9); padding: 0 6px; }
-    .nlab strong { font-weight: 400; font-size: 16px; white-space: nowrap; }
-    .nlab small { font: 11px system-ui, sans-serif; letter-spacing: 0; color: #5a3a1a; white-space: nowrap; }
-    .medals { display: flex; gap: 3px; margin-top: 1px; }
-    .medals i { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--ink); background: #d8c8a4; }
+    .mnode.locked .nicon { background: #a89a88; filter: grayscale(.6); }
+    .nlab { display: flex; flex-direction: column; align-items: center; margin-top: 4px; background: rgba(255,248,232,.95); border: 2px solid var(--ink); border-radius: 6px; padding: 1px 8px 3px; max-width: 150px; }
+    .nlab strong { font-weight: 400; font-size: 15px; line-height: 1.1; text-align: center; }
+    .nlab small { font: 11px system-ui, sans-serif; letter-spacing: 0; color: #5a3a1a; text-align: center; }
+    .mnode.locked .nlab { opacity: .8; }
+    .medals { display: flex; gap: 3px; margin-top: 2px; }
+    .medals i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); background: #d8c8a4; }
     .medals i.bz, #rmedals i.bz { background: #c07a3a; } .medals i.gm, #rmedals i.gm { background: #d8dde6; } .medals i.al, #rmedals i.al { background: #ffcf3f; }
-    #mapdetail { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(460px, calc(100% - 24px)); background: var(--paper); border: 4px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 12px 16px; z-index: 3; text-align: left; }
+    @media (max-aspect-ratio: 1/1) { #mapwrap h1 { padding-left: 0; text-align: right; } .mnode .nicon { width: 56px; height: 56px; } .mnode.boss .nicon { width: 66px; height: 66px; } }
+    #mapshade { position: fixed; inset: 0; background: rgba(10,5,20,.55); z-index: 3; }
+    .mthr .mm { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; } .mthr .mm i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); display: inline-block; }
+    .mthr .mm i.bz { background: #c07a3a; } .mthr .mm i.gm { background: #d8dde6; } .mthr .mm i.al { background: #ffcf3f; }
+    #mapdetail { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4 !important; animation: none !important; width: min(460px, calc(100% - 24px)); background: var(--paper); border: 4px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 12px 16px; z-index: 3; text-align: left; }
     #mapdetail h3 { margin: 0; font-weight: 400; font-size: 30px; color: var(--red); }
     #mapdetail small { font: 12px system-ui, sans-serif; letter-spacing: 0; color: #6a5236; }
     #mapdetail p { margin: 6px 0; font: 14px/1.45 system-ui, sans-serif; letter-spacing: 0; }
@@ -681,14 +692,14 @@
     </div>
     <!-- sağdaki simgeli düğmeler: yeni ekranlar buraya eklenir (data-unlock ile kilitlenebilir) -->
     <div id="mside">
-      <button id="torebtn" class="tile"><b>🏆</b><span>TÖRE</span><i class="dot" hidden></i></button>
-      <button id="carsibtn" class="tile" data-unlock="carsi"><b>🏪</b><span>ÇARŞI</span></button>
-      <button id="yigitbtn" class="tile"><b>🃏</b><span>YİĞİT</span></button>
-      <button id="seferbtn" class="tile" data-unlock="seferler"><b>⛺</b><span>SEFER</span><i class="dot" hidden></i></button>
-      <button id="wardbtn" class="tile" hidden><b>👘</b><span>KOSTÜM</span></button>
-      <button id="bookbtn" class="tile"><b>📜</b><span>DESTAN</span></button>
-      <button id="storybtn" class="tile"><b>🎞</b><span>HİKÂYE</span></button>
-      <button id="ayarbtn" class="tile"><b>⚙</b><span>AYARLAR</span></button>
+      <button id="torebtn" class="tile"><b class="ticon"></b><span>TÖRE</span><i class="dot" hidden></i></button>
+      <button id="carsibtn" class="tile" data-unlock="carsi"><b class="ticon"></b><span>ÇARŞI</span></button>
+      <button id="yigitbtn" class="tile"><b class="ticon"></b><span>YİĞİT</span></button>
+      <button id="seferbtn" class="tile" data-unlock="seferler"><b class="ticon"></b><span>SEFER</span><i class="dot" hidden></i></button>
+      <button id="wardbtn" class="tile" hidden><b class="ticon"></b><span>KOSTÜM</span></button>
+      <button id="bookbtn" class="tile"><b class="ticon"></b><span>DESTAN</span></button>
+      <button id="storybtn" class="tile"><b class="ticon"></b><span>HİKÂYE</span></button>
+      <button id="ayarbtn" class="tile"><b class="ticon"></b><span>AYARLAR</span></button>
     </div>
   </div>
 
@@ -705,6 +716,7 @@
       <h1 class="ink">AKIN HARİTASI</h1>
       <div id="maplist"></div>
     </div>
+    <div id="mapshade" hidden></div>
     <div id="mapdetail" hidden></div>
     <button id="mapback" class="small">◂ MENÜ</button>
   </div>

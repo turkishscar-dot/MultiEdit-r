@@ -29,6 +29,7 @@ import * as KO from './koleksiyon.js';
 import * as EK from './ekranlar.js';
 import * as DLG from './diyalog.js';
 import * as AY from './ayarlar.js';
+import { svg } from './simge.js';
 
 const LANES = [-2.5, 0, 2.5];
 const $ = id => document.getElementById(id);
@@ -782,11 +783,9 @@ const nodes = () => (NODES ??= (() => { const n = buildNodes(LEVELS, PARTS, BOSS
 function openMap() {
   state = 'map';
   for (const id of ['menu', 'win', 'over', 'boyscreen', 'result']) $(id).hidden = true;
-  $('mapdetail').hidden = true;
+  $('mapdetail').hidden = $('mapshade').hidden = true;
   drawMap($('maplist'), nodes(), showNode);
   $('map').hidden = false;
-  const openOnes = [...document.querySelectorAll('.mnode:not(.locked)')]; // son açık düğüme kaydır
-  openOnes.at(-1)?.scrollIntoView({ block: 'center' });
 }
 const reqCard = n => Y.CARDS.find(c => c.costume === n.req?.costume || c.id === n.req?.card);
 function reqOk(n) {
@@ -806,17 +805,20 @@ function showNode(n, open) {
   const goals = n.soon ? 'Bu bölüm henüz yapılıyor.' : n.extra ? n.text : F.goals.map(([k, v]) => `${GOAL_ICON[k][0]} ${v}${GOAL_ICON[k][1]}`).join('  ·  ') + (F.boss ? `  ·  sonunda ${BOSSES[F.boss].name}` : '');
   const kids = [el('h3', null, n.name), el('small', null, n.extra ? 'EK GÖREV' : `${REGIONS[n.lv]?.name || ''} · ${n.sub || ''}`), el('p', 'mgoal', goals)];
   if (!n.soon) {
-    kids.push(el('p', 'mthr', `Madalya: 🥉 bitir · 🥈 ${t[1].toLocaleString('tr-TR')} · 🥇 ${t[2].toLocaleString('tr-TR')} skor`));
+    const thr = el('p', 'mthr');
+    const md = (cls, text) => { const w = el('span', 'mm'); w.append(el('i', cls), document.createTextNode(text)); return w; };
+    thr.append(document.createTextNode('Madalya: '), md('bz', 'bitir'), md('gm', t[1].toLocaleString('tr-TR')), md('al', t[2].toLocaleString('tr-TR') + ' skor'));
+    kids.push(thr);
     const r = n.reward;
     kids.push(el('p', 'mrew', (st?.m ? 'İlk ödül alındı · ' : 'İlk bitirişte: ') + `◆ ${r.kut}` + (r.gd ? ` · ⬢ ${r.gd}` : '') + ` · ${r.xp} XP` + (st?.best ? ` · En iyi skor ${st.best.toLocaleString('tr-TR')}` : '')));
     if (n.req) kids.push(el('p', 'mreq' + (reqOk(n) ? ' ok' : ''), (reqOk(n) ? '✓ ' : '✗ ') + reqText(n)));
   }
   const row = el('div', 'menu-buttons');
-  const go = el('button', 'big', open ? 'BAŞLA ▸' : '🔒 KİLİTLİ');
+  const go = el('button', 'big', open ? 'BAŞLA ▸' : 'KİLİTLİ');
   go.disabled = !open;
   go.onclick = () => playNode(n);
   const close = el('button', 'small', 'KAPAT');
-  close.onclick = () => { box.hidden = true; };
+  close.onclick = () => { box.hidden = true; $('mapshade').hidden = true; };
   row.append(go, close);
   if (n.req?.costume && Y.leader() !== reqCard(n)) {
     const c = reqCard(n), w = el('button', 'small', Y.owned(c.id) ? 'LİDER YAP' : 'YİĞİTLER ▸');
@@ -826,6 +828,7 @@ function showNode(n, open) {
   kids.push(row);
   box.replaceChildren(...kids);
   box.hidden = false;
+  $('mapshade').hidden = false;
 }
 function playNode(n) {
   if (n.req?.costume && !reqOk(n)) return toast('🃏', 'Yiğit şartı', reqText(n));
@@ -1272,7 +1275,7 @@ function start(m = mode, lv = level, skipIntro = false) {
   runHits = runArrow = runRide = runFly = 0; runRecorded = false;
   for (const id of picks.list) recSet('boys', id);
   collectBonus();
-  if (!trial) planGold(); else goldPlan = []; // denemede Gök Demir düşmez
+  goldPlan = []; // önden kaçan altın düşman kaldırıldı (kafa karıştırıyordu)
   runZ = P.z; nextZ = P.z - 35; bossAt = cur().goals ? Infinity : L.bossAt; ambushT = 6; esirs = 0;
   goalsDone = false; goalKey = ''; stageT = 0; goalBase = { kill: 0, kut: 0, esir: 0, hoop: 0 };
   pow.kurt = pow.kilic = secret = 0; deer = trail = rain = null; deerDone = godDone = islikDone = false;
@@ -2806,7 +2809,7 @@ function enterZone(Z) {
   hero.root.visible = true;
   hero.root.rotation.set(0, Math.PI, 0);
   P.inv = 1.5;
-  planGold(zoneStart);
+  goldPlan = [];
   planRelics();
   $('fade').style.opacity = 0;
   state = 'run';
@@ -3508,6 +3511,8 @@ $('wardback').onclick = closeWardrobe;
 $('enter').onclick = () => { music('menu'); playCine(JENERIK, () => playComic(PROLOG_PAGES)); };
 $('skip').onclick = () => cine.skip();
 for (const id of ['mapback', 'overmenu', 'pausemenu', 'wmenu']) $(id).onclick = toMenu;
+for (const [id, ic] of Object.entries({ torebtn: 'tore', carsibtn: 'carsi', yigitbtn: 'yigit', seferbtn: 'sefer', wardbtn: 'kostum', bookbtn: 'destan', storybtn: 'hikaye', ayarbtn: 'ayar' })) $(id).querySelector('.ticon').replaceChildren(svg(ic, 36)); // menü simgeleri (emoji yerine)
+$('mapshade').onclick = () => { $('mapdetail').hidden = $('mapshade').hidden = true; };
 $('bookback').onclick = closeBook;
 $('cover').onclick = openCover;
 $('bprev').onclick = () => turnTo(page - 1);
