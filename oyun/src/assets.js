@@ -77,13 +77,52 @@ function toon(root, name, scenery = false) {
   });
 }
 
+// Dokular adres (blob:/data:) kullanmadan çözülür: sıkı güvenlik kuralı olan sayfalarda (claude.ai yayını) da çalışır,
+// aynı anda yüklenen modellerde blob adresinin erken silinmesi sorunu da olmaz.
+class BitmapTextures {
+  constructor(parser) { this.parser = parser; this.name = 'oguz_bitmap_textures'; }
+  loadTexture(i) {
+    const P = this.parser, json = P.json, def = json.textures[i];
+    const ext = def.extensions || {}, src = ext.EXT_texture_webp?.source ?? ext.EXT_texture_avif?.source ?? def.source; // dokular WebP
+    const img = json.images[src];
+    if (!img) return null;
+    if (img.bufferView == null || typeof createImageBitmap !== 'function') return null; // dış dosya: olağan yol
+    return P.getDependency('bufferView', img.bufferView)
+      .then(buf => createImageBitmap(new Blob([buf], { type: img.mimeType || 'image/png' }), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }))
+      .then(bmp => {
+        const t = new THREE.Texture(bmp);
+        t.flipY = false;
+        t.name = def.name || img.name || '';
+        const sm = (json.samplers || [])[def.sampler] || {};
+        t.magFilter = sm.magFilter === 9728 ? THREE.NearestFilter : THREE.LinearFilter;
+        t.minFilter = sm.minFilter === 9728 ? THREE.NearestFilter : sm.minFilter === 9729 ? THREE.LinearFilter : THREE.LinearMipmapLinearFilter;
+        t.wrapS = sm.wrapS === 33071 ? THREE.ClampToEdgeWrapping : sm.wrapS === 33648 ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping;
+        t.wrapT = sm.wrapT === 33071 ? THREE.ClampToEdgeWrapping : sm.wrapT === 33648 ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping;
+        t.needsUpdate = true;
+        P.associations.set(t, { textures: i });
+        return t;
+      });
+  }
+}
+// Web paketinde modeller base64 metin (.txt) olarak durur: bazı barındırmalar .glb sunmuyor, data: adreslerini de engelliyor.
+async function loadModel(loader, url) {
+  if (!url.endsWith('.txt')) return loader.loadAsync(url);
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Model indirilemedi: ' + url);
+  const s = atob((await r.text()).trim()), n = s.length, b = new Uint8Array(n);
+  for (let i = 0; i < n; i++) b[i] = s.charCodeAt(i);
+  return loader.parseAsync(b.buffer, '');
+}
+
 export async function loadAssets(onProgress) {
   const loader = new GLTFLoader();
+  loader.register(p => new BitmapTextures(p));
+  loader.pluginCallbacks.unshift(loader.pluginCallbacks.pop()); // hazır WebP eklentisinden önce çalışsın
   const urls = { oguz: oguzUrl, kormos: kormosUrl, tepegoz: tepegozUrl, horse: horseUrl, wolf: wolfUrl, albasti: albastiUrl, yelbegen: yelbegenUrl, erlik: erlikUrl, tulpar: tulparUrl, karakus: karakusUrl, cinli: cinliUrl, general: generalUrl, esir: esirUrl, stag: stagUrl, itbarak: itbarakUrl, boyali: boyaliUrl, sulu: suluUrl, almas: almasUrl, sulmus: sulmusUrl, kerey: kereyUrl, anims: animsUrl, doga: dogaUrl, kale: kaleUrl };
   const out = {};
   let done = 0;
   await Promise.all(Object.entries(urls).map(async ([k, u]) => {
-    out[k] = await loader.loadAsync(u);
+    out[k] = await loadModel(loader, u);
     onProgress(++done / Object.keys(urls).length);
   }));
   const templates = {};

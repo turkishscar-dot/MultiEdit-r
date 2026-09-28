@@ -82,7 +82,7 @@ export class Portraits {
     for (let y = 0; y < 256; y++) img.data.set(px.subarray((255 - y) * 1024, (256 - y) * 1024), y * 1024); // WebGL alttan yukarı okur
     g.putImageData(img, 0, 0);
     a.root.visible = false;
-    return (this.cache[key] = c.toDataURL());
+    return (this.cache[key] = c); // data: adresi değil: claude.ai sayfa kuralı (CSP) data: resimleri engelliyor
   }
 }
 
@@ -108,9 +108,11 @@ export function play(lines, portraits, look, onDone, sfx) {
     const [sp, text] = lines[i], S = SPEAKERS[sp];
     const panel = document.createElement('div');
     panel.className = 'dpanel ' + (sp === 'oguz' ? 'r' : 'l') + (sp.startsWith('ulug') || sp === 'oguz' ? '' : ' foe');
-    const img = document.createElement('img');
-    img.src = portraits.get(sp, look);
-    img.alt = S.name;
+    const src = portraits.get(sp, look), img = document.createElement('canvas');
+    img.width = img.height = 256;
+    img.getContext('2d').drawImage(src, 0, 0);
+    img.className = 'dport';
+    img.setAttribute('aria-label', S.name);
     const bal = document.createElement('div');
     bal.className = 'dbal';
     const nm = document.createElement('b');

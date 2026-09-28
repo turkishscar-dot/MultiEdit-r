@@ -70,6 +70,7 @@ Bot bu mekanikleri de oynuyor (uçurumda zıplar, ışında kayar/zıplar, ▼ d
 - **En kolayı:** claude.ai'de yayınlanan sürüm (özel bağlantı, yalnız senin hesabınla açılır): https://claude.ai/artifact/EhXmC3e9XCYgj3JuVJKTxz
 - **Kendi bilgisayarından (aynı Wi-Fi):** `npm run dev` (zaten `--host` ile açılır), terminalde yazan `Network: http://192.168.x.x:5173` adresini telefonun tarayıcısına yaz.
 - **Web paketi:** `npm run build:web` → `dist-web/` klasörü (modeller ve sesler ayrı dosya, telefonda önbelleğe alınır). Herhangi bir barındırmaya (GitHub Pages, Netlify, Cloudflare Pages) olduğu gibi yüklenebilir. Not: `OYNA.html` 51 MB tek dosya olduğu için telefonda yavaş açılır ve gerçek sesleri yükleyemez.
+- **claude.ai güvenlik kuralı (CSP):** yayın sayfası `data:` ve `blob:` adreslerini yüklemez. Bu yüzden web paketinde modeller `.glb.txt` (base64 metin) olarak gider ve bellekte çözülür (`src/assets.js` → `loadModel`), dokular `createImageBitmap` ile açılır (`BitmapTextures`), diyalog portreleri `<img>` değil `<canvas>`. Denemek için: `node tools/csp-sunucu.mjs 4190` ve `node tools/mobil-test.mjs http://localhost:4190/`.
 
 ## Geri bildirim düzeltmeleri (28 Eylül)
 
