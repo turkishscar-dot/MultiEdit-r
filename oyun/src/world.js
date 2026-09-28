@@ -23,13 +23,43 @@ function tex(w, h, draw, rx = 1, ry = 1) {
   return t;
 }
 
+// ---- yapay zekâ dokuları (src/assets/doku/*.jpg, tools/ai_doku.py): yüklenince kodla çizilen dokunun yerine geçer ----
+// Kodla çizilen hali yedek kalır (dosya yoksa ya da yüklenmezse). reTex ile çoğaltılan kopyalar da güncellenir.
+const DOKU = import.meta.glob('./assets/doku/*.jpg', { eager: true, query: '?url', import: 'default' });
+const KOPYA = new Map();
+function aiDoku(t, ad, olcek = 1) {
+  const u = DOKU[`./assets/doku/${ad}.jpg`];
+  if (!u || typeof Image === 'undefined') return t;
+  const im = new Image();
+  im.onload = () => {
+    for (const x of [t, ...(KOPYA.get(t) || [])]) { x.image = im; x.repeat.multiplyScalar(olcek); x.needsUpdate = true; }
+  };
+  im.src = u;
+  return t;
+}
+// Düz renkli zemine dünya koordinatıyla döşenen doku (kutunun boyundan bağımsız): her 'metre' birimde bir tekrar
+function aiZemin(m, ad, metre) {
+  const u = DOKU[`./assets/doku/${ad}.jpg`];
+  if (!u || typeof Image === 'undefined') return;
+  const t = new THREE.Texture(); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+  const im = new Image();
+  im.onload = () => {
+    t.image = im; t.needsUpdate = true;
+    m.map = t; m.color.set(0xffffff);
+    m.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>\n\tvMapUv = (modelMatrix * vec4(position, 1.0)).xz / ${metre.toFixed(2)};`); };
+    m.customProgramCacheKey = () => 'zemin' + metre;
+    m.needsUpdate = true;
+  };
+  im.src = u;
+}
+
 const shade = (hex, k) => {
   const c = new THREE.Color(hex).multiplyScalar(k);
   return '#' + c.getHexString();
 };
 
 // ---- dokular ----
-const stoneTex = tex(512, 512, (g, w, h) => {
+const stoneTex = aiDoku(tex(512, 512, (g, w, h) => {
   g.fillStyle = '#6b5a48';
   g.fillRect(0, 0, w, h);
   const rows = 4;
@@ -48,18 +78,18 @@ const stoneTex = tex(512, 512, (g, w, h) => {
     g.fillStyle = `rgba(60,40,20,${Math.random() * 0.12})`;
     g.fillRect(Math.random() * w, Math.random() * h, 3, 3);
   }
-}, 3, SEG / 2.5);
+}, 3, SEG / 2.5), 'tasyol', 1.7);
 
-const wallTex = tex(256, 256, (g, w, h) => {
+const wallTex = aiDoku(tex(256, 256, (g, w, h) => {
   g.fillStyle = '#5e4d3c';
   g.fillRect(0, 0, w, h);
   for (let r = 0; r < 8; r++) for (let c = -1; c < 5; c++) {
     g.fillStyle = shade(0xb09775, 0.8 + Math.random() * 0.25);
     g.fillRect(c * 64 + (r % 2) * 32 + 3, r * 32 + 3, 58, 26);
   }
-});
+}), 'surduvar');
 
-const woodTex = tex(128, 128, (g, w, h) => {
+const woodTex = aiDoku(tex(128, 128, (g, w, h) => {
   g.fillStyle = '#7a4a24';
   g.fillRect(0, 0, w, h);
   for (let i = 0; i < 4; i++) {
@@ -74,7 +104,7 @@ const woodTex = tex(128, 128, (g, w, h) => {
       g.stroke();
     }
   }
-});
+}), 'tahta');
 
 const kilimTex = tex(128, 256, (g, w, h) => {
   const cols = ['#b3202a', '#e3a82b', '#1f4e9c', '#f3ead8', '#2b1d13'];
@@ -369,7 +399,7 @@ function city(g) {
 }
 
 // ---- engeller ----
-export function makeBarricade() {
+function eskiBarricade() {
   const g = new THREE.Group();
   for (let i = 0; i < 5; i++) {
     const x = -0.9 + i * 0.45, h = rand(1.4, 1.8);
@@ -384,7 +414,7 @@ export function makeBarricade() {
   return g;
 }
 
-export function makeCart() {
+function eskiCart() {
   const g = new THREE.Group();
   g.add(mesh(G.box, M.wood, [0, 1.0, 0], [1.9, 0.6, 1.5]));
   g.add(mesh(G.box, M.hay, [0, 1.55, 0], [1.7, 0.6, 1.3]));
@@ -399,7 +429,7 @@ export function makeCart() {
   return g;
 }
 
-export function makeCrates() {
+function eskiCrates() {
   const g = new THREE.Group();
   g.add(mesh(G.box, M.wood, [-0.5, 0.5, 0], [1, 1, 1]));
   g.add(mesh(G.box, M.wood, [0.55, 0.45, 0.1], [0.9, 0.9, 0.9]));
@@ -409,7 +439,7 @@ export function makeCrates() {
 }
 
 // Alçak ip: üstünden zıplanır
-export function makeRope() {
+function eskiRope() {
   const g = new THREE.Group();
   for (const s of [-1, 1]) g.add(mesh(G.cyl, M.wood, [s * 1.15, 0.45, 0], [0.08, 0.9, 0.08]));
   const r = mesh(G.cyl, M.rope, [0, 0.55, 0], [0.04, 2.3, 0.04]);
@@ -420,7 +450,7 @@ export function makeRope() {
 }
 
 // Yüksek kiriş: altından takla atılır
-export function makeBeam() {
+function eskiBeam() {
   const g = new THREE.Group();
   for (const s of [-1, 1]) g.add(mesh(G.box, M.wood, [s * 1.15, 1.4, 0], [0.2, 2.8, 0.2]));
   g.add(mesh(G.box, M.wood, [0, 2.6, 0], [2.6, 0.25, 0.25]));
@@ -586,7 +616,7 @@ export class Particles {
 // =====================================================================================
 // Faz 3 haritaları: her tema kendi zeminini, dekorunu ve engellerini getirir.
 // =====================================================================================
-const plankTex = tex(256, 256, (g, w, h) => {
+const plankTex = aiDoku(tex(256, 256, (g, w, h) => {
   g.fillStyle = '#2e1d10';
   g.fillRect(0, 0, w, h);
   for (let y = 0; y < h; y += 32) {
@@ -595,7 +625,7 @@ const plankTex = tex(256, 256, (g, w, h) => {
     g.strokeStyle = 'rgba(20,10,0,.4)';
     g.beginPath(); g.moveTo(Math.random() * w, y + 2); g.lineTo(Math.random() * w, y + 30); g.stroke();
   }
-}, 2, SEG / 3);
+}, 2, SEG / 3), 'iskele');
 const waterTex = tex(256, 256, (g, w, h) => {
   g.fillStyle = '#16302c';
   g.fillRect(0, 0, w, h);
@@ -606,15 +636,15 @@ const waterTex = tex(256, 256, (g, w, h) => {
     g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 15, y - 5, x + 30, y); g.stroke();
   }
 }, 20, 4);
-const snowTex = tex(256, 256, (g, w, h) => {
+const snowTex = aiDoku(tex(256, 256, (g, w, h) => {
   g.fillStyle = '#eef3f8';
   g.fillRect(0, 0, w, h);
   for (let i = 0; i < 900; i++) {
     g.fillStyle = `rgba(120,150,190,${Math.random() * 0.12})`;
     g.fillRect(Math.random() * w, Math.random() * h, 4, 4);
   }
-}, 3, SEG / 4);
-const basaltTex = tex(256, 256, (g, w, h) => {
+}, 3, SEG / 4), 'kar');
+const basaltTex = aiDoku(tex(256, 256, (g, w, h) => {
   g.fillStyle = '#140a0a';
   g.fillRect(0, 0, w, h);
   for (let i = 0; i < 26; i++) { // altıgen bazalt taşları, aralarında kor çatlaklar
@@ -627,7 +657,7 @@ const basaltTex = tex(256, 256, (g, w, h) => {
   g.strokeStyle = 'rgba(255,90,20,.55)';
   g.lineWidth = 2;
   for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(Math.random() * w, Math.random() * h); g.lineTo(Math.random() * w, Math.random() * h); g.stroke(); }
-}, 3, SEG / 3);
+}, 3, SEG / 3), 'bazalt');
 
 Object.assign(M, {
   plank: new THREE.MeshToonMaterial({ map: plankTex, gradientMap: GRAD }),
@@ -805,6 +835,13 @@ M.lampglow.userData.outlineParameters = NO_OUTLINE;
 const ROOF = new THREE.ConeGeometry(1, 1, 4).rotateY(Math.PI / 4); // kenarları eksenlere hizalı piramit
 
 function pagoda(x, z, tiers) {
+  if (ENV?.Pagoda) { // yapay zekâ modeli: kat sayısına göre boy (eski: kat başına 2.6 birim, taban 3.2)
+    const o = ENV.Pagoda.clone(), h = new THREE.Box3().setFromObject(ENV.Pagoda).getSize(new THREE.Vector3()).y;
+    o.scale.setScalar((tiers * 2.6 + 1.3) / h);
+    o.rotation.y = rand(-0.4, 0.4);
+    o.position.set(x, -9, z);
+    return o;
+  }
   const g = new THREE.Group();
   let y = 0;
   for (let i = 0; i < tiers; i++) {
@@ -938,6 +975,8 @@ function segKaranlik() {
 
 // ---- Kayın Ormanı (Altay'ın eteği): toprak yol, çayır, kayın-çam-akçaağaç, çalı, çiçek, kaya ----
 Object.assign(M, { dirt: toon(0x9a7a52), grass: toon(0x6aa84a), bog: toon(0x1e3a2e) });
+aiZemin(M.dirt, 'toprak', 4);
+aiZemin(M.grass, 'cimen', 6);
 function segOrman() {
   const g = empty();
   g.add(mesh(G.box, M.dirt, [0, -0.5, -SEG / 2], [8.6, 1, SEG], false));
@@ -998,7 +1037,7 @@ const SEGMENTS = { surlar: segSurlar, bataklik: segBataklik, altay: segAltay, ye
 export const makeSegment = (theme = 'surlar') => SEGMENTS[theme]();
 
 // ---- temaya özel engeller (hit: block = şerit değiştir, low = zıpla, high = kay) ----
-export function makeStump() {
+function eskiStump() {
   const g = new THREE.Group();
   g.add(mesh(G.cyl, M.deadwood, [0, 0.7, 0], [0.75, 1.4, 0.75]));
   for (let i = 0; i < 5; i++) {
@@ -1008,7 +1047,7 @@ export function makeStump() {
   }
   return g;
 }
-export function makeBoat() {
+function eskiBoat() {
   const g = new THREE.Group();
   const hull = mesh(new THREE.CylinderGeometry(1, 1, 2.2, 10, 1, true, 0, Math.PI), M.plank, [0, 0.9, 0], [0.95, 1, 0.9]);
   hull.rotation.set(0, 0, Math.PI);
@@ -1020,7 +1059,7 @@ export function makeBoat() {
   g.rotation.y = Math.PI / 2 + 0.3;
   return g;
 }
-export function makeVine() {
+function eskiVine() {
   const g = new THREE.Group();
   for (const s of [-1, 1]) g.add(mesh(G.cyl, M.deadwood, [s * 1.15, 0.45, 0], [0.1, 0.9, 0.1]));
   const v = mesh(new THREE.TorusGeometry(1.15, 0.07, 6, 16, Math.PI), M.reed, [0, 0.55, 0], [1, 0.12, 1]);
@@ -1028,7 +1067,7 @@ export function makeVine() {
   for (let i = 0; i < 6; i++) g.add(mesh(G.cone, M.reed, [-0.9 + i * 0.36, 0.6, 0], [0.05, 0.25, 0.05]));
   return g;
 }
-export function makeLog() {
+function eskiLog() {
   const g = new THREE.Group();
   for (const s of [-1, 1]) g.add(mesh(G.cyl, M.deadwood, [s * 1.2, 1.1, 0], [0.3, 2.2, 0.3]));
   const l = mesh(G.cyl, M.deadwood, [0, 2.05, 0], [0.32, 2.9, 0.32]);
@@ -1037,27 +1076,27 @@ export function makeLog() {
   for (let i = 0; i < 4; i++) g.add(mesh(G.cone, M.reed, [-0.9 + i * 0.6, 1.7, 0], [0.06, -0.6, 0.06]));
   return g;
 }
-export function makeSnowRock() {
+function eskiSnowRock() {
   const g = new THREE.Group();
   const r = mesh(new THREE.DodecahedronGeometry(1, 0), M.cliff, [0, 0.8, 0], [1.1, 0.85, 0.9]);
   g.add(r, mesh(G.dome, M.white, [0, 1.35, 0], [0.85, 0.35, 0.7]));
   return g;
 }
-export function makeSled() {
+function eskiSled() {
   const g = new THREE.Group();
   g.add(mesh(G.box, M.wood, [0, 0.7, 0], [1.6, 0.25, 1.9]), mesh(G.box, M.hay, [0, 1.1, 0], [1.4, 0.6, 1.5]));
   for (const s of [-1, 1]) g.add(mesh(G.box, M.iron, [s * 0.75, 0.3, 0], [0.08, 0.6, 2.1]));
   return g;
 }
-export function makeFence() {
+function eskiFence() {
   const g = new THREE.Group();
   for (const x of [-1.1, 0, 1.1]) g.add(mesh(G.box, M.wood, [x, 0.4, 0], [0.12, 0.8, 0.12]));
   g.add(mesh(G.box, M.wood, [0, 0.55, 0], [2.4, 0.12, 0.08]), mesh(G.box, M.white, [0, 0.72, 0], [2.4, 0.1, 0.2]));
   return g;
 }
-export function makePine() {
+function eskiPine() {
   const g = new THREE.Group();
-  const l = makeSnowRock().translateX(-1.1), r = makeSnowRock().translateX(1.1);
+  const l = eskiSnowRock().translateX(-1.1), r = eskiSnowRock().translateX(1.1);
   l.scale.setScalar(0.7); r.scale.setScalar(0.7);
   g.add(l, r);
   const t = mesh(G.cyl, M.deadwood, [0, 1.75, 0], [0.3, 2.7, 0.3]);
@@ -1065,7 +1104,7 @@ export function makePine() {
   g.add(t, mesh(G.box, M.white, [0, 2.05, 0], [2.5, 0.12, 0.4]));
   return g;
 }
-export function makeBones() {
+function eskiBones() {
   const g = new THREE.Group();
   g.add(mesh(G.dome, M.spire, [0, 0, 0], [1.1, 0.5, 1]));
   for (let i = 0; i < 9; i++) {
@@ -1076,7 +1115,7 @@ export function makeBones() {
   g.add(mesh(new THREE.SphereGeometry(0.3, 10, 8), M.bone, [0, 1.3, 0.1])); // kafatası
   return g;
 }
-export function makeCage() {
+function eskiCage() {
   const g = new THREE.Group();
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2;
@@ -1085,13 +1124,13 @@ export function makeCage() {
   g.add(mesh(G.cyl, M.iron, [0, 2, 0], [0.9, 0.12, 0.9]), mesh(G.cyl, M.iron, [0, 0.06, 0], [0.9, 0.12, 0.9]));
   return g;
 }
-export function makeSpikes() {
+function eskiSpikes() {
   const g = new THREE.Group();
   g.add(mesh(G.box, M.iron, [0, 0.08, 0], [2.3, 0.16, 0.5]));
   for (let i = 0; i < 7; i++) g.add(mesh(G.cone, M.iron, [-1 + i * 0.33, 0.4, 0], [0.09, 0.55, 0.09]));
   return g;
 }
-export function makeChain() {
+function eskiChain() {
   const g = new THREE.Group();
   for (const s of [-1, 1]) g.add(mesh(G.box, M.spire, [s * 1.2, 1.4, 0], [0.3, 2.8, 0.3]));
   g.add(mesh(G.box, M.iron, [0, 2.7, 0], [2.7, 0.2, 0.2]));
@@ -1099,8 +1138,8 @@ export function makeChain() {
   g.add(mesh(new THREE.SphereGeometry(0.22, 8, 6), M.bone, [0, 1.7, 0]));
   return g;
 }
-export function makeLavaRock() {
-  const g = makeSnowRock();
+function eskiLavaRock() {
+  const g = eskiSnowRock();
   g.children[0].material = M.spire;
   g.children[1].material = M.lava;
   g.children[1].scale.set(0.5, 0.15, 0.4);
@@ -1164,7 +1203,7 @@ export function makeFeather() {
 }
 
 // ---- Çin Seferi engelleri ----
-export function makeJars() { // şarap küpleri
+function eskiJars() { // şarap küpleri
   const g = new THREE.Group();
   for (const [x, y, z, r] of [[-0.5, 0.5, 0, 0.5], [0.5, 0.5, 0.1, 0.5], [0, 1.35, 0, 0.42]]) {
     g.add(mesh(new THREE.SphereGeometry(r, 12, 10), M.jar, [x, y, z], [1, 1.15, 1]));
@@ -1172,20 +1211,20 @@ export function makeJars() { // şarap küpleri
   }
   return g;
 }
-export function makeSupply() { // pirinç çuvallı erzak arabası
-  const g = makeCart();
+function eskiSupply() { // pirinç çuvallı erzak arabası
+  const g = eskiCart();
   g.children[1].material = M.rice;
   g.add(mesh(G.box, M.lacquer, [0, 2.1, 0.3], [0.08, 1, 0.08]), mesh(G.box, M.lacquer, [0.3, 2.4, 0.3], [0.6, 0.4, 0.02]));
   return g;
 }
-export function makeLowGate() { // alçak kırmızı çit: üstünden zıplanır
+function eskiLowGate() { // alçak kırmızı çit: üstünden zıplanır
   const g = new THREE.Group();
   for (const x of [-1.1, 1.1]) g.add(mesh(G.box, M.lacquer, [x, 0.4, 0], [0.14, 0.8, 0.14]));
   for (const y of [0.3, 0.6]) g.add(mesh(G.box, M.lacquer, [0, y, 0], [2.3, 0.1, 0.1]));
   for (let i = 0; i < 5; i++) g.add(mesh(G.box, M.gold, [-0.8 + i * 0.4, 0.45, 0], [0.05, 0.3, 0.05], false));
   return g;
 }
-export function makeBannerBeam() { // kırmızı sancak kirişi: altından eğilinir
+function eskiBannerBeam() { // kırmızı sancak kirişi: altından eğilinir
   const g = new THREE.Group();
   for (const x of [-1.2, 1.2]) g.add(mesh(G.box, M.lacquer, [x, 1.4, 0], [0.2, 2.8, 0.2]));
   g.add(mesh(G.box, M.lacquer, [0, 2.65, 0], [2.7, 0.22, 0.22]));
@@ -1407,7 +1446,7 @@ const lakeTex = tex(256, 256, (g, w, h) => { // donmuş göl: mavi buz, beyaz ç
     g.stroke();
   }
 }, 3, SEG / 6);
-const rockTex = tex(256, 256, (g, w, h) => { // uçurum kayası: katmanlı, çatlaklı
+const rockTex = aiDoku(tex(256, 256, (g, w, h) => { // uçurum kayası: katmanlı, çatlaklı
   g.fillStyle = '#4a4240';
   g.fillRect(0, 0, w, h);
   for (let i = 0; i < 70; i++) {
@@ -1420,7 +1459,7 @@ const rockTex = tex(256, 256, (g, w, h) => { // uçurum kayası: katmanlı, çat
   g.strokeStyle = 'rgba(20,12,10,.6)';
   g.lineWidth = 2;
   for (let i = 0; i < 10; i++) { g.beginPath(); g.moveTo(Math.random() * w, 0); g.lineTo(Math.random() * w, h); g.stroke(); }
-}, 2, SEG / 8);
+}, 2, SEG / 8), 'kaya');
 const whirlTex = tex(128, 128, (g, w) => { // girdap sarmalı
   g.translate(w / 2, w / 2);
   g.strokeStyle = 'rgba(220,250,255,.9)';
@@ -1586,7 +1625,7 @@ export function makeCatlak() { // çatlak buz: altında kara su, üstünden zıp
   for (let i = 0; i < 5; i++) g.add(mesh(new THREE.BoxGeometry(rand(0.3, 0.6), 0.12, rand(0.2, 0.4)), M.white, [rand(-1.1, 1.1), 0.06, (i % 2 ? 1 : -1) * 0.5], [1, 1, 1], false));
   return g;
 }
-export function makeBuzkule() { // buz sarkıtı yığını: şerit değiştir
+function eskiBuzkule() { // buz sarkıtı yığını: şerit değiştir
   const g = new THREE.Group();
   for (let i = 0; i < 4; i++) g.add(mesh(new THREE.ConeGeometry(0.35, 1, 5), M.ice, [rand(-0.6, 0.6), 0.9, rand(-0.3, 0.3)], [1, rand(1.4, 2.4), 1]));
   g.add(mesh(G.dome, M.white, [0, 0, 0], [1, 0.4, 0.8]));
@@ -1641,6 +1680,7 @@ const crackTex = tex(128, 128, (g, w) => {
   }
 });
 const cracked = new Map();
+const eskiDoku = t => t.image instanceof HTMLCanvasElement && !t.image.dataset?.ai;
 export function crackify(obj) {
   obj.traverse(o => {
     if (!o.isMesh || !o.material?.isMeshToonMaterial) return;
@@ -1652,8 +1692,11 @@ export function crackify(obj) {
         const g = c.getContext('2d');
         g.drawImage(img, 0, 0);
         g.globalCompositeOperation = 'multiply';
+        g.globalAlpha = eskiDoku(m.map) ? 1 : 0.55; // yapay zekâ modelinin doku atlasında çatlak hafif kalsın
         g.drawImage(crackTex.image, 0, 0, c.width, c.height);
+        const eski = m.map;
         m.map = new THREE.CanvasTexture(c);
+        m.map.flipY = eski.flipY; // glTF dokuları ters durur
         m.map.colorSpace = THREE.SRGBColorSpace;
         m.map.wrapS = m.map.wrapT = THREE.RepeatWrapping;
       } else m.map = crackTex;
@@ -1682,7 +1725,7 @@ export function makeChips(n = 8) {
 // Parça dünyada zA'dan (yakın uç) zA - len'e uzanır. h0: yakın uçtaki, h1: uzak uçtaki yükseklik.
 // Dokular kutu izdüşümüyle metre başına yerleşir (her parçanın boyu farklı).
 const TW = 8.4; // parçanın genişliği: üç şerit + kenar
-const reTex = (t, r = 1) => { const c = t.clone(); c.repeat.set(r, r); c.needsUpdate = true; return c; };
+const reTex = (t, r = 1) => { const c = t.clone(); c.repeat.set(r, r); c.needsUpdate = true; KOPYA.set(t, [...(KOPYA.get(t) || []), c]); return c; };
 const TSTYLE = {
   sur: { top: new THREE.MeshToonMaterial({ map: reTex(stoneTex), gradientMap: GRAD }), side: new THREE.MeshToonMaterial({ map: reTex(wallTex), gradientMap: GRAD }), ts: [3.2, 2.2], pit: 0x07050a },
   tahta: { top: new THREE.MeshToonMaterial({ map: reTex(plankTex), gradientMap: GRAD }), side: toon(0x2a2018, 'tside'), ts: [2.6, 2.6], pit: 0x07140f },
@@ -1854,3 +1897,43 @@ export function makeLightning(h = 26) { // gökten inen kırık çizgi şimşek
   g.add(f);
   return g;
 }
+
+// ---- yapay zekâ ile üretilmiş engeller (src/assets/dunya.glb, düğüm adı 'Engel_<ad>', tools/ai_uret.py + ai_isle.py) ----
+// Model, eski kodla çizilen engelin kutusuna oturtulur: oynanış (şerit genişliği, zıplama/kayma yüksekliği) değişmez.
+// Kayılan (yüksek) engellerde genişlik ve yükseklik ayrı ölçeklenir ki altındaki geçit aynı yükseklikte kalsın.
+const AI_KUTU = {};
+function aiEngel(ad, eski, tur) {
+  const k = ENV && ENV['Engel_' + ad];
+  if (!k) return eski();
+  const b = AI_KUTU[ad] || (AI_KUTU[ad] = new THREE.Box3().setFromObject(eski()));
+  const hs = b.getSize(new THREE.Vector3()), ks = new THREE.Box3().setFromObject(k).getSize(new THREE.Vector3());
+  const o = k.clone(), g = new THREE.Group();
+  if (tur === 'yuksek') { const sx = hs.x / ks.x, sy = hs.y / ks.y; o.scale.set(sx, sy, (sx + sy) / 2); }
+  else o.scale.setScalar(Math.min(hs.x / ks.x, (hs.y * (tur === 'alcak' ? 1.1 : 1.2)) / ks.y));
+  o.position.set((b.min.x + b.max.x) / 2, Math.max(0, b.min.y), (b.min.z + b.max.z) / 2);
+  g.add(o);
+  return g;
+}
+export const makeBarricade = () => aiEngel('barikat', eskiBarricade, 'engel');
+export const makeCart = () => aiEngel('araba', eskiCart, 'engel');
+export const makeCrates = () => aiEngel('sandik', eskiCrates, 'engel');
+export const makeStump = () => aiEngel('kutuk', eskiStump, 'engel');
+export const makeBoat = () => aiEngel('kayik', eskiBoat, 'engel');
+export const makeSnowRock = () => aiEngel('karkaya', eskiSnowRock, 'engel');
+export const makeSled = () => aiEngel('kizak', eskiSled, 'engel');
+export const makeBones = () => aiEngel('kemik', eskiBones, 'engel');
+export const makeCage = () => aiEngel('kafes', eskiCage, 'engel');
+export const makeLavaRock = () => aiEngel('lavkaya', eskiLavaRock, 'engel');
+export const makeJars = () => aiEngel('kupler', eskiJars, 'engel');
+export const makeSupply = () => aiEngel('erzak', eskiSupply, 'engel');
+export const makeBuzkule = () => aiEngel('buzkule', eskiBuzkule, 'engel');
+export const makeFence = () => aiEngel('cit', eskiFence, 'alcak');
+export const makeSpikes = () => aiEngel('dikenler', eskiSpikes, 'alcak');
+export const makeLowGate = () => aiEngel('alcakkapi', eskiLowGate, 'alcak');
+export const makeRope = () => aiEngel('ip', eskiRope, 'alcak');
+export const makeVine = () => aiEngel('sarmasik', eskiVine, 'alcak');
+export const makeBeam = () => aiEngel('kiris', eskiBeam, 'yuksek');
+export const makeLog = () => aiEngel('devrik', eskiLog, 'yuksek');
+export const makePine = () => aiEngel('devrikcam', eskiPine, 'yuksek');
+export const makeChain = () => aiEngel('zincir', eskiChain, 'yuksek');
+export const makeBannerBeam = () => aiEngel('sancak', eskiBannerBeam, 'yuksek');

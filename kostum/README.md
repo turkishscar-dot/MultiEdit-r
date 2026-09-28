@@ -39,6 +39,7 @@ Amaç: yiğitler (kostümler) güzel görünsün, oyuncu almak istesin. İki tar
 ## Belgeler
 - `TASARIM.md`: 31 yiğidin görünüş tasarımı (siluet, renk, parça, kaynak notu).
 - `BLENDER.md`: PC'deki Claude için adım adım Blender talimatı ve kontrol listesi.
+- `YAPAY-ZEKA-KARAKTER.md`: karakter, düşman ve boss için yapay zekâ seçenekleri, riskleri ve önerilen sıra.
 
 ## PC'deki Claude'a ne diyeceksin
 > `MultiEdit-r` reposunun `claude/serene-wright-uo3dxg` dalını çek. Önce `oyun/UYGULAMA.md`'yi uygula (kod), sonra `kostum/BLENDER.md`'yi sırayla uygula.

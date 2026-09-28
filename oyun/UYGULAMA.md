@@ -10,7 +10,7 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 
 1. Oyun klasöründe `git status`. Git yoksa önce `git init` ve mevcut hâli commit et.
 2. **Çakışma kontrolü:** Bu repodaki ilk "baseline" commit'i (`Add working copy of the game source`), zip'teki hâldir. PC'deki `src/main.js`, `index.html`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js` o tarihten sonra değiştiyse, dosyaları üstüne yazma. Önce farkı çıkar (`git diff <baseline> -- oyun/src/main.js`) ve değişiklikleri birleştir.
-3. Değişmediyse şunları olduğu gibi kopyala (ayrıca `public/ses/` klasörünün tamamı ve yeni `src/assets/karakus.glb`):
+3. Değişmediyse şunları olduğu gibi kopyala (ayrıca `public/ses/` klasörünün tamamı, yeni `src/assets/karakus.glb`, yapay zekâ paketi `src/assets/dunya.glb` ve `src/assets/doku/` klasörü):
    - **Değişen:** `index.html`, `src/main.js`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js`, `src/assets.js`, `src/book.js`, `SESLENDIRME.md`
    - **Yeni kaynak:** `src/simge.js`, `src/akinci.js`, `ui.js`, `sound.js`, `bonus.js`, `tips.js`, `carsi.js`, `tore.js`, `harita.js`, `yigit.js`, `seferler.js`, `koleksiyon.js`, `ekranlar.js`, `diyalog.js`, `diyalog-metin.js`, `ayarlar.js`, `online.js`, `desen.js`
    - **Belgeler:** `SES-KAYNAKLARI.md`, `CEVRIMICI.md`, `UYGULAMA.md`
@@ -97,6 +97,18 @@ Bot bu mekanikleri de oynuyor (uçurumda zıplar, ışında kayar/zıplar, ▼ d
 Ayrıntı ve Blender talimatı: repo kökündeki **`kostum/`** klasörü (`README.md`, `TASARIM.md`, `BLENDER.md`). Kod tarafı burada bitti: vitrin, "bir koşu dene", yiğide özel iz / kılıç parıltısı / eyer rengi / zafer pozu, kaftan desenleri, kenar ışığı, sallanan parçalar, iki bayram yiğidi. Blender'da yapılacak 15 parça `yigit.js` → `DETAY`'da önceden bağlı.
 
 `assets.js` ve `book.js` de değişti. PC'de bu ikisi zip'ten sonra değiştiyse birleştir.
+
+## Yapay zekâ ile yenilenen dünya (28 Eylül)
+
+Engeller, yol kenarı dekoru ve zemin dokuları Replicate'te yapay zekâyla üretildi (yaklaşık 1,5–2 dolar). Karakterlere dokunulmadı.
+
+- **Hat:** `tools/ai_liste.json` (tarifler) → `tools/ai_uret.py gorsel` (FLUX, her nesneye 3 aday görsel) → elle seçim → `tools/ai_uret.py model <ad>:<no>` (TRELLIS, görselden 3B) → `tools/ai_isle.py <ad>` (Blender: gölge plakası temizliği, üçgen düşürme, engeli yola hizalama, 512 px WebP doku) → `tools/ai_isle.py paket` → `src/assets/dunya.glb`. Dokular: `tools/ai_uret.py doku` → `tools/ai_doku.py <ad>:<no>` (döşenebilir yapar) → `src/assets/doku/*.jpg`.
+- **Anahtar:** `REPLICATE_API_TOKEN` ortam değişkeni. Hiçbir dosyaya yazılmaz. Ham üretimler `ai-kaynak/` klasöründe durur (git'e girmez).
+- **Oyunda:** `src/assets.js` paketi yükler. `PineTree_ai…` gibi aile üyeleri eski paketteki aynı ailenin yerine geçer, `Tower`, `Bush` gibi tam adlar eskisinin üstüne yazılır. `src/world.js` → `aiEngel()`: her engel, eski kodla çizilen hâlinin kutusuna oturtulur (şerit genişliği, zıplama/kayma yüksekliği değişmez; kayılan engellerde geçit yüksekliği korunur). Model yoksa eski hâl çizilir. `aiDoku()`/`aiZemin()`: dokular yüklenince kodla çizilenin yerine geçer.
+- **Yenilenenler (35 nesne):** 20 engel (barikat, araba, sandık, kütük, kayık, karlı kaya, kızak, kemik yığını, kafes, lav kayası, küpler, erzak arabası, buz kristali, çit, diken tuzağı, Çin çiti, sarmaşık, kilimli kiriş, devrik ağaç, zincirli geçit, Çin sancak kapısı), 7 ağaç (2 çam, huş, 2 yapraklı, akçaağaç), 2 çalı, 2 kaya, 3 kule, pagoda. 8 doku: taş yol, sur duvarı, tahta, iskele, bazalt, uçurum kayası, toprak, çimen.
+- **Eski hâlinde kalanlar (yapay zekâ bozdu):** gerili ip (ince ip kayboldu), karlı devrik çam (gövde kayboldu), ölü ağaçlar (ince dallar), ikinci huş ve yosunlu kaya (şekil bozuldu), kar dokusu.
+- **Telefon bütçesi:** engel 3–4 bin, ağaç 1000, çalı 1500, kaya 500, kule 1500 üçgen. Ormanda sahne 500 binden 209 bin üçgene indi. Paket 5,5 MB.
+- **Görüntüler:** `node tools/ai-bolge.mjs <önek> [bölüm...]`, `node tools/ai-oncesonra.mjs <boş.glb> [bölüm...]`, `node tools/ai-onizle.mjs <çıktı> <açı> <glb,...>`.
 
 ## Bilinçli kararlar
 

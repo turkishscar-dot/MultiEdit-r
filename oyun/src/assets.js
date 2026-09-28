@@ -25,6 +25,7 @@ import kereyUrl from './assets/kerey.glb?url';
 import animsUrl from './assets/anims.glb?url';
 import dogaUrl from './assets/doga.glb?url';
 import kaleUrl from './assets/kale.glb?url';
+import dunyaUrl from './assets/dunya.glb?url'; // yapay zekâ ile üretilen engel ve dekor (tools/ai_isle.py paket)
 
 export const GRAD = new THREE.DataTexture(new Uint8Array([70, 165, 255]), 3, 1, THREE.RedFormat);
 GRAD.minFilter = GRAD.magFilter = THREE.NearestFilter;
@@ -118,7 +119,7 @@ export async function loadAssets(onProgress) {
   const loader = new GLTFLoader();
   loader.register(p => new BitmapTextures(p));
   loader.pluginCallbacks.unshift(loader.pluginCallbacks.pop()); // hazır WebP eklentisinden önce çalışsın
-  const urls = { oguz: oguzUrl, kormos: kormosUrl, tepegoz: tepegozUrl, horse: horseUrl, wolf: wolfUrl, albasti: albastiUrl, yelbegen: yelbegenUrl, erlik: erlikUrl, tulpar: tulparUrl, karakus: karakusUrl, cinli: cinliUrl, general: generalUrl, esir: esirUrl, stag: stagUrl, itbarak: itbarakUrl, boyali: boyaliUrl, sulu: suluUrl, almas: almasUrl, sulmus: sulmusUrl, kerey: kereyUrl, anims: animsUrl, doga: dogaUrl, kale: kaleUrl };
+  const urls = { oguz: oguzUrl, kormos: kormosUrl, tepegoz: tepegozUrl, horse: horseUrl, wolf: wolfUrl, albasti: albastiUrl, yelbegen: yelbegenUrl, erlik: erlikUrl, tulpar: tulparUrl, karakus: karakusUrl, cinli: cinliUrl, general: generalUrl, esir: esirUrl, stag: stagUrl, itbarak: itbarakUrl, boyali: boyaliUrl, sulu: suluUrl, almas: almasUrl, sulmus: sulmusUrl, kerey: kereyUrl, anims: animsUrl, doga: dogaUrl, kale: kaleUrl, dunya: dunyaUrl };
   const out = {};
   let done = 0;
   await Promise.all(Object.entries(urls).map(async ([k, u]) => {
@@ -127,7 +128,7 @@ export async function loadAssets(onProgress) {
   }));
   const templates = {};
   for (const k of Object.keys(urls).filter(k => k !== 'anims')) {
-    if (k === 'doga' || k === 'kale') { toon(out[k].scene, k, true); continue; }
+    if (k === 'doga' || k === 'kale' || k === 'dunya') { toon(out[k].scene, k, true); continue; }
     toon(out[k].scene, k);
     templates[k] = out[k].scene;
   }
@@ -135,6 +136,16 @@ export async function loadAssets(onProgress) {
   // çevre modelleri: ada göre (doğa: ağaç, çalı, kaya · kale: kule, sur)
   const env = {};
   for (const k of ['doga', 'kale']) for (const o of [...out[k].scene.children]) { o.position.set(0, 0, 0); env[o.name] = o; }
+  // yapay zekâ paketi: 'PineTree_aicam1' gibi aile üyeleri eski paketteki aynı ailenin (PineTree_*) yerine geçer,
+  // 'Tower', 'Bush' gibi tam adlar eskisinin üstüne yazılır, 'Engel_*' düğümleri engellerdir (gölge düşürür).
+  const yeni = [...out.dunya.scene.children], aile = n => n.replace(/ai[a-z0-9]+$/, '');
+  const aileler = new Set(yeni.filter(o => /_ai[a-z0-9]+$/.test(o.name)).map(o => aile(o.name)));
+  for (const k of Object.keys(env)) if ([...aileler].some(a => k.startsWith(a))) delete env[k];
+  for (const o of yeni) {
+    o.position.set(0, 0, 0);
+    if (o.name.startsWith('Engel_')) o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+    env[o.name] = o;
+  }
   return { env, templates, clips: clipMap(out.anims), horseClips: clipMap(out.horse), wolfClips: clipMap(out.wolf), tulparClips: clipMap(out.tulpar), stagClips: clipMap(out.stag) };
 }
 

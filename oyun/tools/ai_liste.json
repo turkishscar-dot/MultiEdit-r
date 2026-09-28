@@ -1,0 +1,248 @@
+{
+  "nesne": {
+    "barikat": {
+      "istem": "a solid defensive palisade wall section made of many thick sharpened wooden log stakes standing tightly side by side pointing up, bound together with ropes and a horizontal beam, chest high, wide, front view",
+      "tur": "engel",
+      "tohum": 19
+    },
+    "araba": {
+      "istem": "a sturdy wooden medieval farm cart with two large spoked wooden wheels, loaded high with golden hay, short shafts in front",
+      "tur": "engel"
+    },
+    "sandik": {
+      "istem": "a stack of three old wooden supply crates with iron corner bands, two on the bottom and one on top",
+      "tur": "engel"
+    },
+    "kutuk": {
+      "istem": "a gnarled dead tree stump with thick twisted roots spreading on the ground, dark wet wood, a little moss, swamp",
+      "tur": "engel"
+    },
+    "kayik": {
+      "istem": "an old abandoned wooden rowboat lying on its side, weathered dark planks, broken edge, swamp",
+      "tur": "engel",
+      "parlak": 1.8
+    },
+    "karkaya": {
+      "istem": "a large grey granite boulder with a thick soft cap of snow on top, a few icicles",
+      "tur": "engel"
+    },
+    "kizak": {
+      "istem": "a wooden cargo sled with iron runners, loaded with hay bales and brown furs tied with rope",
+      "tur": "engel"
+    },
+    "kemik": {
+      "istem": "a pile of old bones, ribs and a big horned beast skull on a dark rock, underworld",
+      "tur": "engel"
+    },
+    "kafes": {
+      "istem": "a round rusty iron prison cage with vertical bars, iron rings at top and bottom, empty inside, dark fantasy",
+      "tur": "engel"
+    },
+    "lavkaya": {
+      "istem": "a jagged black volcanic basalt rock with glowing orange lava cracks, underworld",
+      "tur": "engel"
+    },
+    "kupler": {
+      "istem": "three large glazed chinese ceramic wine jars, two side by side and one stacked on top, red cloth seals tied on the lids",
+      "tur": "engel"
+    },
+    "erzak": {
+      "istem": "an ancient chinese wooden supply cart with two big wheels, red lacquered frame, loaded with rice sacks, a small red flag on a pole",
+      "tur": "engel"
+    },
+    "buzkule": {
+      "istem": "a cluster of sharp tall pale blue ice crystal spikes rising from a mound of snow",
+      "tur": "engel"
+    },
+    "cit": {
+      "istem": "a short wide low rustic wooden fence section with three posts and two rails, snow on the top rail, knee high",
+      "tur": "alcak"
+    },
+    "dikenler": {
+      "istem": "a low wide trap of seven sharp iron spikes pointing up from a long dark wooden plank, knee high",
+      "tur": "alcak"
+    },
+    "alcakkapi": {
+      "istem": "a short wide low chinese fence of red lacquered wood with two rails and small golden ornaments, knee high",
+      "tur": "alcak"
+    },
+    "ip": {
+      "istem": "a low rope barrier stretched between two short wooden posts, small colorful triangular pennant flags hanging from the rope, knee high",
+      "tur": "alcak",
+      "atla": true
+    },
+    "sarmasik": {
+      "istem": "a low barrier of thorny dark swamp vines and reeds tangled between two short dead wooden posts, knee high",
+      "tur": "alcak"
+    },
+    "kiris": {
+      "istem": "a tall wooden gate frame: two thick wooden posts and a heavy crossbeam on top, a colorful woven turkish kilim rug hanging from the beam, wide open empty passage underneath the rug",
+      "tur": "yuksek",
+      "oran": "1:1"
+    },
+    "devrik": {
+      "istem": "a big fallen dead tree trunk lying horizontally high up, resting on two tall broken tree stumps at each end, forming an arch, hanging moss, wide empty space underneath",
+      "tur": "yuksek"
+    },
+    "devrikcam": {
+      "istem": "a fallen pine tree trunk covered with snow lying horizontally high up, resting on two tall snowy rock pillars at each end, forming an arch, wide empty space underneath",
+      "tur": "yuksek",
+      "atla": true
+    },
+    "zincir": {
+      "istem": "a dark stone gateway of two tall pillars and an iron crossbar on top, heavy iron chains and a skull hanging from the bar, wide open empty passage underneath, underworld",
+      "tur": "yuksek"
+    },
+    "sancak": {
+      "istem": "a red lacquered chinese wooden gate with two tall pillars and a crossbeam on top, a red silk banner with a golden emblem hanging from the beam, wide open empty passage underneath",
+      "tur": "yuksek"
+    },
+    "cam1": {
+      "istem": "a single tall conical spruce pine tree, bright vivid green layered needle tiers, reddish brown trunk, entire tree from roots to tip",
+      "tur": "dekor",
+      "aile": "PineTree",
+      "oran": "2:3"
+    },
+    "cam2": {
+      "istem": "a single tall slender mountain pine tree with dark blue-green needle tiers and a straight brown trunk, entire tree from roots to tip",
+      "tur": "dekor",
+      "aile": "PineTree",
+      "oran": "2:3",
+      "tohum": 21
+    },
+    "hus1": {
+      "istem": "a single slender birch tree with white bark and black marks, bright yellow-green leaf clusters, entire tree",
+      "tur": "dekor",
+      "aile": "BirchTree",
+      "oran": "2:3"
+    },
+    "hus2": {
+      "istem": "a single birch tree with two white trunks and soft light green round leaf canopy, entire tree",
+      "tur": "dekor",
+      "aile": "BirchTree",
+      "oran": "2:3",
+      "tohum": 13,
+      "atla": true
+    },
+    "olu1": {
+      "istem": "a single dead leafless tree with twisted dark grey branches, spooky, entire tree",
+      "tur": "dekor",
+      "aile": "DeadTree",
+      "oran": "2:3",
+      "atla": true
+    },
+    "olu2": {
+      "istem": "a single dead swamp tree with a crooked trunk, bare gnarled branches and hanging grey moss, entire tree",
+      "tur": "dekor",
+      "aile": "DeadTree",
+      "oran": "2:3",
+      "tohum": 9,
+      "atla": true
+    },
+    "agac1": {
+      "istem": "a single round leafy oak tree with a thick brown trunk and a big fluffy bright green canopy, entire tree",
+      "tur": "dekor",
+      "aile": "NormalTree",
+      "oran": "2:3"
+    },
+    "agac2": {
+      "istem": "a single tall leafy poplar-like tree with a lush green canopy, entire tree",
+      "tur": "dekor",
+      "aile": "NormalTree",
+      "oran": "2:3",
+      "tohum": 17
+    },
+    "akcaagac": {
+      "istem": "a single maple tree with a round canopy of bright red and orange autumn leaves, entire tree",
+      "tur": "dekor",
+      "aile": "MapleTree",
+      "oran": "2:3"
+    },
+    "cali1": {
+      "istem": "a single round leafy green bush, dense foliage",
+      "tur": "dekor",
+      "aile": "Bush"
+    },
+    "cali2": {
+      "istem": "a single wide low green bush with small pink and white flowers",
+      "tur": "dekor",
+      "aile": "Bush_Flowers"
+    },
+    "kaya1": {
+      "istem": "a single mossy grey boulder rock, rounded, patches of green moss",
+      "tur": "dekor",
+      "aile": "Rock",
+      "parlak": 1.4,
+      "taban": 0.07,
+      "atla": true
+    },
+    "kaya2": {
+      "istem": "a single sharp angular grey stone rock formation with layered cracks",
+      "tur": "dekor",
+      "aile": "Rock",
+      "tohum": 31
+    },
+    "kaya3": {
+      "istem": "a group of three weathered brown sandstone rocks of different sizes",
+      "tur": "dekor",
+      "aile": "Rock",
+      "tohum": 44
+    },
+    "kule1": {
+      "istem": "a tall round stone watchtower of an ancient turkic steppe fortress, wooden conical roof, arrow slits, a red banner on top",
+      "tur": "dekor",
+      "aile": "Tower",
+      "oran": "2:3"
+    },
+    "kule2": {
+      "istem": "a square stone and wood fortress tower with battlements and a wooden lookout balcony, ancient steppe khanate",
+      "tur": "dekor",
+      "aile": "WatchTowerWRoof",
+      "oran": "2:3",
+      "parlak": 1.7
+    },
+    "kule3": {
+      "istem": "a massive wide round stone fortress bastion tower with crenellations and blue tiled pointed roof, central asian",
+      "tur": "dekor",
+      "aile": "LargeTower",
+      "oran": "2:3"
+    },
+    "pagoda": {
+      "istem": "a small three-tier ancient chinese pagoda with red wooden pillars, green glazed tile roofs with curved eaves, stone base",
+      "tur": "dekor",
+      "aile": "Pagoda",
+      "oran": "2:3"
+    }
+  },
+  "doku": {
+    "tasyol": {
+      "istem": "medieval cobblestone road of large warm beige and sand colored flagstones with dark gaps",
+      "doygunluk": 0.72
+    },
+    "surduvar": {
+      "istem": "ancient fortress wall of large rough-cut tan sandstone blocks with mortar",
+      "doygunluk": 0.78
+    },
+    "tahta": {
+      "istem": "weathered brown wooden planks with visible grain and knots, vertical boards"
+    },
+    "iskele": {
+      "istem": "old dark wet wooden boardwalk planks running horizontally, swamp dock"
+    },
+    "kar": {
+      "istem": "fresh soft white snow ground with subtle blue shadows and footprints-free drifts"
+    },
+    "bazalt": {
+      "istem": "black hexagonal basalt stone floor tiles with thin glowing orange lava cracks between them"
+    },
+    "kaya": {
+      "istem": "layered grey-blue mountain cliff rock face with cracks and ledges"
+    },
+    "toprak": {
+      "istem": "packed brown dirt path ground with small pebbles and a few dry grass tufts"
+    },
+    "cimen": {
+      "istem": "lush green meadow grass ground with small clover and tiny wildflowers"
+    }
+  }
+}

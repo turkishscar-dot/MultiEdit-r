@@ -1,0 +1,25 @@
+<!doctype html><html><body style="margin:0;background:#9cc4e4"><script type="module">
+// ?m=yol1,yol2,... modelleri yan yana, oyundaki gibi toon gölgelendirmeyle gösterir
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+const W = innerWidth, H = innerHeight, r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(W, H); r.shadowMap.enabled = true; document.body.append(r.domElement);
+const s = new THREE.Scene(); s.background = new THREE.Color(0x9cc4e4);
+s.add(new THREE.HemisphereLight(0xdfefff, 0x6b5a40, 1.6)); const d = new THREE.DirectionalLight(0xfff1d6, 2.4); d.position.set(4, 8, 6); d.castShadow = true; Object.assign(d.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12 }); d.shadow.mapSize.set(2048, 2048); s.add(d);
+const gc = document.createElement('canvas'); gc.width = 3; gc.height = 1; const gx = gc.getContext('2d'); ['#777', '#bbb', '#fff'].forEach((c, i) => { gx.fillStyle = c; gx.fillRect(i, 0, 1, 1); });
+const GRAD = new THREE.CanvasTexture(gc); GRAD.minFilter = GRAD.magFilter = THREE.NearestFilter;
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 30), new THREE.MeshToonMaterial({ color: 0x8fae62, gradientMap: GRAD })); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; s.add(ground);
+const q = new URLSearchParams(location.search), yollar = (q.get('m') || '').split(','), boy = +(q.get('h') || 2.2);
+const L = new GLTFLoader(), gs = [];
+const ms = await Promise.all(yollar.map(y => L.loadAsync(y)));
+const n = ms.length, cols = Math.min(n, +(q.get('c') || 6)), rows = Math.ceil(n / cols), gap = boy * 1.25;
+ms.forEach((gl, i) => {
+  const o = gl.scene; o.traverse(m => { if (m.isMesh) { const map = m.material.map; m.material = new THREE.MeshToonMaterial({ map, color: map ? 0xffffff : m.material.color, gradientMap: GRAD }); m.castShadow = m.receiveShadow = true; } });
+  const g = new THREE.Group(); g.add(o); const b = new THREE.Box3().setFromObject(g), sz = b.getSize(new THREE.Vector3());
+  g.scale.setScalar(boy / Math.max(sz.y, sz.x * 0.8, sz.z * 0.8)); const b2 = new THREE.Box3().setFromObject(g); g.position.y = -b2.min.y;
+  const c = i % cols, rr = Math.floor(i / cols); g.position.x += (c - (cols - 1) / 2) * gap; g.position.z = -rr * gap * 1.1; s.add(g); gs.push(g);
+});
+const cam = new THREE.PerspectiveCamera(30, W / H, 0.1, 200); const span = cols * gap;
+cam.position.set(0, boy * 1.3 + rows * 1.2, span * 1.15 + 2 + rows * 1.5); cam.lookAt(0, boy * 0.45, -(rows - 1) * gap * 0.55);
+window.spin = a => { gs.forEach(g => g.rotation.y = a); r.render(s, cam); };
+window.ready = true; spin(0.4);
+</script></body></html>
