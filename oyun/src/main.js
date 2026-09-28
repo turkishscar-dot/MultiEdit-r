@@ -321,15 +321,16 @@ const setParts = (a, list) => {
 };
 const PRAISE = ['HASSAS!', 'HARİKA!', 'YİĞİT!', 'ALP!', 'BOZKURT!'];
 // Hareket çeşitliliği: Quaternius + Mixamo klipleri (Mixamo'lar tools/build_chars.py'de iskeletimize aktarılır)
-const SLASHES = ['Sword_Regular_A', 'MX_GS_Slash1', 'Sword_Regular_B', 'MX_Stab1', 'MX_GS_Slash4', 'Sword_Stab', 'MX_GS_Slash3',
-  'Sword_Regular_C', 'MX_GS_Attack', 'MX_Stab3', 'MX_GS_Slash5', 'Sword_Attack'];
-const HEAVY = ['Sword_Heavy_Combo', 'MX_GS_Spin', 'MX_GS_JumpAttack'];
-const RUNS = { sword: ['Sprint_Loop', 'MX_GS_Run', 'MX_GS_Run2', 'MX_Running'], bow: ['MX_BowRun', 'MX_Run', 'Sprint_Loop'] };
+// Klipler tek tek karelerine bakılarak seçildi (tools/anim-sheet.mjs): kılıcı gerçekten savuranlar kaldı; yumruk atar gibi
+// duran Mixamo "greatsword" klipleri (Stab1/Stab3/Slash1/Slash3/Slash5) ve ok bırakınca yumruk atan BowRecoil çıkarıldı.
+const SLASHES = ['Sword_Regular_A', 'MX_GS_Slash4', 'Sword_Regular_B', 'Sword_Stab', 'MX_GS_Attack', 'Sword_Regular_C', 'Sword_Attack'];
+const HEAVY = ['Sword_Heavy_Combo', 'MX_GS_Spin'];
+const RUNS = { sword: ['Sprint_Loop', 'MX_GS_Run2'], bow: ['MX_BowRun', 'Sprint_Loop'] };
 const HURTS = ['Hit_Chest', 'MX_GS_Impact', 'MX_GS_Impact2', 'MX_React'];
 const DEATHS = ['Death01', 'MX_Death1', 'MX_Death2', 'MX_DeathBack', 'MX_DeathFwd'];
 const FOE_IDLE = ['Sword_Idle', 'MX_GS_Idle', 'MX_GS_Idle3', 'MX_GS_Strafe'];
-const FOE_ATK = ['Sword_Attack', 'MX_GS_Slash1', 'MX_GS_Attack', 'MX_GS_Slash3', 'MX_GS_Slash5', 'MX_Stab3', 'MX_GS_Kick'];
-const FOE_RUN = ['Sprint_Loop', 'MX_FastRun', 'MX_GS_Run', 'MX_RunUnarmed'];
+const FOE_ATK = ['Sword_Attack', 'MX_GS_Attack', 'MX_GS_Slash4', 'Sword_Regular_A', 'MX_GS_Kick'];
+const FOE_RUN = ['Sprint_Loop', 'MX_FastRun', 'MX_RunUnarmed'];
 const MENU_IDLE = ['Idle_Loop', 'MX_Look', 'MX_Examine', 'MX_BowIdle'];
 // klibi istenen sürede (sn) oynat: Mixamo kliplerinin uzunlukları farklı, oyun temposu sabit kalsın
 const timed = (a, clip, t, o = {}) => a.play(clip, { loop: false, fade: 0.05, ...o, speed: a.duration(clip) / t });
@@ -2248,7 +2249,7 @@ function skyStrike(o) { // zıplayınca Oğuz sıçrar, kul ona doğru dalar; k�
   P.vy = Math.max(P.vy, 14);
   P.flip = 0;
   swordMode(true);
-  timed(hero, 'MX_GS_JumpAttack', 0.6);
+  timed(hero, 'MX_GS_Jump', 0.6); // havada kılıcı kaldırıp indirir
   P.lock = 0.55;
   P.sword = 0.8;
   Object.assign(o, { phase: 'strike', pt: 0, sx: o.x, sy: o.y, sz: o.z });
@@ -2419,9 +2420,7 @@ function throwArrow() {
   hero.parts.ArrowNock.visible = true;
   sfx('bowdraw');
   const sp = BOW_SPEED * (has('yazir') ? 1.3 : 1);
-  bowStyle = (bowStyle + 1) % 2;
-  if (bowStyle) hero.overlay('Bow_Shoot', { speed: sp }); // çekip bırakma (kendi klibimiz)
-  else timedOver(hero, 'MX_BowDraw', BOW_RELEASE * BOW_SPEED / sp); // Mixamo: ok takıp çekme, bırakınca geri tepme
+  hero.overlay('Bow_Shoot', { speed: sp }); // çekip bırakma: yayı öne uzatır, kirişi çeker
   pending.push(BOW_RELEASE * BOW_SPEED / sp);
 }
 
@@ -2429,7 +2428,6 @@ const v3 = new THREE.Vector3();
 function launchArrow() {
   sfx('bowrelease');
   hero.parts.ArrowNock.visible = false;
-  if (!bowStyle && !flying) timedOver(hero, 'MX_BowRecoil', 0.35);
   hero.bone('hand_r').getWorldPosition(v3);
   const mesh = W.makeArrow();
   scene.add(mesh);
@@ -2874,7 +2872,7 @@ function updateFinisher(dt) {
   hero.root.rotation.set(0, Math.PI, 0);
   if (fin.hits === 0 && t > 0.35) { timed(hero, 'Sword_Regular_A', 0.45); fin.hits = 0.5; }
   if (fin.hits === 0.5 && t > 0.58) { fin.hits = 1; finHit(b, fin.low); }
-  if (fin.hits === 1 && t > 0.95) { timed(hero, 'MX_GS_JumpAttack', 0.8); fin.hits = 1.5; }
+  if (fin.hits === 1 && t > 0.95) { timed(hero, 'MX_GS_Jump', 0.8); fin.hits = 1.5; }
   if (fin.hits === 1.5 && t > 1.38) { fin.hits = 2; finHit(b, fin.high); }
   if (fin.hits === 2 && t > 1.8) { timed(hero, 'Sword_Heavy_Combo', 0.9); fin.hits = 2.5; }
   if (fin.hits === 2.5 && t > 2.3) {
@@ -3023,8 +3021,8 @@ function nextFloor() {
 function makeEagle() { // Er-Töştük'ün Kara Kuşu: altın-kahve dev kartal
   const g = A.templates.karakus.clone(true);
   const gold = new THREE.Color(0xc8923a);
-  g.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.color?.lerp(gold, 0.55); } });
-  g.scale.setScalar(1.0);
+  g.traverse(o => { if (o.isMesh && !/Iris|Pupil|Beak|Leg/.test(o.material.name)) { o.material = o.material.clone(); o.material.color?.lerp(gold, 0.35); } });
+  g.scale.setScalar(1.45); // Oğuz'u taşıyacak kadar büyük
   scene.add(g);
   return g;
 }
