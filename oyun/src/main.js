@@ -1541,7 +1541,7 @@ function groundStep() {
   overPit = t?.kind === 'pit';
   if (overPit) {
     P.y = abs - h; P.gy = h;
-    if (diveNext && P.y < -1.6) { const f = diveNext; diveNext = null; clearTerrain(); f(); return; } // kat geçişi: çukurdan kuyuya
+    if (diveNext && (P.y < -1.6 || P.z < t.z0 - 6)) { const f = diveNext; diveNext = null; clearTerrain(); f(); return; } // kat geçişi: çukurdan kuyuya (zıplasan da düşersin)
     if (!diveNext && P.y < -2.6) fallPit(t);
     return;
   }
@@ -2600,6 +2600,7 @@ const B = {
 };
 
 function startBoss() {
+  if (!cur().boss) return; // boss'suz kısım
   sfx('roar');
   music('boss');
   const kind = cur().boss, def = BOSSES[kind];
@@ -3004,7 +3005,7 @@ function nextFloor() {
     banner(F.sub);
     clearTerrain();
     const z0 = P.z - 14;
-    const pit = { kind: 'pit', z0, z1: z0 - 14, h0: 0, h1: 0, mesh: W.makePit(TSTYLE[theme] || 'kaya', 14, 0) };
+    const pit = { kind: 'pit', dive: true, z0, z1: z0 - 22, h0: 0, h1: 0, mesh: W.makePit(TSTYLE[theme] || 'kaya', 22, 0) }; // atlanamaz: kat geçişi
     pit.mesh.position.z = z0;
     scene.add(pit.mesh);
     terr.push(pit);

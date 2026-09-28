@@ -47,6 +47,7 @@ function kosan(cfg0) {
   const cfg = { escape: 75, scale: 1.4, hitY: 2.2, rockV: 11, every: [2.2, 3.2], ...cfg0 };
   const def = {
     ...cfg,
+    mount: !!cfg.ride, // atlı boss: main.js at aktörünü de kurar
     start(B, b) {
       b.gz = B.P.z - 60; b.rot = Math.PI; b.y = cfg.float || 0; b.lane = 1; b.phase = 1;
       const a = b.actor;

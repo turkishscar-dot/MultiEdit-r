@@ -10,11 +10,11 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 
 1. Oyun klasöründe `git status`. Git yoksa önce `git init` ve mevcut hâli commit et.
 2. **Çakışma kontrolü:** Bu repodaki ilk "baseline" commit'i (`Add working copy of the game source`), zip'teki hâldir. PC'deki `src/main.js`, `index.html`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js` o tarihten sonra değiştiyse, dosyaları üstüne yazma. Önce farkı çıkar (`git diff <baseline> -- oyun/src/main.js`) ve değişiklikleri birleştir.
-3. Değişmediyse şunları olduğu gibi kopyala:
+3. Değişmediyse şunları olduğu gibi kopyala (ayrıca `public/ses/` klasörünün tamamı ve yeni `src/assets/karakus.glb`):
    - **Değişen:** `index.html`, `src/main.js`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js`, `src/assets.js`, `src/book.js`, `SESLENDIRME.md`
-   - **Yeni kaynak:** `src/akinci.js`, `ui.js`, `sound.js`, `bonus.js`, `tips.js`, `carsi.js`, `tore.js`, `harita.js`, `yigit.js`, `seferler.js`, `koleksiyon.js`, `ekranlar.js`, `diyalog.js`, `diyalog-metin.js`, `ayarlar.js`, `online.js`, `desen.js`
+   - **Yeni kaynak:** `src/simge.js`, `src/akinci.js`, `ui.js`, `sound.js`, `bonus.js`, `tips.js`, `carsi.js`, `tore.js`, `harita.js`, `yigit.js`, `seferler.js`, `koleksiyon.js`, `ekranlar.js`, `diyalog.js`, `diyalog-metin.js`, `ayarlar.js`, `online.js`, `desen.js`
    - **Belgeler:** `SES-KAYNAKLARI.md`, `CEVRIMICI.md`, `UYGULAMA.md`
-   - **Test araçları** (`tools/` içine; mevcut `bot.js`, `build_chars.py`, `vo_list.mjs` dosyalarının üstüne yazılmaz, adları farklı): `test-bot.mjs`, `bot-brain.js`, `smu2-scenes.mjs`, `kostum-shots.mjs`, `regresyon.sh`, `flow-test.mjs`, `tore-test.mjs`, `cards-test.mjs`, `dialog-test.mjs`, `tips-test.mjs`, `sound-test.mjs`, `events-test.mjs`, `scenes.mjs`, `shot-menu.mjs`, `ui-test.mjs`, `fps-test.mjs`, `vo_dialog.mjs`
+   - **Test araçları** (`tools/` içine; mevcut `bot.js`, `build_chars.py`, `vo_list.mjs` dosyalarının üstüne yazılmaz, adları farklı): `test-bot.mjs`, `bot-brain.js`, `smu2-scenes.mjs`, `kostum-shots.mjs`, `boss-shots.mjs`, `anim-sheet.mjs`, `eagle-shots.mjs`, `tur.mjs`, `ses_uret.py`, `build_eagle.py`, `regresyon.sh`, `flow-test.mjs`, `tore-test.mjs`, `cards-test.mjs`, `dialog-test.mjs`, `tips-test.mjs`, `sound-test.mjs`, `events-test.mjs`, `scenes.mjs`, `shot-menu.mjs`, `ui-test.mjs`, `fps-test.mjs`, `vo_dialog.mjs`
 4. `npm run dev`, sonra `tools/regresyon.sh` (Playwright gerekir: `npm i -D playwright`). Hepsi "tamam" çıkmalı.
 5. `npm run build` ile `OYNA.html`'i yeniden üret.
 6. `node tools/vo_list.mjs` çalıştırılırsa SESLENDIRME.md'nin eski bölümü yeniden yazılır. Diyalog bölümü `<!-- diyaloglar -->` işaretleri arasında durur. Silinirse `node tools/vo_dialog.mjs` ile geri gelir.
@@ -64,6 +64,26 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 | Boss yeteneğini koştuğumuz yere atsın | Tepegöz, Yelbegen, Çin Generali ve Kerey Han atışlarını %70 oyuncunun şeridine yapar | `bosses.js` (aim) |
 
 Bot bu mekanikleri de oynuyor (uçurumda zıplar, ışında kayar/zıplar, ▼ düşmanın altından kayar, ▲ çıkınca zıplar, Yada Taşı atar). Ekran görüntüleri: `node tools/smu2-scenes.mjs kalkan kanatli sur ucurum2 yerucurum isin kalinisin yada bitir`.
+
+## Geri bildirim düzeltmeleri (28 Eylül)
+
+| Şikâyet | Ne yapıldı |
+|---|---|
+| Kılıç sesi silah gibi, müzik kötü | Bütün önemli sesler ve 9 müzik artık gerçek ses dosyası (`public/ses/`), `tools/ses_uret.py` ile üretildi. Ayrıntı: SES-KAYNAKLARI.md |
+| Harita | Bölge sekmeleri (kendi çizilmiş simgeleriyle), her bölgenin çizilmiş manzarası, yol üstünde düğümler. Kaydırma yok. Düğüme tıklayınca ayrıntı ekranın ortasında açılır, arkası kararır |
+| Emoji simgeler | `src/simge.js`: bölge, düğüm ve menü simgeleri SVG olarak çizildi |
+| Öğretici ipuçları önü kapatıyor | Küçük bir bant olarak üstte çıkıyor, oyunu yavaşlatmıyor |
+| Önde koşan sarı karakter | Altın düşman kaldırıldı |
+| Mavi küre toplayınca boss kesiliyor | SMU'daki gibi: küre yolda süzülür, yanına gelince kılıçla VUR, küre boss'a uçar. Hasar yalnız böyle ya da altın mermiyi geri çalarak verilir |
+| Boss hiç durmasın | 15 boss'un hepsi aynı çekirdekle baştan yazıldı (`bosses.js` → `kosan`): hep önde koşar, arada sıçrayıp havada döner, şeridine kendi silahını atar, iner, koşmaya devam eder. Albastı yavaşlatıldı |
+| Bitiriş havaya vuruyor | Oğuz boss'un dibine atılır, vuruş noktaları boss'un boyuna göre hesaplanır: diz, sıçrayıp göğüs, son ağır darbe + şimşek. Kamera yolun içinden, çapraz |
+| Havada indirmede değmiyor | Kul Oğuz'un kılıcına doğru dalar, havada buluşurlar |
+| Güçlü kartlar varken oyun kolay | Ordu gücüne göre zorluk (1.0 → 1.8): sıra sıklığı, düşman oranı, pusu, hız, boss canı. HUD'da "ZORLUK ×" |
+| Irmak anlamsız | Irmak bölümü kaldırıldı |
+| Bataklık düşüşü | Yolun önünde toprak çöker, Oğuz çukura düşer, kuyunun içinden aşağı bakan kamerayla yüzüstü düşer, dipte su yaklaşır, suya dalıp yeni kata çıkar. Kesme yok |
+| Destan Kitabı | İçindekiler sayfası (gruplu, tıklanınca o sayfaya gider), her sayfada kurdele ile İçindekiler'e dönüş, alttaki menü kaldırıldı, sayfa kıvrılarak çevrilir, kaide sayfaya sığar |
+| Komik animasyonlar | Her klip kare kare incelendi (`tools/anim-sheet.mjs`); yumruk atar gibi duranlar çıkarıldı |
+| Kartal | Blender'da (bpy) baştan modellendi: `tools/build_eagle.py` → `src/assets/karakus.glb` |
 
 ## Kostüm ve görünüş paketi
 

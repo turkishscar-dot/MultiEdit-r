@@ -25,7 +25,7 @@
     const G = g(), P = G.P, v = Math.max(1, P.vz);
     if (G.yada > 0 && cd <= 0 && G.boss) { G.act('yada'); ev('yada'); }
     if (P.y !== 0 && !G.overPit) return false;
-    const pit = G.terr.find(t => t.kind === 'pit' && t.z0 < P.z + 0.5 && P.z - t.z0 < 12);
+    const pit = G.terr.find(t => t.kind === 'pit' && !t.dive && t.z0 < P.z + 0.5 && P.z - t.z0 < 12);
     if (pit && P.y === 0) {
       const d = P.z - pit.z0, len = pit.z0 - pit.z1;
       if (d <= Math.max(1.2, v * 0.62 - len - 1.5)) { act('up'); stats.jumps++; ev('pitjump'); return true; }

@@ -23,9 +23,9 @@ const SC = {
   isin: `g.start('level', 1, true); run(3, true); clear(); g.add('isin', 1, g.P.z - 22); run(0.3, false);`,
   kalinisin: `g.start('level', 5, true); run(3, true); clear(); g.add('kalinisin', 1, g.P.z - 20); run(0.3, false);`,
   isinzipla: `g.start('level', 3, true); run(3, true); clear(); g.add('kalinisin', 1, g.P.z - 12); run(0.25, false); g.act('up'); run(0.3, false);`,
-  yada: `g.start('level', 1, true); run(2, true); clear(); g.startBoss(); run(3, true); g.yada = 2; run(0.1, false);`,
-  yadaat: `g.start('level', 1, true); run(2, true); clear(); g.startBoss(); run(3, true); g.yada = 2; g.act('yada'); run(0.58, false);`,
-  bitir: `g.start('level', 1, true); run(2, true); clear(); g.startBoss(); run(3, true); g.boss.hp = 1; g.yada = 1; g.act('yada'); run(2.2, false);`,
+  yada: `g.start('level', 1, true); run(2, true); clear(); g.startBoss(); run(3, true); g.add('yada', g.P.lane, g.P.z - 8); run(0.1, false);`,
+  yadaat: `g.start('level', 1, true); run(2, true); clear(); g.startBoss(); run(3, true); g.add('yada', g.P.lane, g.P.z - 3); run(0.05, true); g.tryOrb(); run(0.3, false);`,
+  bitir: `g.start('level', 1, true); run(2, true); clear(); g.startBoss(); run(3, true); g.boss.hp = 1; g.add('yada', g.P.lane, g.P.z - 3); run(0.05, true); g.tryOrb(); run(2.2, false);`,
   bossrow: `g.start('level', 1, true); run(2, true); clear(); g.startBoss(); run(6, true);`,
 };
 for (const name of want) {
@@ -35,7 +35,7 @@ for (const name of want) {
     const run = (sec, fast) => { g.norender = !!fast; for (let i = 0; i < sec * 30; i++) { g.P.inv = Math.max(g.P.inv, 0); g.tick(1 / 30); } g.norender = false; };
     const clear = () => { for (const o of g.objs) o.dead = true; g.tick(1 / 30); };
     eval(code);
-    return { state: g.state, hp: g.P.hp, gy: g.P.gy, y: +g.P.y.toFixed(2), kills: g.kills, yada: g.yada, bossHp: g.boss?.hp, terr: g.terr.map(t => t.kind).join(',') };
+    return { state: g.state, hp: g.P.hp, gy: g.P.gy, y: +g.P.y.toFixed(2), kills: g.kills, bossHp: g.boss?.hp, terr: g.terr.map(t => t.kind).join(',') };
   }, SC[name]);
   await p.screenshot({ path: `test-out/smu2-${name}.png` });
   console.log(name, JSON.stringify(res));
