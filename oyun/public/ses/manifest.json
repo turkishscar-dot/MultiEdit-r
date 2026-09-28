@@ -1,0 +1,58 @@
+{
+ "swing": "swing.mp3",
+ "swing2": "swing2.mp3",
+ "swing3": "swing3.mp3",
+ "hit": "hit.mp3",
+ "hit2": "hit2.mp3",
+ "bowdraw": "bowdraw.mp3",
+ "bowrelease": "bowrelease.mp3",
+ "arrowhit": "arrowhit.mp3",
+ "parry": "parry.mp3",
+ "shieldbreak": "shieldbreak.mp3",
+ "jump": "jump.mp3",
+ "land": "land.mp3",
+ "slide": "slide.mp3",
+ "kut": "kut.mp3",
+ "hurt": "hurt.mp3",
+ "roar": "roar.mp3",
+ "thunder": "thunder.mp3",
+ "whoosh": "whoosh.mp3",
+ "menu": {
+  "f": "menu.mp3",
+  "n": 2228210
+ },
+ "otuken": {
+  "f": "otuken.mp3",
+  "n": 1628307
+ },
+ "boss": {
+  "f": "boss.mp3",
+  "n": 1144216
+ },
+ "altay": {
+  "f": "altay.mp3",
+  "n": 1840695
+ },
+ "bataklik": {
+  "f": "bataklik.mp3",
+  "n": 2646000
+ },
+ "gok": {
+  "f": "gok.mp3",
+  "n": 2016000
+ },
+ "yeralti": {
+  "f": "yeralti.mp3",
+  "n": 2419200
+ },
+ "cin": {
+  "f": "cin.mp3",
+  "n": 1764000
+ },
+ "karanlik": {
+  "f": "karanlik.mp3",
+  "n": 2822400
+ },
+ "win": "win.mp3",
+ "lose": "lose.mp3"
+}

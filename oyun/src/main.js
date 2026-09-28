@@ -2693,7 +2693,7 @@ function lightning(x, z) {
   scene.add(L);
   bolts.push({ m: L, t: 0 });
   flash('#e4efff');
-  sfx('roar', { gain: 0.4 });
+  sfx('thunder', { gain: 0.8 });
 }
 function yadaStrike(b, at) {
   lightning(at.x, at.z);

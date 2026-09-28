@@ -1,7 +1,8 @@
 // Ses yöneticisi (Web Audio). Müzik, efekt ve seslendirme düzeyleri ayrı tutulur ve saklanır.
-// Sesler kod içinde üretilir (kopuz teli, davul, zurna, boğaz sesi, rüzgâr...): dosya boyutu 0, lisans derdi yok.
-// Gerçek ses dosyası koymak istersen: ses/manifest.json = { "kut": "kut.ogg", "otuken": "otuken.ogg", ... }
-// Manifestteki ad varsa o dosya çalar, yoksa üretilen ses kullanılır.
+// Asıl sesler public/ses/ altındaki dosyalardır (tools/ses_uret.py ile çevrimdışı üretilir: fiziksel tel modeli, kaval,
+// davul, yankı). ses/manifest.json = { "kut": "kut.mp3", "menu": { "f": "menu.mp3", "n": örnek sayısı }, ... }
+// Dosya yüklenemezse (ör. OYNA.html'i diskten açınca) aşağıdaki kodla üretilen yedek sesler çalar.
+// Aynı adın çeşitleri (swing, swing2, swing3) varsa her seferinde biri rastgele seçilir.
 const load = (k, d) => { try { return { ...d, ...JSON.parse(localStorage.getItem(k)) }; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
@@ -9,6 +10,9 @@ export const vol = load('oguz-ses', { music: 0.6, sfx: 0.8, voice: 1 });
 
 let ctx = null, master, musicBus, sfxBus, verb, duckGain;
 const files = {}; // ad -> AudioBuffer (manifestten)
+const loops = {}; // ad -> { start, end } (döngülü müzik: MP3'ün baştaki boşluğu atlanır)
+const raw = {}; // ad -> ArrayBuffer: ses bağlamı açılmadan önce indirilir
+const pending = []; // çözülünce çalınacaklar
 
 function init() {
   if (ctx) return ctx;
@@ -40,16 +44,32 @@ function applyVol() {
 }
 export function setVol(k, v) { vol[k] = v; save('oguz-ses', vol); applyVol(); }
 
-async function loadManifest() {
+// Dosyalar sayfa açılır açılmaz indirilir (bağlam yokken); bağlam açılınca çözülür
+let manifest = null;
+const prefetch = (async () => {
   try {
     const r = await fetch('ses/manifest.json');
     if (!r.ok) return;
-    const m = await r.json();
-    for (const [name, file] of Object.entries(m)) {
-      fetch('ses/' + file).then(x => x.arrayBuffer()).then(b => ctx.decodeAudioData(b)).then(buf => { files[name] = buf; }).catch(() => {});
-    }
+    manifest = await r.json();
+    await Promise.all(Object.entries(manifest).map(([name, e]) => fetch('ses/' + (e.f || e)).then(x => (x.ok ? x.arrayBuffer() : null)).then(b => { if (b) raw[name] = b; }).catch(() => {})));
   } catch {}
+})();
+function firstSound(buf) { const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) if (Math.abs(d[i]) > 1e-4) return i; return 0; }
+async function loadManifest() {
+  await prefetch;
+  if (!manifest) return;
+  await Promise.all(Object.entries(raw).map(([name, b]) => ctx.decodeAudioData(b.slice(0)).then(buf => {
+    files[name] = buf;
+    const n = manifest[name]?.n;
+    if (n) { const s0 = firstSound(buf); loops[name] = { start: s0 / buf.sampleRate, end: (s0 + n) / buf.sampleRate }; }
+    if (cur?.name === name && !cur.src) { const nm = name; cur = null; music(nm); } // yedek müzik çalıyordu: dosyaya geç
+  }).catch(() => {})));
 }
+const pickFile = name => {
+  if (!files[name]) return null;
+  const v = [name, name + '2', name + '3'].filter(n => files[n]);
+  return files[v[Math.floor(Math.random() * v.length)]];
+};
 
 // Mobilde ses ilk dokunuşta açılır; sekme gizlenince susar
 const unlock = () => { init(); if (ctx?.state === 'suspended' && !document.hidden) ctx.resume(); };
@@ -271,7 +291,8 @@ export function sfx(name, { gain = 1, gap = 0.03 } = {}) {
   const out = ctx.createGain();
   out.gain.value = gain;
   out.connect(sfxBus);
-  if (files[name]) { const s = ctx.createBufferSource(); s.buffer = files[name]; s.connect(out); s.start(t); return; }
+  const f = pickFile(name);
+  if (f) { const s = ctx.createBufferSource(); s.buffer = f; s.playbackRate.value = 0.96 + Math.random() * 0.08; s.connect(out); s.start(t); return; }
   SFX[name]?.(t, out);
 }
 
@@ -379,7 +400,10 @@ export function music(name) {
   g.gain.setTargetAtTime(1, now() + 0.1, 0.5);
   g.connect(musicBus);
   if (files[name]) { // dosya varsa döngüde çalar
-    const s = ctx.createBufferSource(); s.buffer = files[name]; s.loop = true; s.connect(g); s.start();
+    const s = ctx.createBufferSource(); s.buffer = files[name]; s.loop = true;
+    const L = loops[name];
+    if (L) { s.loopStart = L.start; s.loopEnd = L.end; }
+    s.connect(g); s.start(now(), L ? L.start : 0);
     cur = { name, gain: g, src: s };
     return;
   }
