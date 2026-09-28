@@ -223,7 +223,7 @@ const LEVELS = {
   },
   2: {
     theme: 'bataklik', floors: [
-      { name: 'SİSLİ SAZLIK', sub: 'BİRİNCİ KISIM', theme: 'bataklik', boss: 'suluaga', goals: [['dist', 550], ['kill', 8]], sect: ['sal', 200] },
+      { name: 'SİSLİ SAZLIK', sub: 'BİRİNCİ KISIM', theme: 'bataklik', boss: 'suluaga', goals: [['dist', 550], ['kill', 8]], },
       { name: 'ÖLÜ ORMAN', sub: 'İKİNCİ KISIM', theme: 'olu', boss: null, goals: [['dist', 500], ['kut', 50]], fall: true },
       { name: 'KARA GÖL', sub: 'ÜÇÜNCÜ KISIM', theme: 'bataklik', boss: 'albasti', goals: [['dist', 450], ['kill', 8]] },
     ],
@@ -259,7 +259,7 @@ const LEVELS = {
   7: {
     theme: 'karanlik', floors: [
       { name: 'DONMUŞ IRMAK', sub: 'BİRİNCİ KISIM', theme: 'karanlik', boss: 'itbasi', goals: [['dist', 600], ['kill', 12]], sect: ['buz', 200] },
-      { name: 'KUZEY IŞIKLARI', sub: 'İKİNCİ KISIM', theme: 'karanlik', boss: null, goals: [['dist', 500], ['combo', 6]], sect: ['sal', 150] },
+      { name: 'KUZEY IŞIKLARI', sub: 'İKİNCİ KISIM', theme: 'karanlik', boss: null, goals: [['dist', 500], ['combo', 6]] },
       { name: 'İT-BARAK OBASI', sub: 'ÜÇÜNCÜ KISIM', theme: 'karanlik', boss: 'boyali', goals: [['dist', 500], ['kill', 12]], sect: ['kartal', 200] },
     ],
   },
@@ -1302,6 +1302,7 @@ function start(m = mode, lv = level, skipIntro = false) {
   hearts();
   comboUi();
   $('armym').textContent = '×' + Y.armyMult(isUnlocked('ordu')).toFixed(1); // Ordu gücü (SMU Team Power)
+  $('zorm').textContent = zorluk() > 1.05 ? 'ZORLUK ×' + zorluk().toFixed(1) : ''; // güçlü ordu: oyun da zorlaşır
   if (has('alayuntli') && !flying) mount(); // Ala-yuntlı: akına at sırtında başla
   useBoosts();
   if (nodeRun?.floor > 0) { floor = nodeRun.floor - 1; nextFloor(); } // haritadan sonraki bir kısım: o kısmın girişiyle başlar
@@ -1397,7 +1398,7 @@ function release(o) {
 // P.gy: ayağın altındaki zemin yüksekliği; P.y bunun üstündeki sıçrama yüksekliği.
 const TSTYLE = { surlar: 'sur', aksam: 'sur', burc: 'sur', karakol: 'sur', cin: 'sur', bataklik: 'tahta', olu: 'tahta', altay: 'kar', karanlik: 'kar', orman: 'kaya', yeralti: 'bazalt', tamu: 'bazalt', demirhane: 'bazalt', abyss: 'bazalt' };
 const H1 = 2.2, H2 = 4.4;
-let terr = [], terrNext = 150, noSpawn = [], overPit = false, camGy = 0;
+let terr = [], terrNext = 150, noSpawn = [], overPit = false, camGy = 0, diveNext = null;
 function terrAt(z) { for (const t of terr) if (z <= t.z0 && z > t.z1) return t; return null; }
 function groundAt(z) {
   const t = terrAt(z);
@@ -1455,7 +1456,12 @@ const blocked = z => noSpawn.some(([a, b]) => z <= a && z >= b);
 function groundStep() {
   const t = terrAt(P.z), abs = P.gy + P.y, h = groundAt(P.z);
   overPit = t?.kind === 'pit';
-  if (overPit) { P.y = abs - h; P.gy = h; if (P.y < -2.6) fallPit(t); return; }
+  if (overPit) {
+    P.y = abs - h; P.gy = h;
+    if (diveNext && P.y < -1.6) { const f = diveNext; diveNext = null; clearTerrain(); f(); return; } // kat geçişi: çukurdan kuyuya
+    if (!diveNext && P.y < -2.6) fallPit(t);
+    return;
+  }
   if (P.y <= 0 && Math.abs(h - P.gy) < 1.2) { P.gy = h; return; } // yürüyerek (rampa)
   P.y = abs - h; P.gy = h;
   if (P.y < 0 && P.y > -0.9) P.y = 0; // kenara tutundu
@@ -1507,10 +1513,10 @@ function spawnRow(z) {
       else if (LEVELS[level].prisoners && d > 60 && Math.random() < 0.22) add('esir', l, z);
       else if (d > 80 && !sect && Math.random() < 0.07) add('tamga', l, z); // İSABET halkası
       else if (Math.random() < 0.65) for (let i = 0; i < 6; i++) add('kut', l, z + 3 - i * 2);
-    } else if (Math.random() < 0.62) {
+    } else if (Math.random() < Math.min(0.85, 0.62 * zorluk())) {
       const base = THEMES[theme].foes ?? THEMES[sect?.prev]?.foes;
       const foes = (base?.length && !sect ? [...base, ...EXTRA_FOES] : base)?.filter(f => d >= f[1]);
-      if (d < 150 || !foes?.length || Math.random() < 0.5) add(pick(THEMES[theme].obst), l, z);
+      if (d < 150 || !foes?.length || Math.random() < 0.5 / zorluk()) add(pick(THEMES[theme].obst), l, z);
       else add('kormos', l, z, { variant: pick(foes)[0] });
     }
   }
@@ -2518,7 +2524,8 @@ function startBoss() {
   music('boss');
   const kind = cur().boss, def = BOSSES[kind];
   const { main, extra, mount } = getBossActors(kind);
-  boss = { kind, def, hp: def.hp, max: def.hp, state: 'enter', t: 0, time: 0, gz: 0, off: 0, x: 0, y: 0, lane: 1, rot: 0, n: 0, hits: 0, actor: main, extra, mount };
+  const bossHp = Math.round(def.hp * (1 + (zorluk() - 1) * 0.75)); // güçlü orduya karşı boss daha dayanıklı
+  boss = { kind, def, hp: bossHp, max: bossHp, state: 'enter', t: 0, time: 0, gz: 0, off: 0, x: 0, y: 0, lane: 1, rot: 0, n: 0, hits: 0, actor: main, extra, mount };
   main.root.visible = true;
   main.root.rotation.set(0, 0, 0);
   def.start(B, boss);
@@ -2913,9 +2920,19 @@ function nextFloor() {
     $('goals').hidden = false;
     sectDone = false;
   };
-  if (F.fall) { // yol uçurumda biter: Oğuz aşağı atlar, dipte yeni kata iner
+  if (F.fall) { // yolun önünde toprak çöker: Oğuz çukura düşer, kuyudan aşağı iner, dipteki suya dalıp yeni kata çıkar
     banner(F.sub);
-    return startSect('dive', () => { enter(); banner(F.name); hero.play('NinjaJump_Land', { loop: false, speed: 1.6, fade: 0.05 }); P.lock = 0.3; });
+    clearTerrain();
+    const z0 = P.z - 14;
+    const pit = { kind: 'pit', z0, z1: z0 - 14, h0: 0, h1: 0, mesh: W.makePit(TSTYLE[theme] || 'kaya', 14, 0) };
+    pit.mesh.position.z = z0;
+    scene.add(pit.mesh);
+    terr.push(pit);
+    dust.emit(0, 0.4, z0 - 6, 120, 0x6a5a48, 8, 6);
+    shake = 0.5;
+    diveNext = () => startSect('dive', () => { enter(); banner(F.name); hero.play('Roll', { loop: false, speed: 1.3, fade: 0.05, then: () => hero.play('Sprint_Loop') }); P.lock = 0.5; });
+    state = 'run';
+    return;
   }
   playCine([runShot], enter);
 }
@@ -2929,8 +2946,44 @@ function makeEagle() { // Er-Töştük'ün Kara Kuşu: altın-kahve dev kartal
   scene.add(g);
   return g;
 }
+// Kuyunun dibi: yaklaşan bataklık suyu ve dipteki ışık; yanında düşen taşlar (yukarı kayıyormuş gibi görünür)
+let diveWater = null, diveGlow = null, pebbles = [];
+function diveProps() {
+  if (diveWater) return;
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const r = g.createRadialGradient(128, 128, 10, 128, 128, 128);
+  r.addColorStop(0, '#6a9a7a'); r.addColorStop(0.6, '#2a4a3a'); r.addColorStop(1, '#10201a');
+  g.fillStyle = r; g.fillRect(0, 0, 256, 256);
+  g.strokeStyle = 'rgba(200,240,220,.35)'; g.lineWidth = 4;
+  for (const rr of [40, 75, 110]) { g.beginPath(); g.arc(128, 128, rr, 0, 7); g.stroke(); }
+  const m = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) });
+  m.userData.outlineParameters = { visible: false };
+  diveWater = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), m);
+  diveGlow = W.glowSprite(0xbfffd8, 7, 0);
+  diveGlow.material.opacity = 0.5;
+  scene.add(diveWater, diveGlow);
+  diveWater.visible = diveGlow.visible = false;
+  for (let i = 0; i < 14; i++) {
+    const p = new THREE.Mesh(new THREE.DodecahedronGeometry(0.12 + Math.random() * 0.18), W.toon(0x4a4038, 'pebble'));
+    p.visible = false;
+    scene.add(p);
+    pebbles.push({ m: p, x: rand(-3.5, 3.5), y: rand(1.5, 8.5), dz: rand(-30, 4) });
+  }
+}
+function divePebbles(dt) { // taşlar Oğuz'dan yavaş düşer: ekranda yukarı doğru akar
+  for (const p of pebbles) {
+    p.dz += P.vz * 0.55 * dt;
+    if (p.dz > 6) { p.dz = rand(-34, -26); p.x = rand(-3.5, 3.5); p.y = rand(1.5, 8.5); }
+    p.m.visible = true;
+    p.m.position.set(p.x, p.y, P.z + p.dz);
+    p.m.rotation.x += dt * 3;
+  }
+}
 function hideProps() {
-  for (const p of [eagle, raft, board]) if (p) p.visible = false;
+  for (const p of [eagle, raft, board, diveWater, diveGlow]) if (p) p.visible = false;
+  for (const p of pebbles) p.m.visible = false;
   if (hero) hero.root.rotation.z = 0;
   $('grid').hidden = !LEVELS[level]?.flight;
 }
@@ -2954,6 +3007,7 @@ function startSect(kind, after = null) {
     $('grid').hidden = false;
   }
   if (kind === 'kartal') { (eagle ??= makeEagle()).visible = true; eagleAway = null; sw.a = sw.v = 0; sw.px = P.x; }
+  if (kind === 'dive') { diveProps(); P.row = 1; P.y = HEIGHTS[1]; sfx('whoosh'); }
   if (kind === 'sal') { (raft ??= (() => { const r = W.makeSal(); scene.add(r); return r; })()).visible = true; P.y = 0; }
   if (kind === 'buz') { (board ??= (() => { const b = W.makeShieldBoard(); scene.add(b); return b; })()).visible = true; }
 }
@@ -2967,7 +3021,13 @@ function endSect() {
   flash();
   if (s.kind === 'kartal') { eagleAway = { t: 0, x: eagle.position.x, y: eagle.position.y, z: eagle.position.z }; P.vy = 2; } // bırakır, Oğuz yere süzülür
   if (s.S.fly) flying = false;
-  if (s.kind === 'dive') P.y = P.vy = 0;
+  if (s.kind === 'dive') { // suya dalış: sıçrama, kısa beyaz parlama, yeni katta yuvarlanarak kalkar
+    P.y = P.vy = 0;
+    sparks.emit(P.x, 0.6, P.z - 1, 90, 0xcfeee0, 9, 7);
+    dust.emit(P.x, 0.3, P.z - 1, 60, 0x2a4a3a, 6, 4);
+    shake = 0.5;
+    sfx('land');
+  }
   const keep = eagle;
   hideProps();
   if (eagleAway) keep.visible = true;
@@ -2982,13 +3042,19 @@ function sectTick(dt) { // update(): bölüm zamanı ve tetikleyiciler
   if (boss || fin || flying || stageT > 0) return;
   const sc = cur().sect;
   if (mode === 'level' && sc && !sectDone && !goalsDone && dist() >= sc[1]) { sectDone = true; startSect(sc[0]); }
-  else if (mode === 'endless' && dist() >= sectAt) { sectAt += 650; startSect(pick(['kartal', 'sal', 'buz'])); }
+  else if (mode === 'endless' && dist() >= sectAt) { sectAt += 650; startSect(pick(['kartal', 'buz'])); }
 }
 function sectView(dt) { // view(): bölümdeki duruşlar ve sahne eşyaları
   const r = hero.root, k = sect.kind;
-  if (k === 'dive') { // baş aşağı dalış: gövde düşüş yönünde (-z), yüz aşağı
-    r.position.set(P.x, P.y + 1.6, P.z + 0.9);
-    r.rotation.set(-1.3, Math.PI, Math.sin(time * 3) * 0.12);
+  if (k === 'dive') { // kuyudan düşüş: yüz aşağı (−z), sırtı kameraya, kollar ve bacaklar açık; hafifçe döner
+    r.position.set(P.x, P.y + 0.9, P.z - 1.2);
+    r.rotation.set(1.45, Math.PI, Math.sin(time * 2.2) * 0.18); // düşüş klibi yere paralel: 90° çevrilince yüzü kuyunun dibine bakar
+    // dibe yaklaşırken: su yüzeyi yaklaşır
+    const left = sect.S.dur - sect.t;
+    if (left < 1.4) { diveWater.visible = true; diveWater.position.set(0, 4.5, P.z - 2 - left * 26); } else diveWater.visible = false;
+    diveGlow.position.set(0, 4.5, P.z - 70);
+    diveGlow.visible = true;
+    divePebbles(dt);
   } else if (k === 'kartal') {
     const vx = (P.x - sw.px) / Math.max(dt, 1e-3);
     sw.px = P.x;
@@ -3119,7 +3185,7 @@ function update(dt) {
 
   if (!boss) P.speed = mode === 'endless' // Sonsuz Akın: her bölgede ve her turda daha hızlı
     ? Math.min(24 + loop * 3, (has('kayi') ? 13.5 : 12) + loop * 2.5 + zone * 0.4 + (dist() - zoneStart) * 0.004)
-    : Math.min(24, (has('kayi') ? 13.5 : 12) + time * 0.1);
+    : Math.min(24 + (zorluk() - 1) * 4, (has('kayi') ? 13.5 : 12) * (0.9 + zorluk() * 0.1) + time * 0.1);
   flow += (holdTarget - flow) * Math.min(1, dt * 6);
   const speed = P.speed * (P.ride ? 1.45 : 1) * flow * (sect?.S.fast || 1);
   P.vz = speed;
@@ -3162,7 +3228,7 @@ function update(dt) {
   while (nextZ > P.z - 110) {
     if (runZ - nextZ > terrNext && terrOk(nextZ)) { const end = buildTerrain(nextZ - 6); terrNext = runZ - end + rand(160, 300); }
     if (sect || (!boss && (cur().goals ? !goalsDone : runZ - nextZ < bossAt - 40))) (flying ? spawnSky : spawnRow)(nextZ);
-    nextZ -= rand(9, 13) + P.speed * 0.28; // SMU temposu: her saniye bir sıra
+    nextZ -= (rand(9, 13) + P.speed * 0.28) / Math.sqrt(zorluk()); // SMU temposu: her saniye bir sıra; güçlü orduda daha sık
   }
   if (terr.length) pruneTerrain();
   if (!sect?.after) updateGoals(); // kat geçişi inişinde görevler sayılmaz
@@ -3178,7 +3244,7 @@ function update(dt) {
   tipScan(dt);
   if (rain) updateRain(dt);
   if (!boss && !sect && dist() > bossAt && !P.ride && !terr.some(t => t.z1 < P.z + 5)) startBoss(); // boss düz yerde karşılanır
-  if (!boss && !flying && !sect && dist() > 250 && (ambushT -= dt) <= 0) { ambushT = rand(3, 6); if (!blocked(P.z - P.speed * 1.5) && !terrAt(P.z - P.speed * 1.5)) spawnAmbush(); }
+  if (!boss && !flying && !sect && dist() > 250 && (ambushT -= dt) <= 0) { ambushT = rand(3, 6) / zorluk(); if (!blocked(P.z - P.speed * 1.5) && !terrAt(P.z - P.speed * 1.5)) spawnAmbush(); }
 
   for (const o of objs) updateObj(o, dt);
   for (const a of arrows) updateArrow(a, dt);
@@ -3299,9 +3365,12 @@ function view(dt, realDt) {
       camera.position.set(boss.x + side * (2.6 + k * 0.6), hy + 0.9 + s * 0.35, mid + 4.2 + s * 1.3 - k * 0.8);
       camera.lookAt(boss.x - side * 0.3, hy, mid - 0.3);
     }
-  } else if (sect?.kind === 'dive') { // kuyuya yukarıdan bakış
-    camera.position.set(camX * 0.7 + rand(-s, s), P.y + 3.1, P.z + 6.4);
-    camera.lookAt(camX * 0.7, P.y + 1.3, P.z - 12);
+  } else if (sect?.kind === 'dive') { // kuyunun içinden aşağı bakış: kamera düşen Oğuz'un üstünde, tam ortada
+    const cy = 4.6 + (P.y - 3.5) * 0.35, roll = Math.sin(time * 1.3) * 0.06;
+    camera.position.set(P.x * 0.35 + rand(-s, s), cy + rand(-s, s), P.z + 5.2);
+    camera.up.set(Math.sin(roll), Math.cos(roll), 0);
+    camera.lookAt(P.x * 0.35, cy - 0.2, P.z - 30);
+    camera.up.set(0, 1, 0);
   } else if (sect?.kind === 'kartal') {
     camera.position.set(camX + rand(-s, s), P.y + 5.6, P.z + 8);
     camera.lookAt(camX, P.y + 1.4, P.z - 9);
