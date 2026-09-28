@@ -145,9 +145,9 @@ const DETAY = {
   babur: { parts: ['C_KaftanLong', 'C_Sash', 'C_BeardLong'], colors: { M_Sash: 0xd9b04a } },
   ismail: { parts: ['C_KaftanLong', 'C_Sash', 'C_Mustache'], colors: { M_Sash: 0x1a1414 } },
   akoglan: { parts: ['C_Sash', 'C_HairTop'], colors: { M_Sash: 0xffffff } },
-  geyiksaman: { parts: ['C_Fringe_Sway', 'C_ShamanMirror', 'C_Drum'] },
-  ayisaman: { parts: ['C_Fringe_Sway', 'C_ShamanMirror', 'C_FurCollar'], colors: { M_Kurk: 0x2a1f18 } },
-  kartalsaman: { parts: ['C_Fringe_Sway', 'C_ShamanMirror', 'C_Drum'] },
+  geyiksaman: { parts: ['C_ShamanMirror', 'C_Drum'] },
+  ayisaman: { parts: ['C_ShamanMirror', 'C_FurCollar'], colors: { M_Kurk: 0x2a1f18 } },
+  kartalsaman: { parts: ['C_ShamanMirror', 'C_Drum'] },
   ergenekon: { parts: ['C_FurCollar', 'C_Belt', 'C_Cape_Sway'], colors: { M_Cape: 0x8a1a1a, M_Kurk: 0x3a2a1a } },
   hizir: { parts: ['C_KaftanLong', 'C_Sash', 'C_BeardLongWhite', 'C_Cape_Sway'], colors: { M_Cape: 0x7a7a7a, M_Sash: 0x2a6a3a } },
 };

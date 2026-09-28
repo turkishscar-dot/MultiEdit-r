@@ -8,6 +8,9 @@ import { wallet, applyCostume } from './costumes.js';
 
 const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const SPLASH = import.meta.glob('./assets/splash/*.jpg', { eager: true, query: '?url', import: 'default' });
+const splashUrl = id => SPLASH[`./assets/splash/${id}.jpg`];
+const splashArka = (id, alt) => { const u = splashUrl(id); return u ? `linear-gradient(180deg, rgba(0,0,0,0) ${alt}, rgba(8,6,12,.88)), url("${u}")` : ''; };
 let U = null;
 export function init(u) { U = u; }
 
@@ -127,6 +130,7 @@ export function drawYigit() {
   for (const k of sortedCards()) {
     const ks = Y.cardState(k.id), own = !!ks;
     const card = el('button', 'ycard ' + RCLS[own ? ks.stars : k.stars] + (own ? '' : ' none') + (k.id === sel ? ' on' : ''));
+    if (splashUrl(k.id)) { card.classList.add('art'); card.style.backgroundImage = splashArka(k.id, '38%'); }
     card.append(el('span', 'ystars', stars(own ? ks.stars : k.stars)), el('b', null, k.name), el('small', null, own ? `Sv ${ks.lvl} · Güç ${Y.power(k.id)}` : 'KİLİTLİ'));
     if (k.id === Y.leader().id) card.append(el('i', 'ytag', 'LİDER'));
     else if (Y.team().includes(k)) card.append(el('i', 'ytag', 'ORDU'));
@@ -141,6 +145,7 @@ export function drawYigit() {
   const rk = Y.RANKS[s ? s.stars : c.stars];
   const kids = [el('div', 'yhead ' + RCLS[s ? s.stars : c.stars])];
   kids[0].append(el('span', 'ystars', stars(s ? s.stars : c.stars) + ' ' + rk[0]), el('h3', null, c.name), el('small', null, c.title));
+  if (splashUrl(c.id)) { kids[0].classList.add('art'); kids[0].style.backgroundImage = splashArka(c.id, '10%'); }
   if (s) kids.push(el('p', 'ylvl', `Seviye ${s.lvl} / ${Y.maxLvl(c.id)} · Güç ${Y.power(c.id)}` + (s.copies ? ` · kopya ×${s.copies}` : '')));
   const ab = el('div', 'yab');
   c.ab.forEach((a, i) => { const on = i === 0 || (s && s.stars >= 5); ab.append(el('span', on ? 'on' : 'off', (on ? '✦ ' : '🔒 5★: ') + Y.ABILITY[a].text)); });
