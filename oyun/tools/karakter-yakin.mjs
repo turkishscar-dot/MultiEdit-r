@@ -2,7 +2,8 @@
 // Çıktı: test-out/yakin-<yiğit>.png (solda önce, sağda sonra; üstte tüm boy, altta yakın)
 import { chromium } from 'playwright';
 import { execFileSync } from 'child_process';
-const ids = process.argv.slice(2).length ? process.argv.slice(2) : ['oguz'];
+const BOYA = process.argv.includes('--boya'), ids0 = process.argv.slice(2).filter(a => a !== '--boya');
+const ids = ids0.length ? ids0 : ['oguz'];
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await b.newPage({ viewport: { width: 900, height: 700 }, deviceScaleFactor: 1.5 });
 const errs = []; p.on('pageerror', e => errs.push(e.message));
@@ -20,12 +21,12 @@ for (const id of ids) {
     await p.waitForTimeout(1500);
   }
   const cek = async (ac, ad, yakin) => {
-    await p.evaluate(([ac, yakin]) => {
+    await p.evaluate(([ac, yakin, process_boya]) => {
       const g = window.__game, A = g.AYR, bk = g.book;
-      A.detay.value = A.parlak.value = ac ? 1 : 0; A.ao.value = ac ? 0.75 : 0;
+      if (process_boya) { A.detay.value = A.parlak.value = 1; A.ao.value = 0.75; A.boya.value = ac ? 1 : 0; } else { A.detay.value = A.parlak.value = ac ? 1 : 0; A.ao.value = ac ? 0.75 : 0; A.boya.value = ac ? 0.7 : 0; }
       bk.hold = 1e9; bk.current.root.rotation.y = 0.55;
       if (yakin) { const h = bk.h; bk.camera.clearViewOffset(); bk.camera.position.set(0.18 * h, h * 0.78, h * 0.85); bk.camera.lookAt(0, h * 0.68, 0); bk.camera.updateProjectionMatrix(); }
-    }, [ac, yakin]);
+    }, [ac, yakin, BOYA]);
     await p.waitForTimeout(700);
     await p.screenshot({ path: `test-out/yk-${ad}${yakin ? 'z' : ''}.png` });
   };

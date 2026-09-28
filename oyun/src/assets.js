@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
-import { ayrintila, aoYukle } from './ayrinti.js';
+import { ayrintila, aoYukle, kadinBicimi } from './ayrinti.js';
 import oguzUrl from './assets/oguz.glb?url';
 import kormosUrl from './assets/kormos.glb?url';
 import tepegozUrl from './assets/tepegoz.glb?url';
@@ -26,7 +26,8 @@ import kereyUrl from './assets/kerey.glb?url';
 import animsUrl from './assets/anims.glb?url';
 import dogaUrl from './assets/doga.glb?url';
 import kaleUrl from './assets/kale.glb?url';
-import dunyaUrl from './assets/dunya.glb?url'; // yapay zekâ ile üretilen engel ve dekor (tools/ai_isle.py paket)
+import dunyaUrl from './assets/dunya.glb?url';
+import kiyafetUrl from './assets/kiyafet.glb?url'; // kostüm parçaları (tools/build_kiyafet.py), Oğuz şablonuna eklenir // yapay zekâ ile üretilen engel ve dekor (tools/ai_isle.py paket)
 
 export const GRAD = new THREE.DataTexture(new Uint8Array([70, 165, 255]), 3, 1, THREE.RedFormat);
 GRAD.minFilter = GRAD.magFilter = THREE.NearestFilter;
@@ -44,6 +45,7 @@ const UPPER = /^(spine_0[23]|neck_01|Head|clavicle_|upperarm_|lowerarm_|hand_|th
 export const RIM = { color: { value: new THREE.Color(0xfff0d0) }, power: { value: 0.28 } };
 
 function toon(root, name, scenery = false) {
+  root.updateMatrixWorld(true);
   root.traverse(o => {
     if (!o.isMesh) return;
     o.castShadow = !scenery; // yüzlerce ağacın gölgesi pahalı
@@ -65,7 +67,7 @@ function toon(root, name, scenery = false) {
       name: old.name, color, map: old.map, gradientMap: GRAD,
       transparent: old.transparent, alphaTest: old.alphaTest, side: old.side,
     });
-    if (!scenery) ayrintila(o.material, o.geometry, name, name === 'oguz' ? RIM : null); // ayrıntı dokusu, parlama, gölge boşluğu
+    if (!scenery) ayrintila(o.material, o.geometry, name, name === 'oguz' ? RIM : null, name === 'oguz' && o.isSkinnedMesh ? o.bindMatrix.clone() : null); // ayrıntı, parlama, gölge boşluğu, boyalı ayrıntı
   });
 }
 
@@ -106,6 +108,29 @@ async function loadModel(loader, url) {
   return loader.parseAsync(b.buffer, '');
 }
 
+// Kostüm parçalarını (kiyafet.glb) Oğuz şablonuna ekle. İki dosya aynı iskeleti (kemik adlarını) paylaşır:
+//  - kemiğe takılı parça (bıyık, sakal, ayna, davul) ya da menteşe zinciri (hizala_C_* <- C_*_Sway): aynı adlı kemiğe taşınır
+//  - gövdeye giydirilmiş parça (kemer, kuşak, uzun kaftan, pul zırh, omuzluk, kürk yaka): şablonun kemikleriyle yeniden bağlanır
+function kiyafetEkle(hedef, kaynak) {
+  const kemikler = {};
+  let govde = null;
+  hedef.traverse(o => { if (o.isBone) kemikler[o.name] = o; if (o.isSkinnedMesh && !govde) govde = o.parent; });
+  const tasinacak = [];
+  kaynak.traverse(o => { if (/^(C_|hizala_C_)/.test(o.name) && (o.parent?.isBone || !/^(C_|hizala_)/.test(o.parent?.name || ''))) tasinacak.push(o); });
+  for (const o of tasinacak) {
+    // çok malzemeli parçanın alt örgüleri C_Belt_1 gibi adlanır: kostüm kodu bunları ayrı parça sanıp gizlemesin
+    o.traverse(c => { if (c !== o && c.isMesh && /^C_/.test(c.name)) c.name = 'p_' + c.name; });
+    if (o.parent?.isBone) { const k = kemikler[o.parent.name]; if (k) k.add(o); continue; }
+    o.traverse(s => {
+      if (!s.isSkinnedMesh) return;
+      const kem = s.skeleton.bones.map(b => kemikler[b.name]);
+      if (kem.some(b => !b)) return;
+      s.bind(new THREE.Skeleton(kem, s.skeleton.boneInverses.map(m => m.clone())), s.bindMatrix.clone());
+    });
+    (govde || hedef).add(o);
+  }
+}
+
 // Gölge boşlukları (tools/karakter_ao.py): dosya yoksa ya da inmezse ayrıntısız devam
 const AO_URL = Object.values(import.meta.glob('./assets/ao.json', { eager: true, query: '?url', import: 'default' }))[0];
 
@@ -114,19 +139,21 @@ export async function loadAssets(onProgress) {
   const loader = new GLTFLoader();
   loader.register(p => new BitmapTextures(p));
   loader.pluginCallbacks.unshift(loader.pluginCallbacks.pop()); // hazır WebP eklentisinden önce çalışsın
-  const urls = { oguz: oguzUrl, kormos: kormosUrl, tepegoz: tepegozUrl, horse: horseUrl, wolf: wolfUrl, albasti: albastiUrl, yelbegen: yelbegenUrl, erlik: erlikUrl, tulpar: tulparUrl, karakus: karakusUrl, cinli: cinliUrl, general: generalUrl, esir: esirUrl, stag: stagUrl, itbarak: itbarakUrl, boyali: boyaliUrl, sulu: suluUrl, almas: almasUrl, sulmus: sulmusUrl, kerey: kereyUrl, anims: animsUrl, doga: dogaUrl, kale: kaleUrl, dunya: dunyaUrl };
+  const urls = { oguz: oguzUrl, kormos: kormosUrl, tepegoz: tepegozUrl, horse: horseUrl, wolf: wolfUrl, albasti: albastiUrl, yelbegen: yelbegenUrl, erlik: erlikUrl, tulpar: tulparUrl, karakus: karakusUrl, cinli: cinliUrl, general: generalUrl, esir: esirUrl, stag: stagUrl, itbarak: itbarakUrl, boyali: boyaliUrl, sulu: suluUrl, almas: almasUrl, sulmus: sulmusUrl, kerey: kereyUrl, anims: animsUrl, doga: dogaUrl, kale: kaleUrl, dunya: dunyaUrl, kiyafet: kiyafetUrl };
   const out = {};
   let done = 0;
   await Promise.all(Object.entries(urls).map(async ([k, u]) => {
     out[k] = await loadModel(loader, u);
     onProgress(++done / Object.keys(urls).length);
   }));
+  kiyafetEkle(out.oguz.scene, out.kiyafet.scene);
   const templates = {};
-  for (const k of Object.keys(urls).filter(k => k !== 'anims')) {
+  for (const k of Object.keys(urls).filter(k => k !== 'anims' && k !== 'kiyafet')) {
     if (k === 'doga' || k === 'kale' || k === 'dunya') { toon(out[k].scene, k, true); continue; }
     toon(out[k].scene, k);
     templates[k] = out[k].scene;
   }
+  kadinBicimi(templates.oguz); // kadın yiğitler için geometri kopyası (gölge boşluğu özniteliğiyle birlikte)
   const clipMap = gltf => Object.fromEntries(gltf.animations.map(c => [c.name, c]));
   // çevre modelleri: ada göre (doğa: ağaç, çalı, kaya · kale: kule, sur)
   const env = {};

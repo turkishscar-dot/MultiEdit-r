@@ -18,17 +18,19 @@ Amaç: yiğitler (kostümler) güzel görünsün, oyuncu almak istesin. İki tar
 - [x] **Bayram yiğitleri:** Ergenekon Demircisi (Nevruz, 14–28 Mart) ve Boz Atlı Hızır (Hıdırellez, 1–10 Mayıs). Yalnız bu günlerde çağrılır, alınan kalıcıdır.
 - [x] **Blender parçaları kodda bağlı:** 15 parçanın hangi yiğitte görüneceği ve rengi `oyun/src/yigit.js` → `DETAY` içinde yazılı. Model gelince kendiliğinden görünür.
 - [x] Telefonda Yiğitler ekranındaki üst üste binen düğmeler düzeltildi.
+- [x] **Karakter ayrıntısı:** kumaş, deri, kürk, metal ve altın dokuları, parlama, gölge boşlukları, yapay zekâ boyalı ayrıntı (`oyun/src/ayrinti.js`).
+- [x] **Kadın yiğitler:** Tomris ve Banu Çiçek için ince gövde, saç tepesi, örgüler.
 
 ### Blender (PC'de, sırayla)
 - [ ] 1. Kaftan ve şalvara düzgün UV (desenler için).
-- [ ] 2. `C_Belt` kemer takımı (17 yiğit).
-- [ ] 3. `C_Sash` kuşak (12).
-- [ ] 4. `C_Cape_Sway` pelerin (11).
-- [ ] 5. `C_KaftanLong` uzun kaftan (11).
-- [ ] 6. `C_FurCollar`, `C_Mustache`, `C_BraidBack_Sway` (7, 7, 6).
-- [ ] 7. `C_Lamellar`, `C_BraidsSide`, `C_Pauldrons`, `C_BeardLong`, `C_BeardLongWhite` (5, 4, 4, 2, 2).
-- [ ] 8. Şaman takımı: `C_Fringe_Sway`, `C_ShamanMirror`, `C_Drum`.
-- [ ] 9. İkinci tur: baş ve el oranları, yüz, kadın yiğitler için yüz ve saç.
+- [x] 2. `C_Belt` kemer takımı (17 yiğit). *Bu repoda üretildi (`tools/build_kiyafet.py`).*
+- [x] 3. `C_Sash` kuşak (12).
+- [x] 4. `C_Cape_Sway` pelerin (11).
+- [x] 5. `C_KaftanLong` uzun kaftan (11).
+- [x] 6. `C_FurCollar`, `C_Mustache`, `C_BraidBack_Sway` (7, 7, 6).
+- [x] 7. `C_Lamellar`, `C_BraidsSide`, `C_Pauldrons`, `C_BeardLong`, `C_BeardLongWhite` (5, 4, 4, 2, 2).
+- [x] 8. Şaman takımı: `C_Fringe_Sway`, `C_ShamanMirror`, `C_Drum`.
+- [ ] 9. İkinci tur: baş ve el oranları, yüz. *(Kadın yiğitlerin gövdesi, saç tepesi ve örgüleri bu repoda yapıldı; yüz hâlâ Oğuz'unki.)*
 - [ ] 10. Her adımdan sonra `node tools/kostum-shots.mjs` ve `tools/regresyon.sh`.
 
 ### İleride

@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+import { KADIN, ERKEK } from './ayrinti.js';
 import { desen } from './desen.js';
 
 // Kostümler: Oğuz'un modelindeki başlık/gövde parçalarını açıp kapatır, kaftan-şalvar-çizme renklerini değiştirir.
@@ -92,6 +94,10 @@ export function applyCostume(actor, id) {
   for (const [n, o] of Object.entries(actor.parts)) if (PARTS.includes(n) || n.startsWith('C_')) o.visible = c.parts.includes(n);
   actor.root.traverse(o => {
     if (!o.isMesh) return;
+    if (o.isSkinnedMesh) { // kadın yiğitte kadın biçimli geometri (src/ayrinti.js)
+      const e = ERKEK.get(o.geometry) || o.geometry, k = KADIN.get(e), g = c.kadin && k ? k : e;
+      if (o.geometry !== g) o.geometry = g;
+    }
     if (o.name === 'Hair_Beard') o.visible = c.beard !== false;
     for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
       m.userData.base ??= m.color?.getHex(); // görünüşte olmayan renk özgün hâline döner
@@ -112,6 +118,7 @@ const baseMap = new WeakMap();
 // Sallanan parçalar (adında Sway geçen, Blender'da menteşe noktasına göre yerleştirilmiş pelerin, örgü, etek paneli):
 // koşu hızıyla geriye kalkar, zıplayınca aşağı-yukarı savrulur, yay gibi yerine döner.
 const swayState = new WeakMap();
+const _kq = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _aq = new THREE.Quaternion(), _X = new THREE.Vector3(1, 0, 0);
 export function sway(actor, dt, speed = 0, vy = 0) {
   for (const o of actor.sway || []) {
     if (!o.visible) continue;
@@ -121,7 +128,10 @@ export function sway(actor, dt, speed = 0, vy = 0) {
     const target = Math.min(0.9, speed * 0.035) + Math.max(-0.5, Math.min(0.5, -vy * 0.03)) + Math.sin(s.t * (6 + speed * 0.3)) * 0.06 * (0.3 + speed / 20);
     s.v += ((target - s.a) * 60 - s.v * 9) * dt; // yay + sönüm
     s.a += s.v * dt;
-    o.rotation.x = s.base + s.a;
+    if (o.parent?.name?.startsWith('hizala_')) { // tools/build_kiyafet.py menteşesi: gövde dönse de karakterin arkasına kalkar
+      actor.root.getWorldQuaternion(_kq); o.parent.getWorldQuaternion(_pq);
+      o.quaternion.copy(_pq.invert().multiply(_kq).multiply(_aq.setFromAxisAngle(_X, s.a)));
+    } else o.rotation.x = s.base + s.a;
   }
 }
 

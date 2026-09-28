@@ -10,7 +10,7 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 
 1. Oyun klasöründe `git status`. Git yoksa önce `git init` ve mevcut hâli commit et.
 2. **Çakışma kontrolü:** Bu repodaki ilk "baseline" commit'i (`Add working copy of the game source`), zip'teki hâldir. PC'deki `src/main.js`, `index.html`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js` o tarihten sonra değiştiyse, dosyaları üstüne yazma. Önce farkı çıkar (`git diff <baseline> -- oyun/src/main.js`) ve değişiklikleri birleştir.
-3. Değişmediyse şunları olduğu gibi kopyala (ayrıca `public/ses/` klasörünün tamamı, yeni `src/assets/karakus.glb`, yapay zekâ paketi `src/assets/dunya.glb`, `src/assets/doku/` klasörü ve karakter gölgeleri `src/assets/ao.json`):
+3. Değişmediyse şunları olduğu gibi kopyala (ayrıca `public/ses/` klasörünün tamamı, yeni `src/assets/karakus.glb`, yapay zekâ paketi `src/assets/dunya.glb`, `src/assets/doku/` klasörü karakter gölgeleri `src/assets/ao.json`, kostüm parçaları `src/assets/kiyafet.glb` ve `src/assets/doku/boya*`):
    - **Değişen:** `index.html`, `src/main.js`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js`, `src/assets.js`, `src/book.js`, `SESLENDIRME.md`
    - **Yeni kaynak:** `src/simge.js`, `src/akinci.js`, `ui.js`, `sound.js`, `bonus.js`, `tips.js`, `carsi.js`, `tore.js`, `harita.js`, `yigit.js`, `seferler.js`, `koleksiyon.js`, `ekranlar.js`, `diyalog.js`, `diyalog-metin.js`, `ayarlar.js`, `online.js`, `desen.js`
    - **Belgeler:** `SES-KAYNAKLARI.md`, `CEVRIMICI.md`, `UYGULAMA.md`
@@ -117,6 +117,14 @@ Modellere dokunmadan karakterlerin yüzeyi zenginleştirildi (`src/ayrinti.js`, 
 - **Parlama:** metal, altın, mücevher ve cilada çizgi film tarzı ışık lekesi.
 - **Gölge boşlukları (AO):** kol altı, yaka altı, kıvrımlar. `python3 tools/karakter_ao.py` (Blender Python modülü) 21 modelin hepsini ~30 sn'de hesaplar → `src/assets/ao.json` (409 KB). Anahtar köşe sayısı + ilk köşe konumu olduğundan model değişirse o parça kendiliğinden gölgesiz kalır. **`build_chars.py` ile bir karakter yeniden üretilirse bu komutu tekrar çalıştır.**
 - Önce/sonra: `node tools/karakter-yakin.mjs oguz model:tepegoz` → `test-out/yakin-*.png`. `window.__game.AYR` ile ayrıntı, parlama ve gölge kısılabilir.
+
+## Kostüm parçaları, kadın yiğitler, boyalı ayrıntı (28 Eylül)
+
+- **15 kostüm parçası + saç tepesi** (`kostum/BLENDER.md` tablosundakilerin hepsi): `python3 tools/build_kiyafet.py` Oğuz gövdesinin kesitlerini ölçüp Blender'da üretir → `src/assets/kiyafet.glb` (1,1 MB). `oguz.glb`'ye dokunulmaz; oyun yüklerken parçaları Oğuz şablonuna ekler (`src/assets.js` → `kiyafetEkle`). Kemer, kuşak, uzun kaftan, pul zırh, omuzluk, kürk yaka gövdenin kemik ağırlıklarını alır. Pelerin, arka örgü ve şaman saçağı menteşelidir; koşarken gövde dönse de karakterin arkasına kalkar (`costumes.js` → `sway`). Hangi yiğidin ne giydiği `yigit.js` → `DETAY`.
+- **Kadın yiğitler** (Tomris, Banu Çiçek: `DETAY[...].kadin`): kollar, bacaklar ve bel incelir, kalça biraz genişler, kaşlar incelir. Gövdenin kadın biçimli geometri kopyası yüklemede hesaplanır (`ayrinti.js` → `kadinBicimi`), kostüm giyilirken geometri değişir. İskelet ve animasyonlar aynıdır. Başı açık yiğitlerde `C_HairTop` (saç tepesi).
+- **Boyalı ayrıntı:** `node tools/boya-render.mjs` Oğuz gövdesini T duruşunda önden ve arkadan çeker, `python3 tools/boya.py` yapay zekâya (FLUX Kontext) ayrıntılı boyatır ve boyanın düz renge oranından gri harita çıkarır (`src/assets/doku/boya_*.jpg`). Gölgelendirici haritayı gövdeye bağlanma konumundan izdüşürür. Renk alınmadığı için kostüm renkleri bozulmaz.
+- **Model değişirse:** `build_chars.py` ile `oguz.glb` yeniden üretilirse sırayla `python3 tools/build_kiyafet.py`, `python3 tools/karakter_ao.py`, `node tools/boya-render.mjs` ve `python3 tools/boya.py` çalıştır.
+- Görüntüler: `node tools/kiyafet-shots.mjs [--yakin] [yiğit...]`, `node tools/karakter-yakin.mjs [--boya] [yiğit|model:ad...]`.
 
 ## Bilinçli kararlar
 

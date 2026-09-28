@@ -1,5 +1,7 @@
 # Kostüm Parçaları: Blender Talimatı (PC'deki Claude için)
 
+> **28 Eylül güncellemesi:** 2. bölümdeki 15 parçanın hepsi bu repoda, Blender Python modülüyle üretildi: `oyun/tools/build_kiyafet.py` → `oyun/src/assets/kiyafet.glb` (oyun yüklerken Oğuz'a ekler, `oguz.glb` değişmez). PC'de parça modellemek gerekmiyor. Kalan iş: 3. bölüm (oranlar ve yüz) ve istenirse parçaları elle güzelleştirmek. Elle yapılan parça aynı adla `oguz.glb`'ye eklenirse `kiyafet.glb`'deki aynı adlı parçayı listeden çıkar (`build_kiyafet.py`).
+
 > PC'deki Claude'a: "`MultiEdit-r` reposunun `claude/serene-wright-uo3dxg` dalındaki `kostum/BLENDER.md` dosyasını oku ve sırayla uygula."
 
 Kod tarafı hazır (bu repoda `oyun/src`). Blender'da yalnızca **parçaları modelleyip `oguz.glb`'ye eklemek** gerekiyor. Parça doğru adla gelince oyunda kendiliğinden görünür. Hangi yiğidin hangi parçayı giydiği `oyun/src/yigit.js` → `DETAY` içinde zaten yazılı.

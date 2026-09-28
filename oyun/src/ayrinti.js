@@ -22,15 +22,29 @@ function doku(ad) {
   return (dokular[ad] = t);
 }
 
+// ---- boyalı ayrıntı (tools/boya.py): T duruşunda önden/arkadan yapay zekâ boyamasının gri oran haritası ----
+// Oğuz'un iskelete giydirilmiş örgülerine bağlanma konumundan (iskelet öncesi) izdüşürülür: önden bakan yüz ön haritayı,
+// arkaya bakan arka haritayı alır, yanlara doğru etkisi söner. Yüz, saç ve kemiğe takılı başlıklar almaz.
+const BOYA = import.meta.glob('./assets/doku/boya*', { eager: true, query: '?url', import: 'default' });
+const BOYA_CER = import.meta.glob('./assets/doku/boya.json', { eager: true, import: 'default' })['./assets/doku/boya.json'];
+let boyaTx = null;
+function boyaDoku() {
+  if (boyaTx !== null) return boyaTx;
+  const on = BOYA['./assets/doku/boya_on.jpg'], arka = BOYA['./assets/doku/boya_arka.jpg'];
+  if (!on || !arka || !BOYA_CER || typeof document === 'undefined') return (boyaTx = false);
+  const y = t => { const x = yukle.load(t); x.colorSpace = THREE.NoColorSpace; x.anisotropy = 4; return x; };
+  return (boyaTx = { on: y(on), arka: y(arka) });
+}
+
 // malzeme adı (".001" ekleri atılır) -> [doku, ölçek (tekrar/birim), güç, parlama]
 // Karakterler ~2.5 birim boyunda: ölçek 6 ≈ kumaşta 15 cm'lik doku karesi.
 const TUR = [
-  [/^(M_Cloth|M_Kaftan|M_Trouser|M_Coat\d|M_Rag)$/, 'kumas', 13, 0.4, 0],
+  [/^(M_Cloth|M_Kaftan|M_Trouser|M_Coat\d|M_Rag|M_Cape|M_Sash)$/, 'kumas', 13, 0.4, 0],
   [/^(M_Leather|M_Boot|M_Hide)$/, 'deri', 5, 0.6, 0.15],
-  [/^(M_Fur|M_DarkFur|M_Pelt2?)$/, 'kurk', 4, 0.8, 0],
+  [/^(M_Fur|M_DarkFur|M_Pelt2?|M_Kurk)$/, 'kurk', 4, 0.8, 0],
   [/^M_Bork$/, 'kece', 5, 0.5, 0],
   [/^(M_Wood|LightWood|DarkWood)$/, 'ahsap', 3, 0.6, 0.1],
-  [/^(M_Iron|M_Steel|Steel|LightSteel)$/, 'metal', 5, 0.5, 0.5],
+  [/^(M_Iron|M_Steel|Steel|LightSteel)$/, 'metal', 5, 0.5, 0.3],
   [/^(M_Gold|M_GoldDark|M_GoldHorn|M_Copper)$/, 'altin', 4, 0.6, 0.6],
   [/^(M_Bone|M_Horn)$/, 'kemik', 4, 0.5, 0.15],
   [/^(M_Jewel|M_Lacquer)$/, null, 0, 0, 1],
@@ -66,14 +80,65 @@ function aoEkle(geo, model) {
   return true;
 }
 
-export const AYAR = { ao: { value: 0.75 }, detay: { value: 1 }, parlak: { value: 1 } }; // ayarlardan kısılabilir (düşük grafik)
+// ---- kadın biçimi: şablonun iskelete giydirilmiş örgülerine köşe başına kayma (bağlanma duruşunda) ----
+// Kollar ve bacaklar kemik eksenine doğru incelir, bel daralır, kalça biraz genişler, kaşlar incelir. Baş, eller, başlıklar
+// değişmez (başlıklar kaymasın). Her örgünün kadın biçimli geometri kopyası tutulur; kostüm giyilirken (costumes.js)
+// geometri değiştirilir. Böylece kontur çizgisi ve gölge de aynı biçimi görür.
+export const KADIN = new WeakMap(), ERKEK = new WeakMap();
+export function kadinBicimi(sablon) {
+  sablon.updateMatrixWorld(true);
+  const V = THREE.Vector3, bas = {};
+  sablon.traverse(o => { if (o.isBone) bas[o.name] = o; });
+  const kafa = /^(Head|neck_01|hand_|index_|middle_|ring_|pinky_|thumb_)/;
+  sablon.traverse(s => {
+    if (!s.isSkinnedMesh || KADIN.has(s.geometry)) return;
+    const g = s.geometry, pos = g.attributes.position, si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
+    if (!si || !sw) return;
+    const bones = s.skeleton.bones, bind = s.bindMatrix, binv = new THREE.Matrix4().copy(bind).invert();
+    const bw = bones.map((b, i) => new V().setFromMatrixPosition(new THREE.Matrix4().copy(s.skeleton.boneInverses[i]).invert()));
+    const ucu = i => { const b = bones[i]; const c = b.children.find(x => x.isBone); return c ? bw[bones.indexOf(c)] ?? null : null; };
+    const ofs = new Float32Array(pos.count * 3), p = new V(), d = new V(), a = new V(), t = new V();
+    const kas = s.name === 'Eyebrows' || /Eyebrow/.test(s.name);
+    let km = null;
+    if (kas) { km = new V(); for (let k = 0; k < pos.count; k++) km.add(p.fromBufferAttribute(pos, k).applyMatrix4(bind)); km.multiplyScalar(1 / pos.count); }
+    for (let k = 0; k < pos.count; k++) {
+      p.fromBufferAttribute(pos, k).applyMatrix4(bind); d.set(0, 0, 0);
+      if (kas) { d.set(0, (km.y - p.y) * 0.45, 0); }
+      else {
+        let top = 0;
+        for (let j = 0; j < 4; j++) {
+          const w = sw.getComponent(k, j); if (w <= 0) continue;
+          const bi = si.getComponent(k, j), ad = bones[bi]?.name || '';
+          if (kafa.test(ad)) continue;
+          let e = null;
+          if (/^(upperarm|lowerarm)_/.test(ad)) e = 0.2;            // kollar %20 incelir
+          else if (/^(thigh|calf)_/.test(ad)) e = 0.1;              // bacaklar %10
+          if (e != null) { const u = ucu(bi); if (!u) continue; a.copy(bw[bi]); t.copy(u).sub(a).normalize();
+            const proj = a.clone().add(t.clone().multiplyScalar(p.clone().sub(a).dot(t))); d.add(proj.sub(p).multiplyScalar(e * w)); top += w; continue; }
+          if (/^(spine_02|spine_03|clavicle_)/.test(ad)) { d.x += -p.x * 0.1 * w; d.z += -(p.z - bw[bi].z) * 0.05 * w; }  // göğüs ve sırt daralır
+          else if (/^spine_01$/.test(ad)) d.x += -p.x * 0.14 * w;   // bel
+          else if (/^pelvis$/.test(ad)) d.x += p.x * 0.04 * w;      // kalça
+        }
+      }
+      t.copy(d).applyMatrix3(new THREE.Matrix3().setFromMatrix4(binv));
+      ofs[k * 3] = t.x; ofs[k * 3 + 1] = t.y; ofs[k * 3 + 2] = t.z;
+    }
+    const gk = g.clone(), kp = gk.attributes.position;
+    for (let k = 0; k < kp.count; k++) kp.setXYZ(k, kp.getX(k) + ofs[k * 3], kp.getY(k) + ofs[k * 3 + 1], kp.getZ(k) + ofs[k * 3 + 2]);
+    KADIN.set(g, gk); ERKEK.set(gk, g);
+  });
+}
 
-// m: MeshToonMaterial, geo: parçanın geometrisi, model: 'oguz' gibi, rim: { color, power } (yalnız Oğuz)
-export function ayrintila(m, geo, model, rim) {
+export const AYAR = { ao: { value: 0.75 }, detay: { value: 1 }, parlak: { value: 1 }, boya: { value: 0.85 } }; // ayarlardan kısılabilir (düşük grafik)
+
+// m: MeshToonMaterial, geo: parçanın geometrisi, model: 'oguz' gibi, rim: { color, power } (yalnız Oğuz),
+// boyaM: bağlanma konumunu model uzayına götüren matris (yalnız Oğuz'un giydirilmiş örgülerinde; boyalı ayrıntı)
+export function ayrintila(m, geo, model, rim, boyaM) {
   const t = tur(m.name), tx = t?.d ? doku(t.d) : null;
   const ao = aoEkle(geo, model), parlak = t?.parlak || 0;
-  if (!tx && !ao && !parlak && !rim) return;
-  const anahtar = ['ayr', tx ? t.d : '', ao ? 'ao' : '', parlak ? 'p' : '', rim ? 'rim' : ''].join('|');
+  const bt = boyaM && !/^(MI_|M_Black|M_BeardWhite)/.test(m.name) ? boyaDoku() : null;
+  if (!tx && !ao && !parlak && !rim && !bt) return;
+  const anahtar = ['ayr', tx ? t.d : '', ao ? 'ao' : '', parlak ? 'p' : '', rim ? 'rim' : '', bt ? 'b' : ''].join('|');
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, { uAo: AYAR.ao, uDetGuc: AYAR.detay });
     let v = sh.vertexShader, f = sh.fragmentShader;
@@ -93,6 +158,20 @@ export function ayrintila(m, geo, model, rim) {
       vb += 'vAo = ao;\n';
       fd += 'varying float vAo;\nuniform float uAo;\n';
       fm += 'diffuseColor.rgb *= mix(1.0, vAo, uAo);\n';
+    }
+    if (bt) {
+      Object.assign(sh.uniforms, { uBoyaOn: { value: bt.on }, uBoyaArka: { value: bt.arka }, uBoyaM: { value: boyaM }, uBoyaGuc: AYAR.boya,
+        uBoyaC: { value: new THREE.Vector3(BOYA_CER.cx, BOYA_CER.cy, BOYA_CER.H) } });
+      vd += 'uniform mat4 uBoyaM;\nvarying vec3 vBoyaP;\nvarying vec3 vBoyaN;\n';
+      vb += 'vBoyaP = (uBoyaM * vec4(position, 1.0)).xyz; vBoyaN = mat3(uBoyaM) * normal;\n';
+      fd += 'uniform sampler2D uBoyaOn;\nuniform sampler2D uBoyaArka;\nuniform float uBoyaGuc;\nuniform vec3 uBoyaC;\nvarying vec3 vBoyaP;\nvarying vec3 vBoyaN;\n';
+      fm += `{ vec3 bn = normalize(vBoyaN);
+        float v = (vBoyaP.y - uBoyaC.y) / uBoyaC.z + 0.5;
+        float to = texture2D(uBoyaOn, vec2((vBoyaP.x - uBoyaC.x) / uBoyaC.z + 0.5, v)).r;
+        float ta = texture2D(uBoyaArka, vec2((-vBoyaP.x - uBoyaC.x) / uBoyaC.z + 0.5, v)).r;
+        float wo = smoothstep(0.15, 0.55, bn.z), wa = smoothstep(0.15, 0.55, -bn.z);
+        float oran = 1.0 + (0.6 + to * 0.8 - 1.0) * wo + (0.6 + ta * 0.8 - 1.0) * wa;
+        diffuseColor.rgb *= 1.0 + (oran - 1.0) * uBoyaGuc; }\n`;
     }
     if (parlak) { // çizgi film parlaması: güneş yönünde keskin, yumuşak kenarlı leke + kenarda hafif metal yansıması
       Object.assign(sh.uniforms, { uParlak: { value: parlak }, uParlakGuc: AYAR.parlak });

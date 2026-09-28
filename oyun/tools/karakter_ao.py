@@ -12,7 +12,7 @@ from mathutils.bvhtree import BVHTree
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ATLA = {'anims', 'doga', 'kale', 'dunya'}
 import re
-ACILIR = re.compile(r'^(Hair_Beard|C_.*|Bork|Kavuk|Sarik|Taj|Collar|AltinBork|GoldPlates|Antlers|EagleHat|Feathers|BearHat|ClawL|ClawR|YakutHat|Headband|Kalpak|HunCap|KulTiginTac|Tug)(\.\d+)?$')
+ACILIR = re.compile(r'^(Hair_Beard|C_.*|orgu_.*|Bork|Kavuk|Sarik|Taj|Collar|AltinBork|GoldPlates|Antlers|EagleHat|Feathers|BearHat|ClawL|ClawR|YakutHat|Headband|Kalpak|HunCap|KulTiginTac|Tug)(\.\d+)?$')
 ISIN = 24          # köşe başına ışın
 MESAFE = 0.1       # model boyunun oranı olarak ışın uzunluğu
 
@@ -30,6 +30,8 @@ def yon_kumesi(n):
 def model_ao(yol):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=yol)
+    if os.path.basename(yol) == 'oguz.glb' and os.path.exists(yol.replace('oguz.glb', 'kiyafet.glb')):  # kostüm parçaları gövdeyle birlikte
+        bpy.ops.import_scene.gltf(filepath=yol.replace('oguz.glb', 'kiyafet.glb'))
     for a in [o for o in bpy.context.scene.objects if o.type == 'ARMATURE']: a.data.pose_position = 'REST'
     bpy.context.view_layer.update()
     dg = bpy.context.evaluated_depsgraph_get()

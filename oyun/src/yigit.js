@@ -138,19 +138,19 @@ const DETAY = {
   kultigin: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_BraidBack_Sway', 'C_Mustache'] },
   tonyukuk: { parts: ['C_KaftanLong', 'C_BeardLongWhite', 'C_Sash'], colors: { M_Sash: 0x6a5a48 } },
   alperTunga: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_Cape_Sway', 'C_Belt'], colors: { M_Cape: 0x3a0a2a } },
-  tomris: { parts: ['C_KaftanLong', 'C_Belt', 'C_BraidsSide', 'C_Cape_Sway'], colors: { M_Cape: 0xd9b04a } },
+  tomris: { kadin: true, parts: ['C_KaftanLong', 'C_Belt', 'C_BraidsSide', 'C_BraidBack_Sway', 'C_Cape_Sway', 'C_HairTop'], colors: { M_Cape: 0xd9b04a } },
   attila: { parts: ['C_Lamellar', 'C_FurCollar', 'C_Cape_Sway', 'C_Mustache'], colors: { M_Cape: 0x2a1030, M_Kurk: 0x3a2a1a } },
   basat: { parts: ['C_FurCollar', 'C_Belt'], colors: { M_Kurk: 0x8a6a48 } },
   beyrek: { parts: ['C_KaftanLong', 'C_Belt', 'C_Mustache'] },
   dumrul: { parts: ['C_Pauldrons', 'C_Belt', 'C_Cape_Sway'], colors: { M_Cape: 0x2a3a2a } },
-  banucicek: { parts: ['C_KaftanLong', 'C_BraidsSide', 'C_Sash'], colors: { M_Sash: 0xe8c040 } },
+  banucicek: { kadin: true, parts: ['C_KaftanLong', 'C_BraidsSide', 'C_BraidBack_Sway', 'C_Sash', 'C_HairTop'], colors: { M_Sash: 0xe8c040 } },
   manas: { parts: ['C_KaftanLong', 'C_Belt', 'C_Cape_Sway', 'C_Mustache'], colors: { M_Cape: 0xf0ece0 } },
   sogotoh: { parts: ['C_FurCollar', 'C_Belt', 'C_BraidBack_Sway'], colors: { M_Kurk: 0xe8e0d0 } },
   altin: { parts: ['C_KaftanLong', 'C_Belt', 'C_Pauldrons'] },
   fatih: { parts: ['C_KaftanLong', 'C_FurCollar', 'C_Sash', 'C_BeardLong'], colors: { M_Kurk: 0x5a3a22, M_Sash: 0xe8d8a0 } },
   babur: { parts: ['C_KaftanLong', 'C_Sash', 'C_BeardLong'], colors: { M_Sash: 0xd9b04a } },
   ismail: { parts: ['C_KaftanLong', 'C_Sash', 'C_Mustache'], colors: { M_Sash: 0x1a1414 } },
-  akoglan: { parts: ['C_Sash'], colors: { M_Sash: 0xffffff } },
+  akoglan: { parts: ['C_Sash', 'C_HairTop'], colors: { M_Sash: 0xffffff } },
   geyiksaman: { parts: ['C_Fringe_Sway', 'C_ShamanMirror', 'C_Drum'] },
   ayisaman: { parts: ['C_Fringe_Sway', 'C_ShamanMirror', 'C_FurCollar'], colors: { M_Kurk: 0x2a1f18 } },
   kartalsaman: { parts: ['C_Fringe_Sway', 'C_ShamanMirror', 'C_Drum'] },
@@ -160,7 +160,7 @@ const DETAY = {
 export const CPARTS = [...new Set(Object.values(DETAY).flatMap(d => d.parts))];
 export const cardLook = c => {
   const b = c.costume ? COSTUMES.find(x => x.id === c.costume) : c.look, d = DETAY[c.id];
-  return d ? { ...b, parts: [...b.parts, ...d.parts], colors: { ...b.colors, ...d.colors } } : b;
+  return d ? { ...b, parts: [...b.parts, ...d.parts], colors: { ...b.colors, ...d.colors }, kadin: !!d.kadin } : b;
 };
 
 // ---------- kayıt ----------
