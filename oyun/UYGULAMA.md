@@ -133,3 +133,9 @@ Modellere dokunmadan karakterlerin yüzeyi zenginleştirildi (`src/ayrinti.js`, 
 - **Seferden gelen destan eşyası:** Uzun seferler bazen eksik bir **gümüş ok** getirir, **altın yay hiçbir zaman** gelmez; altın yay bölümde bulunmalı.
 - **Nazar Boncuğu + Kara-evli:** İkisi toplanır (2 kalkan).
 - **Kaçış süreleri:** Bot, 15 boss'un hepsini sürenin yarısından azında yendi (en uzun: Yelbegen 35 sn / 70 sn). Oyuncu için bol pay var.
+
+## Splash art kartları (Adım 2)
+
+- Yiğitler ekranındaki her kart karesinin ve seçili yiğit başlığının arka planı, o yiğide özel çizgi roman (comic) splash art'tır (`src/assets/splash/<id>.jpg`, 640x360, 29 dosya, ~2 MB). `src/ekranlar.js` dosya varsa `art` sınıfını ekler, yoksa eski düz kart kalır.
+- Üretim: `node tools/splash-render.mjs [id...]` yiğidin vitrindeki 3B görüntüsünü düz zeminde 16:9 alır (`ai-kaynak/splash/<id>-girdi.png`); `python3 tools/splash-uret.py <id...>` FLUX Kontext pro ile çizgi roman illüstrasyonuna çevirir (~0,04 $ / görsel, anahtar `REPLICATE_API_TOKEN` ortam değişkeninden); `python3 tools/splash-uret.py paket` küçültüp `src/assets/splash`'a koyar. Yeni yiğit eklenince yalnız o `id` için üç adım yeterli.
+- Şaman kostümlerinden (Geyik, Ayı, Kartal) `C_Fringe_Sway` (belden aşağı püskül) çıkarıldı; oyun içinde kötü duruyordu.
