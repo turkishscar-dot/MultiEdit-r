@@ -744,6 +744,15 @@ function drawTore() {
   } else if (toreTab === 'basarim') {
     const done = TORE.ACH.reduce((s, a) => s + TORE.achTier(a.id), 0);
     box.append(el('p', 'tnote', `${done} / ${TORE.ACH.length * 3} kademe · her kademe ödül verir`));
+    const bekleyen = TORE.achClaimable(), hepsi = el('button', 'big', bekleyen.length ? `HEPSİNİ AL (${bekleyen.length})` : 'ALINACAK ÖDÜL YOK');
+    hepsi.disabled = !bekleyen.length;
+    hepsi.onclick = () => {
+      const top = { kut: 0, gd: 0, xp: 0 };
+      for (const a of bekleyen) { const g = TORE.claimAch(a.id); top.kut += g.kut; top.gd += g.gd; top.xp += g.xp; }
+      toast('🏆', `${bekleyen.length} başarım ödülü alındı`, rewardTxt(top));
+      levelUps(addXP(top.xp), levelBar); drawTore();
+    };
+    hepsi.style.margin = '2px auto 10px'; box.append(hepsi);
     for (const a of TORE.ACH) {
       const t = TORE.achTier(a.id), row = el('div', 'trow' + (t === 3 ? ' full' : ''));
       row.append(el('b', 'tmed', ['▫', '🥉', '🥈', '🥇'][t]));

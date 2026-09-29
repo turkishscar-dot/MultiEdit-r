@@ -132,7 +132,7 @@ const DETAY = {
   bumin: { parts: ['C_Lamellar', 'C_Belt', 'C_BraidBack_Sway', 'C_Cape_Sway'], colors: { M_Cape: 0x1f4a38 } },
   bilge: { parts: ['C_KaftanLong', 'C_Belt', 'C_BraidBack_Sway', 'C_Mustache', 'C_Cape_Sway'], colors: { M_Cape: 0xb08a2a } },
   kultigin: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_BraidBack_Sway', 'C_Mustache'] },
-  tonyukuk: { parts: ['C_KaftanLong', 'C_BeardLongWhite', 'C_Sash'], colors: { M_Sash: 0x6a5a48 } },
+  tonyukuk: { parts: ['C_KaftanLong', 'C_BeardLongWhite', 'C_Sash'], colors: { M_Sash: 0x6a5a48, MI_Hair_1: 0xd8d4cc, 'MI_Hair_1.001': 0xefedea, MI_Hair_2: 0xefedea, MI_Hair_Braid: 0xefedea } },
   alperTunga: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_Cape_Sway', 'C_Belt'], colors: { M_Cape: 0x3a0a2a } },
   attila: { parts: ['C_Lamellar', 'C_FurCollar', 'C_Cape_Sway', 'C_Mustache'], colors: { M_Cape: 0x2a1030, M_Kurk: 0x3a2a1a } },
   basat: { parts: ['C_FurCollar', 'C_Belt'], colors: { M_Kurk: 0x8a6a48 } },

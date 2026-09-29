@@ -114,13 +114,24 @@ const baseMap = new WeakMap();
 // koşu hızıyla geriye kalkar, zıplayınca aşağı-yukarı savrulur, yay gibi yerine döner.
 const swayState = new WeakMap();
 const _kq = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _aq = new THREE.Quaternion(), _X = new THREE.Vector3(1, 0, 0);
+const _lp = new THREE.Vector3(), _ls = new THREE.Vector3();
+function govdeEgimi(actor) { // gövde öne eğilince omuzdan sarkan pelerin kalçaya girmesin: eğim kadar geriye kalkar
+  const b = actor._egim ??= { p: actor.root.getObjectByName('pelvis'), s: actor.root.getObjectByName('spine_03'), a: 0 };
+  if (!b.p || !b.s) return 0;
+  actor.root.updateMatrixWorld();
+  actor.root.worldToLocal(b.p.getWorldPosition(_lp)); actor.root.worldToLocal(b.s.getWorldPosition(_ls));
+  const a = Math.atan2(_ls.z - _lp.z, Math.max(0.05, _ls.y - _lp.y));
+  return b.a += (Math.max(0, Math.min(0.9, a)) - b.a) * 0.5;
+}
 export function sway(actor, dt, speed = 0, vy = 0) {
+  let egim = null;
   for (const o of actor.sway || []) {
     if (!o.visible) continue;
     let s = swayState.get(o);
     if (!s) swayState.set(o, (s = { base: o.rotation.x, a: 0, v: 0, t: Math.random() * 9 }));
     s.t += dt;
-    const target = Math.min(0.9, speed * 0.035) + Math.max(-0.5, Math.min(0.5, -vy * 0.03)) + Math.sin(s.t * (6 + speed * 0.3)) * 0.06 * (0.3 + speed / 20);
+    const pel = o.name.includes('Cape') ? 0.1 + 0.95 * (egim ??= govdeEgimi(actor)) : 0;
+    const target = pel + Math.min(0.9, speed * 0.035) + Math.max(-0.5, Math.min(0.5, -vy * 0.03)) + Math.sin(s.t * (6 + speed * 0.3)) * 0.06 * (0.3 + speed / 20);
     s.v += ((target - s.a) * 60 - s.v * 9) * dt; // yay + sönüm
     s.a += s.v * dt;
     if (o.parent?.name?.startsWith('hizala_')) { // tools/build_kiyafet.py menteşesi: gövde dönse de karakterin arkasına kalkar

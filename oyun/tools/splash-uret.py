@@ -15,11 +15,22 @@ ISTEM = ('Redraw this 3D game character as a hand-drawn comic-book illustration,
          'cinematic composition, epic painted comic background of a Central Asian steppe with dramatic sky, speed lines and energy swirls. '
          'No text, no letters, no logo, no watermark.')
 
+PELERIN = (' The cape is drawn as a separate piece of cloth that flows and billows out behind the character, clearly behind the body and '
+           'in front of the background, never merging into, blending with or passing through the body, arms or legs.')
+KURK = (' The fur collar is a fluffy, soft natural fur mantle with tufts draped over the shoulders, NOT tubes, pipes, ropes or rings.')
+OZEL = {'tonyukuk': ' His hair and beard are both pure white silver, long white beard and white hair, no black hair at all.'}
+PELERINLI = ['oguz', 'mete', 'bumin', 'bilge', 'alperTunga', 'attila', 'dumrul', 'manas', 'ergenekon', 'hizir']
+KURKLU = ['sogotoh', 'attila', 'ergenekon', 'fatih', 'ayisaman']
+
+
+def istem(id):
+    return ISTEM + (PELERIN if id in PELERINLI else '') + (KURK if id in KURKLU else '') + OZEL.get(id, '')
+
 
 def uret(id):
     yol = os.path.join(DIR, f'{id}-girdi.png')
     url = R.yukle(yol)
-    p = R.calistir('black-forest-labs/flux-kontext-pro', {'prompt': ISTEM, 'input_image': url, 'aspect_ratio': 'match_input_image', 'output_format': 'png', 'seed': 7})
+    p = R.calistir('black-forest-labs/flux-kontext-pro', {'prompt': istem(id), 'input_image': url, 'aspect_ratio': 'match_input_image', 'output_format': 'png', 'seed': 7})
     out = p['output'] if isinstance(p['output'], str) else p['output'][0]
     R.indir(out, os.path.join(DIR, f'{id}-ai.png')); print('splash', id)
 
@@ -40,6 +51,7 @@ if __name__ == '__main__':
     if a == ['paket']: paketle()
     else:
         if not R.TOKEN: sys.exit('REPLICATE_API_TOKEN yok')
-        for id in a:
-            if os.path.exists(os.path.join(DIR, f'{id}-ai.png')) and '--yeniden' not in a: print('var', id); continue
+        yeniden = '--yeniden' in a
+        for id in [x for x in a if not x.startswith('--')]:
+            if os.path.exists(os.path.join(DIR, f'{id}-ai.png')) and not yeniden: print('var', id); continue
             uret(id)

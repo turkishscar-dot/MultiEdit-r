@@ -13,22 +13,23 @@ const ac = async () => {
   await p.evaluate(() => { localStorage.setItem('oguz-test', '1'); window.__game.toMenu(); });
 };
 await ac();
-const argv = process.argv.slice(2);
-const ids = argv.length ? argv : await p.evaluate(() => window.__game.Y.CARDS.map(c => c.id));
+const argv = process.argv.slice(2), donme = {};
+for (const a of argv) { const [i, r] = a.split(':'); if (r) donme[i] = +r; }  // id:dönüş (radyan), örn. attila:0.9 (pelerin arkada görünsün)
+const ids = argv.length ? argv.map(a => a.split(':')[0]) : await p.evaluate(() => window.__game.Y.CARDS.map(c => c.id));
 for (const id of ids) for (let deneme = 0; deneme < 3; deneme++) try {
   await p.evaluate(id => window.__game.EK.openYigit(id), id);
   await p.waitForTimeout(500);
   await p.click('#ypbtns > button');
   await p.waitForTimeout(1500);
-  await p.evaluate(() => {
+  await p.evaluate(rot => {
     for (const e of document.querySelectorAll('#yigit, .yv, .yvnav, .yvacts, #ypbtns')) e.style.visibility = 'hidden';
     const bk = window.__game.book, h = bk.h, C = bk.scene.background.constructor;
     bk.hold = 1e9; bk.pedestal(false); for (const k of ['halo', 'flashS', 'motes']) if (bk[k]) bk[k].visible = false;
     bk.scene.background = new C(0xd8d4c8);
-    bk.current.root.rotation.y = 0.4;
+    bk.current.root.rotation.y = rot;
     const cam = bk.camera; cam.clearViewOffset(); cam.fov = 30; cam.aspect = 16 / 9;
     cam.position.set(0.55 * h, 0.6 * h, 2.4 * h); cam.lookAt(0, 0.47 * h, 0); cam.updateProjectionMatrix();
-  });
+  }, donme[id] ?? 0.4);
   await p.waitForTimeout(600);
   await p.screenshot({ path: `${DIR}/${id}-girdi.png` });
   await p.evaluate(() => { for (const e of document.querySelectorAll('#yigit, .yv, .yvnav, .yvacts, #ypbtns')) e.style.visibility = ''; window.__game.toMenu(); });
