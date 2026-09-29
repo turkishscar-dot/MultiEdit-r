@@ -120,6 +120,8 @@ export const RANK_COLOR = { 3: 0xb09a80, 4: 0x3aba5a, 5: 0x3a7ae0, 6: 0xa04ae0, 
 const byId = id => CARDS.find(c => c.id === id);
 // Blender'da yapılacak kostüm parçaları (kostum/TASARIM.md). Model gelmeden de burada durur: olmayan parça yok sayılır.
 // Yeni malzemeler (M_Cape pelerin, M_Sash kuşak, M_Kurk kürk yaka) kostüme göre boyanır.
+// Beyaz sakallı yiğitlerde saç, kaş ve kısa sakal da sakalla aynı beyaz olur (M_BeardWhite = 0xefedea)
+const BEYAZ_SAC = { MI_Hair_1: 0xe4e1da, 'MI_Hair_1.001': 0xefedea, MI_Hair_2: 0xefedea, MI_Hair_Braid: 0xefedea };
 const DETAY = {
   oguz: { parts: ['C_Cape_Sway', 'C_Belt', 'C_BraidBack_Sway'], colors: { M_Cape: 0x1a2f66 } },
   gunhan: { parts: ['C_Sash', 'C_Belt'], colors: { M_Sash: 0xffc040 } },
@@ -132,7 +134,7 @@ const DETAY = {
   bumin: { parts: ['C_Lamellar', 'C_Belt', 'C_BraidBack_Sway', 'C_Cape_Sway'], colors: { M_Cape: 0x1f4a38 } },
   bilge: { parts: ['C_KaftanLong', 'C_Belt', 'C_BraidBack_Sway', 'C_Mustache', 'C_Cape_Sway'], colors: { M_Cape: 0xb08a2a } },
   kultigin: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_BraidBack_Sway', 'C_Mustache'] },
-  tonyukuk: { parts: ['C_KaftanLong', 'C_BeardLongWhite', 'C_Sash'], colors: { M_Sash: 0x6a5a48, MI_Hair_1: 0xd8d4cc, 'MI_Hair_1.001': 0xefedea, MI_Hair_2: 0xefedea, MI_Hair_Braid: 0xefedea } },
+  tonyukuk: { parts: ['C_KaftanLong', 'C_BeardLongWhite', 'C_Sash'], colors: { M_Sash: 0x6a5a48, ...BEYAZ_SAC } },
   alperTunga: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_Cape_Sway', 'C_Belt'], colors: { M_Cape: 0x3a0a2a } },
   attila: { parts: ['C_Lamellar', 'C_FurCollar', 'C_Cape_Sway', 'C_Mustache'], colors: { M_Cape: 0x2a1030, M_Kurk: 0x3a2a1a } },
   basat: { parts: ['C_FurCollar', 'C_Belt'], colors: { M_Kurk: 0x8a6a48 } },
@@ -149,7 +151,7 @@ const DETAY = {
   ayisaman: { parts: ['C_ShamanMirror', 'C_FurCollar'], colors: { M_Kurk: 0x2a1f18 } },
   kartalsaman: { parts: ['C_ShamanMirror', 'C_Drum'] },
   ergenekon: { parts: ['C_FurCollar', 'C_Belt', 'C_Cape_Sway'], colors: { M_Cape: 0x8a1a1a, M_Kurk: 0x3a2a1a } },
-  hizir: { parts: ['C_KaftanLong', 'C_Sash', 'C_BeardLongWhite', 'C_Cape_Sway'], colors: { M_Cape: 0x7a7a7a, M_Sash: 0x2a6a3a } },
+  hizir: { parts: ['C_KaftanLong', 'C_Sash', 'C_BeardLongWhite', 'C_Cape_Sway'], colors: { M_Cape: 0x7a7a7a, M_Sash: 0x2a6a3a, ...BEYAZ_SAC } },
 };
 export const CPARTS = [...new Set(Object.values(DETAY).flatMap(d => d.parts))];
 export const cardLook = c => {

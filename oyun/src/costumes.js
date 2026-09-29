@@ -99,6 +99,11 @@ export function applyCostume(actor, id) {
       const col = c.colors[m.name];
       if (col != null) m.color.setHex(col); // malzemeler kahraman ve önizleme arasında ortak
       else if (m.userData.base != null && m.color) m.color.setHex(m.userData.base);
+      if (m.name.startsWith('MI_Hair')) { // koyu saç dokusu açık rengi karartır: renk verilen saçta doku kalkar
+        if (!baseMap.has(m)) baseMap.set(m, m.map);
+        const t = col != null ? null : baseMap.get(m);
+        if (m.map !== t) { m.map = t; m.needsUpdate = true; }
+      }
       if (DESENLI.includes(m.name)) { // desen: yalnız UV'si olan kaftan ve şalvarda
         if (!baseMap.has(m)) baseMap.set(m, m.map); // Blender'dan kendi dokusu geldiyse o varsayılan kalır
         const t = c.desen?.[m.name] ? desen(c.desen[m.name]) : baseMap.get(m);

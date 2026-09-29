@@ -401,7 +401,8 @@ def sakal(ad, mat_ad):
     for k in range(9):
         x = (k - 4) * 0.014; boy = 0.2 - abs(k - 4) * 0.018
         y0 = yuz_on(1.625, x) - 0.004
-        tut.append(boru('sk', [(x, y0, 1.63), (x * 1.1, y0 - 0.025, 1.59), (x * 0.8 + 0.004 * math.sin(k), y0 - 0.03, 1.59 - boy * 0.6), (x * 0.4, y0 - 0.02, 1.59 - boy)], 0.02, mat_ad))
+        ZK = 0.03  # sakal köküne çeneden başlar: eskiden ağız hizasındaydı, dudakları örtüyordu
+        tut.append(boru('sk', [(x, y0, 1.63 - ZK), (x * 1.1, y0 - 0.025, 1.59 - ZK), (x * 0.8 + 0.004 * math.sin(k), y0 - 0.03, 1.59 - ZK - boy * 0.6), (x * 0.4, y0 - 0.02, 1.59 - ZK - boy)], 0.02, mat_ad))
     o = birlestir(ad, tut); kemige_bagla(o, 'Head'); return o
 PARCALAR.append(sakal('C_BeardLong', 'M_Black'))
 PARCALAR.append(sakal('C_BeardLongWhite', 'M_BeardWhite'))

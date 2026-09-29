@@ -18,9 +18,15 @@ ISTEM = ('Redraw this 3D game character as a hand-drawn comic-book illustration,
 PELERIN = (' The cape is drawn as a separate piece of cloth that flows and billows out behind the character, clearly behind the body and '
            'in front of the background, never merging into, blending with or passing through the body, arms or legs.')
 KURK = (' The fur collar is a fluffy, soft natural fur mantle with tufts draped over the shoulders, NOT tubes, pipes, ropes or rings.')
-OZEL = {'tonyukuk': ' His hair and beard are both pure white silver, long white beard and white hair, no black hair at all.'}
+BEYAZ = ' His hair and beard are both pure white silver, a long white beard flowing from his chin and white hair, no black hair at all.'
+OZEL = {
+    'tonyukuk': BEYAZ, 'hizir': BEYAZ,
+    'daghan': (' He wears a bear-pelt headdress like a helmet: the bear head with small round ears sits high on top of his head, above his eyebrows. IMPORTANT: his own face is a normal '
+               'HUMAN face, fully visible below the cap, with human eyes, human nose, human mouth and a short dark beard. The bear cap must NOT cover '
+               'his face, there is NO bear face, NO bear snout, NO animal muzzle anywhere on his face.'),
+}
 PELERINLI = ['oguz', 'mete', 'bumin', 'bilge', 'alperTunga', 'attila', 'dumrul', 'manas', 'ergenekon', 'hizir']
-KURKLU = ['sogotoh', 'attila', 'ergenekon', 'fatih', 'ayisaman']
+KURKLU = ['sogotoh', 'attila', 'ergenekon', 'fatih', 'ayisaman', 'basat', 'daghan']
 
 
 def istem(id):
