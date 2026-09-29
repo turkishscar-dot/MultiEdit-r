@@ -21,9 +21,9 @@ KURK = (' The fur collar is a fluffy, soft natural fur mantle with tufts draped 
 BEYAZ = ' His hair and beard are both pure white silver, a long white beard flowing from his chin and white hair, no black hair at all.'
 OZEL = {
     'tonyukuk': BEYAZ, 'hizir': BEYAZ,
-    'daghan': (' He wears a bear-pelt headdress like a helmet: the bear head with small round ears sits high on top of his head, above his eyebrows. IMPORTANT: his own face is a normal '
-               'HUMAN face, fully visible below the cap, with human eyes, human nose, human mouth and a short dark beard. The bear cap must NOT cover '
-               'his face, there is NO bear face, NO bear snout, NO animal muzzle anywhere on his face.'),
+    'daghan': (' He wears a plain round dark brown fur cap with two small round ears on top, like a fur hat. The cap ends at his forehead hairline. '
+               'The bear has NO eyes, NO snout, NO nose, NO teeth and NO mask: the cap is just fur. His face from the forehead down is a normal HUMAN '
+               'face: bare human skin, human eyebrows, human eyes, human nose, human mouth and a short dark beard. Nothing covers his face.'),
 }
 PELERINLI = ['oguz', 'mete', 'bumin', 'bilge', 'alperTunga', 'attila', 'dumrul', 'manas', 'ergenekon', 'hizir']
 KURKLU = ['sogotoh', 'attila', 'ergenekon', 'fatih', 'ayisaman', 'basat', 'daghan']
@@ -36,9 +36,9 @@ def istem(id):
 def uret(id):
     yol = os.path.join(DIR, f'{id}-girdi.png')
     url = R.yukle(yol)
-    p = R.calistir('black-forest-labs/flux-kontext-pro', {'prompt': istem(id), 'input_image': url, 'aspect_ratio': 'match_input_image', 'output_format': 'png', 'seed': 7})
+    p = R.calistir('black-forest-labs/flux-kontext-pro', {'prompt': istem(id), 'input_image': url, 'aspect_ratio': 'match_input_image', 'output_format': 'png', 'seed': int(os.environ.get('SEED', 7))})
     out = p['output'] if isinstance(p['output'], str) else p['output'][0]
-    R.indir(out, os.path.join(DIR, f'{id}-ai.png')); print('splash', id)
+    R.indir(out, os.path.join(DIR, f'{id}-ai{os.environ.get("SON", "")}.png')); print('splash', id)
 
 
 def paketle():
