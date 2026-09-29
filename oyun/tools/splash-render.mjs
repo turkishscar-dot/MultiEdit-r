@@ -7,12 +7,15 @@ const W = 1280, H = 720;
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await b.newPage({ viewport: { width: W, height: H } });
 const errs = []; p.on('pageerror', e => errs.push(e.message));
-await p.goto('http://localhost:5173/');
-await p.waitForFunction(() => window.__game?.state === 'gate', null, { timeout: 180000 });
-await p.evaluate(() => { localStorage.setItem('oguz-test', '1'); window.__game.toMenu(); });
+const ac = async () => {
+  await p.goto('http://localhost:5173/');
+  await p.waitForFunction(() => window.__game?.state === 'gate', null, { timeout: 180000 });
+  await p.evaluate(() => { localStorage.setItem('oguz-test', '1'); window.__game.toMenu(); });
+};
+await ac();
 const argv = process.argv.slice(2);
 const ids = argv.length ? argv : await p.evaluate(() => window.__game.Y.CARDS.map(c => c.id));
-for (const id of ids) {
+for (const id of ids) for (let deneme = 0; deneme < 3; deneme++) try {
   await p.evaluate(id => window.__game.EK.openYigit(id), id);
   await p.waitForTimeout(500);
   await p.click('#ypbtns > button');
@@ -29,6 +32,7 @@ for (const id of ids) {
   await p.waitForTimeout(600);
   await p.screenshot({ path: `${DIR}/${id}-girdi.png` });
   await p.evaluate(() => { for (const e of document.querySelectorAll('#yigit, .yv, .yvnav, .yvacts, #ypbtns')) e.style.visibility = ''; window.__game.toMenu(); });
-}
+  break;
+} catch (e) { console.log('yeniden:', id, e.message.split('\n')[0]); await ac(); }
 console.log(ids.length, 'görüntü; hata:', errs.length ? errs.slice(0, 3) : 'yok');
 await b.close();
