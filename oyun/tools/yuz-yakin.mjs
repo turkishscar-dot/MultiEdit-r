@@ -8,7 +8,7 @@ await p.waitForFunction(() => window.__game?.state === 'gate', null, { timeout: 
 await p.evaluate(() => { localStorage.setItem('oguz-test', '1'); window.__game.toMenu(); });
 for (const id of ids) {
   await p.evaluate(id => window.__game.EK.openYigit(id), id);
-  await p.waitForTimeout(1500);
+  await p.waitForTimeout(2800);
   await p.evaluate(() => {
     for (const e of document.querySelectorAll('#yigit, .yv, .yvnav, .yvacts, #ypbtns')) e.style.visibility = 'hidden';
     const bk = window.__game.book, C = bk.scene.background.constructor; bk.hold = 1e9; bk.pedestal(false); bk.scene.background = new C(0xd8d4c8);

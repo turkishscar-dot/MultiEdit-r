@@ -332,9 +332,9 @@ etek = birlestir('C_KaftanLong', [etek] + serit)
 giydir(etek, sadece=['pelvis', 'thigh_l', 'thigh_r', 'calf_l', 'calf_r', 'spine_01']); PARCALAR.append(etek)
 
 # 5. C_FurCollar: omuzlara taşan kalın kürk yaka (gürültüyle kabarık)
-yaka = bant('C_FurCollar', 1.42, 1.53, 0.03, 'M_Kurk', satir=4, kalin=0.05, xlim=0.26)
-tex = bpy.data.textures.new('kurk', 'CLOUDS'); tex.noise_scale = 0.03
-d = yaka.modifiers.new('disp', 'DISPLACE'); d.texture = tex; d.strength = 0.03; d.mid_level = 0.3
+yaka = bant('C_FurCollar', 1.38, 1.54, 0.025, 'M_Kurk', satir=5, kalin=0.026, xlim=0.26)  # yayvan ve ince: halat/boru gibi durmasın
+tex = bpy.data.textures.new('kurk', 'CLOUDS'); tex.noise_scale = 0.018
+d = yaka.modifiers.new('disp', 'DISPLACE'); d.texture = tex; d.strength = 0.05; d.mid_level = 0.3
 s = yaka.modifiers.new('sub', 'SUBSURF'); s.levels = 1; uygula(yaka); giydir(yaka); PARCALAR.append(yaka)
 
 # 6. C_Mustache: uçları çeneye sarkan bıyık
@@ -401,7 +401,10 @@ def sakal(ad, mat_ad):
     for k in range(9):
         x = (k - 4) * 0.014; boy = 0.2 - abs(k - 4) * 0.018
         y0 = yuz_on(1.625, x) - 0.004
-        ZK = 0.03  # sakal köküne çeneden başlar: eskiden ağız hizasındaydı, dudakları örtüyordu
+        ZK = 0.045  # sakal çeneden başlar (eskiden ağız hizasındaydı, dudakları örtüyordu)
+        y0 = yuz_on(1.63 - ZK, x)
+        if y0 == -0.11: y0 = yuz_on(1.625, x) + 0.012  # çene geride kalır
+        y0 -= 0.004
         tut.append(boru('sk', [(x, y0, 1.63 - ZK), (x * 1.1, y0 - 0.025, 1.59 - ZK), (x * 0.8 + 0.004 * math.sin(k), y0 - 0.03, 1.59 - ZK - boy * 0.6), (x * 0.4, y0 - 0.02, 1.59 - ZK - boy)], 0.02, mat_ad))
     o = birlestir(ad, tut); kemige_bagla(o, 'Head'); return o
 PARCALAR.append(sakal('C_BeardLong', 'M_Black'))
