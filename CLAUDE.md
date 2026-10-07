@@ -5,6 +5,7 @@ Claude oturumları birbirinin sohbetini görmez; bu repo tek ortak nokta. Öneml
 ## Kullanıcı
 - **Hacı Kadir Özmen**, İzmir. Türkçe konuşur; kısa, sade Türkçe cevap ister. Küçük adımlarla ("Adım N") istek verir.
 - E-posta: `kadir@oguzkagangame.com` (Cloudflare Email Routing → kişisel Gmail).
+- LinkedIn: https://www.linkedin.com/in/hac%C4%B1-kadir-%C3%B6zmen-5285ba311/
 - YouTube: **Scar Edits** (https://www.youtube.com/@scarfan35), çok dilli (multilanguage) dublaj videoları.
 
 ## Projeler
