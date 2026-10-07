@@ -1,7 +1,7 @@
 // Menü ve ekranların ekran görüntüsü: node tools/shot-menu.mjs <ad> [mobile] [js]
 import { chromium } from 'playwright';
 const [name, dev, js] = process.argv.slice(2);
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const b = await chromium.launch({ executablePath: process.env.CHROME, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const vp = dev === 'mobile' ? { width: 390, height: 844 } : { width: 960, height: 540 };
 const p = await b.newPage({ viewport: vp, deviceScaleFactor: 1 });
 const errs = []; p.on('pageerror', e => errs.push(e.message));

@@ -1,4 +1,5 @@
 // Test botu: oyunu başsız Chromium'da açar, window.__game ile kare kare ilerletir ve oynar.
+import { fileURLToPath } from 'node:url';
 // Kullanım: node tools/test-bot.mjs [--level 1] [--endless] [--seconds 240] [--god] [--shot ad]
 // (tools/bot.js'in yerine geçmez; bu oturumda yazılan bağımsız bir test aracıdır.)
 import { chromium } from 'playwright';
@@ -9,7 +10,7 @@ const URL = opt('url', 'http://localhost:5173/');
 const LEVEL = +opt('level', 1), SECONDS = +opt('seconds', 240), GOD = !!opt('god', false), ENDLESS = !!opt('endless', false);
 const SHOT = opt('shot', null), OUT = opt('out', 'test-out'), NODE = opt('node', null);
 
-const browser = await chromium.launch({ executablePath: process.env.CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+const browser = await chromium.launch({ executablePath: process.env.CHROME, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 const errors = [];
 page.on('pageerror', e => errors.push('pageerror: ' + e.message + '\n' + (e.stack || '').split('\n').slice(0, 4).join('\n')));
@@ -17,7 +18,7 @@ page.on('console', m => { if (m.type() === 'error' && !/vo\/|ses\/|404|Failed to
 await page.goto(URL);
 await page.waitForFunction(() => window.__game && window.__game.state === 'gate', null, { timeout: 120000 });
 await page.evaluate(() => { try { localStorage.setItem('oguz-test', '1'); } catch {} });
-await page.addScriptTag({ path: new globalThis.URL('./bot-brain.js', import.meta.url).pathname });
+await page.addScriptTag({ path: fileURLToPath(new globalThis.URL('./bot-brain.js', import.meta.url)) });
 if (opt('bow', false)) await page.evaluate(() => { window.__botHook = G => { if (G.weapon !== 'bow' && G.state === 'run') G.setWeapon('bow'); }; });
 await page.evaluate(([lv, endless, god, node]) => window.__bot.begin(lv, endless, god, node), [LEVEL, ENDLESS, GOD, NODE]);
 

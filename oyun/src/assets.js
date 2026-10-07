@@ -27,7 +27,12 @@ import animsUrl from './assets/anims.glb?url';
 import dogaUrl from './assets/doga.glb?url';
 import kaleUrl from './assets/kale.glb?url';
 import dunyaUrl from './assets/dunya.glb?url';
+import phUrl from './assets/ph.glb?url';
 import kiyafetUrl from './assets/kiyafet.glb?url'; // kostüm parçaları (tools/build_kiyafet.py), Oğuz şablonuna eklenir // yapay zekâ ile üretilen engel ve dekor (tools/ai_isle.py paket)
+
+// Meshy gövdeleri (yiğitler: assets/yigit, boss ve düşmanlar: assets/govde)
+// Diğer yiğitlerin Meshy gövdeleri (tools/meshy_uydur.py, GOVDE_TEK=1): oyuncu iskeletine bağlı tek örgü; kart yiğidi seçilince Actor.setBody ile değişir
+const YIGIT_GOVDE = import.meta.glob('./assets/{yigit,govde}/*.glb', { eager: true, query: '?url', import: 'default' });
 
 export const GRAD = new THREE.DataTexture(new Uint8Array([70, 165, 255]), 3, 1, THREE.RedFormat);
 GRAD.minFilter = GRAD.magFilter = THREE.NearestFilter;
@@ -52,6 +57,12 @@ function toon(root, name, scenery = false) {
     o.receiveShadow = scenery;
     o.frustumCulled = scenery; // animasyonlu gövdenin sınır kutusu güncellenmiyor; sabit ağaçlar kırpılabilir
     const old = o.material;
+    if (o.name.startsWith('Govde_Meshy') || name.startsWith('yigit_')) { // Meshy gövdesi: boyalı dokusu korunur (çizgi film kademelemesi ayrıntıyı siler)
+      o.material = new THREE.MeshStandardMaterial({ name: old.name, map: old.map, color: old.map ? 0xffffff : old.color, roughness: 0.78, metalness: 0, side: THREE.DoubleSide });
+      if (o.material.map) { o.material.map.anisotropy = 8; o.material.map.colorSpace = THREE.SRGBColorSpace; }
+      o.castShadow = true;
+      return;
+    }
     if (old.name.startsWith('M_Glow')) { // kor gözler gibi ışık saçan parçalar
       o.material = new THREE.MeshBasicMaterial({ color: old.color });
       return;
@@ -63,9 +74,10 @@ function toon(root, name, scenery = false) {
     const color = old.color.clone();
     if (old.name.startsWith('MI_Superhero')) color.set(SKIN[name]);
     if (old.name.startsWith('MI_Hair')) color.set(HAIR[name]);
+    const ph = name === 'ph'; // Poly Haven çevre paketi: yaprak kesmesi (alphaTest) ve kabartma (normal) korunur
     o.material = new THREE.MeshToonMaterial({
-      name: old.name, color, map: old.map, gradientMap: GRAD,
-      transparent: old.transparent, alphaTest: old.alphaTest, side: old.side,
+      name: old.name, color, map: old.map, gradientMap: GRAD, normalMap: ph ? old.normalMap : null,
+      transparent: ph ? false : old.transparent, alphaTest: ph && old.map && old.transparent ? 0.5 : old.alphaTest, side: scenery ? THREE.DoubleSide : old.side, // çevre parçaları iç yüzeyden de görünür (boşluklu kule/kale görüntüsü olmasın)
     });
     if (!scenery) ayrintila(o.material, o.geometry, name, name === 'oguz' ? RIM : null, name === 'oguz' && o.isSkinnedMesh ? o.bindMatrix.clone() : null); // ayrıntı, parlama, gölge boşluğu, boyalı ayrıntı
   });
@@ -139,7 +151,8 @@ export async function loadAssets(onProgress) {
   const loader = new GLTFLoader();
   loader.register(p => new BitmapTextures(p));
   loader.pluginCallbacks.unshift(loader.pluginCallbacks.pop()); // hazır WebP eklentisinden önce çalışsın
-  const urls = { oguz: oguzUrl, kormos: kormosUrl, tepegoz: tepegozUrl, horse: horseUrl, wolf: wolfUrl, albasti: albastiUrl, yelbegen: yelbegenUrl, erlik: erlikUrl, tulpar: tulparUrl, karakus: karakusUrl, cinli: cinliUrl, general: generalUrl, esir: esirUrl, stag: stagUrl, itbarak: itbarakUrl, boyali: boyaliUrl, sulu: suluUrl, almas: almasUrl, sulmus: sulmusUrl, kerey: kereyUrl, anims: animsUrl, doga: dogaUrl, kale: kaleUrl, dunya: dunyaUrl, kiyafet: kiyafetUrl };
+  const urls = { oguz: oguzUrl, kormos: kormosUrl, tepegoz: tepegozUrl, horse: horseUrl, wolf: wolfUrl, albasti: albastiUrl, yelbegen: yelbegenUrl, erlik: erlikUrl, tulpar: tulparUrl, karakus: karakusUrl, cinli: cinliUrl, general: generalUrl, esir: esirUrl, stag: stagUrl, itbarak: itbarakUrl, boyali: boyaliUrl, sulu: suluUrl, almas: almasUrl, sulmus: sulmusUrl, kerey: kereyUrl, anims: animsUrl, doga: dogaUrl, kale: kaleUrl, dunya: dunyaUrl, ph: phUrl, kiyafet: kiyafetUrl };
+  for (const [yol, u] of Object.entries(YIGIT_GOVDE)) urls['yigit_' + yol.split('/').pop().replace('.glb', '')] = u;
   const out = {};
   let done = 0;
   await Promise.all(Object.entries(urls).map(async ([k, u]) => {
@@ -147,9 +160,13 @@ export async function loadAssets(onProgress) {
     onProgress(++done / Object.keys(urls).length);
   }));
   kiyafetEkle(out.oguz.scene, out.kiyafet.scene);
-  const templates = {};
-  for (const k of Object.keys(urls).filter(k => k !== 'anims' && k !== 'kiyafet')) {
-    if (k === 'doga' || k === 'kale' || k === 'dunya') { toon(out[k].scene, k, true); continue; }
+  const templates = {}, bodies = {};
+  for (const k of Object.keys(urls).filter(k => k.startsWith('yigit_'))) {
+    toon(out[k].scene, k);
+    out[k].scene.traverse(o => { if (o.isSkinnedMesh) (bodies[k.slice(6)] ??= []).push(o); }); // gövde + varsa eklenen şapka (ayrı malzeme)
+  }
+  for (const k of Object.keys(urls).filter(k => k !== 'anims' && k !== 'kiyafet' && !k.startsWith('yigit_'))) {
+    if (k === 'doga' || k === 'kale' || k === 'dunya' || k === 'ph') { toon(out[k].scene, k, true); continue; }
     toon(out[k].scene, k);
     templates[k] = out[k].scene;
   }
@@ -162,12 +179,13 @@ export async function loadAssets(onProgress) {
   const yeni = [...out.dunya.scene.children], aile = n => n.replace(/ai[a-z0-9]+$/, '');
   const aileler = new Set(yeni.filter(o => /_ai[a-z0-9]+$/.test(o.name)).map(o => aile(o.name)));
   for (const k of Object.keys(env)) if ([...aileler].some(a => k.startsWith(a))) delete env[k];
+  for (const o of [...out.ph.scene.children]) { o.position.set(0, 0, 0); env[o.name] = o; } // Poly Haven paketi (PH_<ad>)
   for (const o of yeni) {
     o.position.set(0, 0, 0);
     if (o.name.startsWith('Engel_')) o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
     env[o.name] = o;
   }
-  return { env, templates, clips: clipMap(out.anims), horseClips: clipMap(out.horse), wolfClips: clipMap(out.wolf), tulparClips: clipMap(out.tulpar), stagClips: clipMap(out.stag) };
+  return { env, templates, bodies, clips: clipMap(out.anims), horseClips: clipMap(out.horse), wolfClips: clipMap(out.wolf), tulparClips: clipMap(out.tulpar), stagClips: clipMap(out.stag) };
 }
 
 const upperCache = new Map();
@@ -188,6 +206,7 @@ export class Actor {
     this.parts = {};
     // C_ ile başlayan adlar Blender'da eklenen kostüm parçalarıdır (kostum/BLENDER.md); adında Sway geçenler koşarken sallanır
     this.root.traverse(o => { if (PARTS.includes(o.name) || o.name.startsWith('C_')) this.parts[o.name] = o; if (o.name.includes('Sway')) (this.sway ??= []).push(o); });
+    this.assets = assets;
     this.mixer.addEventListener('finished', e => {
       if (e.action === this.upper) { e.action.fadeOut(0.15); return; }
       if (e.action !== this.current || !this.then) return;
@@ -195,6 +214,35 @@ export class Actor {
       this.then = null;
       f();
     });
+  }
+
+  // Yiğidin kendi Meshy gövdesi (assets.bodies[id]) varsa onu giydirir; yoksa şablonun gövdesi kalır. Gövdede şapka ve saç hazır olduğu için şapka parçaları gizlenir.
+  setBody(id) {
+    const B = this.assets.bodies?.[id];
+    this.bodyMeshes ??= {};
+    // şablonun kendi gövdesi: kostüm parçalarının (GoldPlates, C_* ...) içindeki örgüler sayılmaz
+    const inPart = o => { for (let p = o; p && p !== this.root; p = p.parent) if (this.parts[p.name] || p.name.startsWith('C_') || p.name.startsWith('p_C_')) return true; return false; };
+    this.defBody ??= (() => { const l = []; this.root.traverse(o => { if (o.isSkinnedMesh && !inPart(o)) l.push(o); }); return l; })();
+    if (!this.defBody.length) return false;
+    if (B && !this.bodyMeshes[id]) {
+      const bones = {};
+      this.root.traverse(o => { if (o.isBone) bones[o.name] = o; });
+      const g = new THREE.Group();
+      for (const b of B) {
+        const kem = b.skeleton.bones.map(x => bones[x.name]);
+        if (kem.some(x => !x)) return false;
+        const m = b.clone();
+        m.bind(new THREE.Skeleton(kem, b.skeleton.boneInverses.map(x => x.clone())), b.bindMatrix.clone());
+        m.frustumCulled = false;
+        g.add(m);
+      }
+      this.defBody[0].parent.add(g);
+      this.bodyMeshes[id] = g;
+    }
+    for (const m of this.defBody) m.visible = !B;
+
+    for (const [k, m] of Object.entries(this.bodyMeshes)) m.visible = k === id;
+    return !!B || this.defBody.some(m => m.name.startsWith('Govde_Meshy')); // Oğuz'un kendi gövdesi de Meshy
   }
 
   // Tüm gövde klibi; loop=false olan klip bitince then() çağrılır

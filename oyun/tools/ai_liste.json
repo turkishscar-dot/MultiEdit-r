@@ -69,7 +69,8 @@
     "ip": {
       "istem": "a low rope barrier stretched between two short wooden posts, small colorful triangular pennant flags hanging from the rope, knee high",
       "tur": "alcak",
-      "atla": true
+      "atla": true,
+      "kaynak": "nesneler/engel/rope"
     },
     "sarmasik": {
       "istem": "a low barrier of thorny dark swamp vines and reeds tangled between two short dead wooden posts, knee high",
@@ -87,7 +88,8 @@
     "devrikcam": {
       "istem": "a fallen pine tree trunk covered with snow lying horizontally high up, resting on two tall snowy rock pillars at each end, forming an arch, wide empty space underneath",
       "tur": "yuksek",
-      "atla": true
+      "atla": true,
+      "kaynak": "nesneler/engel/pine"
     },
     "zincir": {
       "istem": "a dark stone gateway of two tall pillars and an iron crossbar on top, heavy iron chains and a skull hanging from the bar, wide open empty passage underneath, underworld",
@@ -212,6 +214,22 @@
       "tur": "dekor",
       "aile": "Pagoda",
       "oran": "2:3"
+    },
+    "demirdiken": {
+      "istem": "scattered iron caltrops on the ground",
+      "tur": "alcak",
+      "kaynak": "nesneler/engel/caltrop"
+    },
+    "cikinti": {
+      "istem": "a rocky ledge sticking out of a well wall",
+      "tur": "merkez",
+      "taban": 0,
+      "kaynak": "nesneler/engel/ledge"
+    },
+    "irmakkutuk": {
+      "istem": "a floating log tied with rope",
+      "tur": "alcak",
+      "kaynak": "nesneler/engel/kutuk"
     }
   },
   "doku": {

@@ -1,23 +1,22 @@
 # Ses ve Müzik Kaynakları
 
-Sesler ve müzikler artık **gerçek ses dosyaları** (`public/ses/*.mp3`, toplam ~4,3 MB). Hepsi bu projede, `tools/ses_uret.py` ile çevrimdışı üretildi: dışarıdan alınmış kayıt yok, lisans sorunu yok, hepsi projeye ait.
+Bu oturumun çalıştığı ortamdan ses sitelerine (freesound, opengameart, kenney, pixabay, incompetech) erişim kapalıydı. Bu yüzden bütün ses ve müzikler **`src/sound.js` içinde, Web Audio API ile kodla üretiliyor**. Dışarıdan alınmış hiçbir ses dosyası yok.
 
-Üretim: Python (numpy, scipy) ile fiziksel modelleme + Spotify'ın açık kaynak `pedalboard` kütüphanesiyle yankı, sıkıştırma ve sınırlayıcı. Yeniden üretmek: `pip install numpy scipy soundfile pedalboard` → `python3 tools/ses_uret.py` (tek bir ses: `python3 tools/ses_uret.py swing`).
+| Ses | Nasıl üretiliyor | Kaynak | Lisans | Boyut |
+|---|---|---|---|---|
+| Menü müziği (kopuz/dombra, sakin) | Karplus-Strong tel sentezi, uşşak dizisi, hafif def | Oyunun kendi kodu | Projeye ait | 0 KB |
+| Ötüken (davul-zurna) | İnen sinüs davul + kamışlı (testere/kare dalga, titreşimli) zurna, hicaz | Oyunun kendi kodu | Projeye ait | 0 KB |
+| Kara Bataklık (karanlık, yankılı) | Alçak süzgeçli drone, yankılı (üretilmiş oda tepkisi) tel, su damlası | Oyunun kendi kodu | Projeye ait | 0 KB |
+| Altay (boğazdan söyleme) | Alçak testere dalga drone + dar bant süzgeçle seçilen üst sesler (khöömei), topşur ritmi | Oyunun kendi kodu | Projeye ait | 0 KB |
+| Gök Yolu (rüzgârlı, ferah) | Süzgeci gezinen gürültü (rüzgâr), sinüs pad, pentatonik tel | Oyunun kendi kodu | Projeye ait | 0 KB |
+| Yeraltı (ağır davul) | Çok alçak davul, drone, örs çınlaması | Oyunun kendi kodu | Projeye ait | 0 KB |
+| Çin (pentatonik) | Parlak tel (guzheng benzeri), tahta tokmak | Oyunun kendi kodu | Projeye ait | 0 KB |
+| Karanlık Ülke (soğuk, kurt uluması) | Sinüs pad, yankılı çan, sentez kurt uluması | Oyunun kendi kodu | Projeye ait | 0 KB |
+| Boss müziği (hızlı) | 150 BPM davul + hızlı zurna | Oyunun kendi kodu | Projeye ait | 0 KB |
+| Zafer / yenilgi | Kısa zurna nakaratı / inen tel dizisi | Oyunun kendi kodu | Projeye ait | 0 KB |
+| 29 efekt (kılıç, ok, zıplama, kut dizisi, nal, kişneme, kurt, ıslıklı ok, kımız, darbe, ölüm, kükreme, kalkan, tık, sayfa...) | Gürültü süzgeçleri, osilatörler, tel sentezi | Oyunun kendi kodu | Projeye ait | 0 KB |
 
-| Ses | Nasıl yapıldı |
-|---|---|
-| Kılıç savurma (3 çeşit) | Patlama yok: gürültü, hızla yükselip hafifçe inen dar bir bantta akar (Doppler), ~60 ms'de yumuşak yükselir. Eski ses ani başladığı için silah sesi gibi duyuluyordu |
-| Kılıç değme (2 çeşit) | Gövdeye tok vuruş + kısa kesik + küçük çelik çınlaması |
-| Yay çekme, ok bırakma, ok saplanma | Ahşap gıcırtısı; alçak kiriş "tınn"ı (tel modeli + yay gövdesi) ve okun havayı yarışı; kuru "tak" ve titreyen ok gövdesi |
-| Geri çalma, kalkan kırılması | Parlak çelik çınlaması, uzun yankı; kırılan tahta |
-| Zıplama, iniş, kayma, kut, darbe | Kısa, yumuşak, müziği bastırmayan sesler |
-| Kükreme, gök gürültüsü, kuyuya düşüş | Formantlı dev sesi; çatırtı + uzun gümbürtü; rüzgâr uğultusu |
-| 9 bölge müziği (26–64 sn döngü) | Kopuz/dombra (Karplus-Strong tel + tahta gövde rezonansı, çift tel), kaval (nefesli, geç başlayan titreşim), zurna (boss), davul ve zilli def, boğazdan söyleme (Altay). Makamlar: uşşak (menü), bozlak (Ötüken), hicaz (boss, Yeraltı), pentatonik (Altay, Gök, Karanlık). Her parça A-B-A-B-A'-B'-A-B düzeninde, hepsi aynı ses düzeyinde (-18 dBFS) |
-| Zafer, yenilgi | Zurna nakaratı; inen kopuz dizisi |
-
-Oyun dosyaları sayfa açılınca indirir, ilk dokunuşta çözer. Döngülü müzikte MP3'ün baştaki sessizliği atlanır (kesintisiz döngü). Efektlerin çeşitleri rastgele seçilir ve her çalışta perdesi biraz değişir (tekdüze olmasın).
-
-Dosya yüklenemezse (ör. `OYNA.html` bilgisayardan çift tıklanarak açılırsa) `src/sound.js`'teki eski kodla üretilen sesler yedek olarak çalar. Gerçek sesleri duymak için oyunu `npm run dev` ya da bir sunucu üzerinden aç.
+**Toplam boyut:** 0 MB (sınır 8 MB).
 
 ## Gerçek ses dosyası eklemek istersen
 

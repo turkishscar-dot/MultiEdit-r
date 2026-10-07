@@ -1,6 +1,7 @@
 // Menü ekranları: Yiğitler (kartlar, ordu, Tunç Davul), Kağanlık Kademesi, Akın Seferleri, Destan Koleksiyonları.
 // main.js init(U) ile sahne ve ortak yardımcıları verir.
 import * as Y from './yigit.js';
+import { drumReveal } from './smu.js';
 import * as SF from './seferler.js';
 import * as KO from './koleksiyon.js';
 import * as THREE from 'three';
@@ -180,16 +181,15 @@ function afterChange() {
 export function drumRoll() {
   const r = Y.drum();
   if (!r) return U.toast('🥁', 'Tunç Davulun yok', 'Giriş armağanı, kademe ve seferlerden kazanılır; ya da 5 Gök Demir ile al.');
-  U.sfx('levelup');
   const box = $('ydraw');
   box.replaceChildren(el('small', null, "KAM'IN DAVULU ÇALDI"), el('span', 'ystars', stars(r.card.stars) + ' ' + Y.RANKS[r.card.stars][0]), el('h2', 'ink', r.card.name), el('p', null, r.isNew ? 'YENİ YİĞİT!' : 'KOPYA +1 (rütbe için)'));
   const ok = el('button', 'big', 'TAMAM');
   ok.onclick = () => { box.hidden = true; };
   box.append(ok);
   box.className = RCLS[r.card.stars];
-  box.hidden = false;
   sel = r.card.id;
-  afterChange();
+  // önce videodaki gibi çekim gösterisi (ışık küresi -> girdap -> kart, yıldızlar tek tek), sonra ayrıntı kutusu
+  drumReveal(r.card, Y.RANKS[r.card.stars][0], r.isNew, () => { box.hidden = false; afterChange(); }, (n, o) => U.sfx(n, o));
 }
 export function buyDrum() {
   if (!wallet.spendGD(5)) return U.toast('⬢', 'Gök Demir yetmiyor', 'Tunç Davul 5 Gök Demir.');

@@ -91,12 +91,17 @@ const PARTS = ['Bork', 'Kavuk', 'Sarik', 'Taj', 'Collar', 'AltinBork', 'GoldPlat
 export function applyCostume(actor, id) {
   const c = typeof id === 'object' && id ? id : COSTUMES.find(x => x.id === id) || COSTUMES[0];
   for (const [n, o] of Object.entries(actor.parts)) if (PARTS.includes(n) || n.startsWith('C_')) o.visible = c.parts.includes(n);
+  const meshy = actor.setBody?.(c.body ?? null);
+  if (meshy) // Meshy gövdesi şapkayı, zırhı, pelerini zaten taşır: eski parçalar üstüne binmesin
+    for (const [n, o] of Object.entries(actor.parts)) if (PARTS.includes(n) || n.startsWith('C_')) o.visible = false;
+  // kın, sırttaki yay ve sadak da Meshy modelinde var: oyun bunların görünürlüğünü silah değişiminde açıp kapadığı için katmanla gizlenir
+  for (const n of ['SwordSheath', 'BowBack', 'Quiver']) actor.parts[n]?.traverse(o => o.layers.set(meshy ? 31 : 0));
   actor.root.traverse(o => {
     if (!o.isMesh) return;
     if (o.name === 'Hair_Beard') o.visible = c.beard !== false;
     for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
       m.userData.base ??= m.color?.getHex(); // görünüşte olmayan renk özgün hâline döner
-      const col = c.colors[m.name];
+      const col = c.colors[m.name.replace(/\.\d+$/, '')]; // kiyafet.glb'den gelen kopya malzeme (M_Kaftan.001) ana adın rengini alır
       if (col != null) m.color.setHex(col); // malzemeler kahraman ve önizleme arasında ortak
       else if (m.userData.base != null && m.color) m.color.setHex(m.userData.base);
       if (m.name.startsWith('MI_Hair')) { // koyu saç dokusu açık rengi karartır: renk verilen saçta doku kalkar

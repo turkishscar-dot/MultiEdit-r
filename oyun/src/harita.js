@@ -15,9 +15,8 @@ export const REGIONS = {
 export const EXTRA = [
   { id: 'kilpayi20', lv: 1, after: 0, name: 'Kıl Payı Talimi', icon: '✦', cond: ['kilpayi', 20], text: '20 kez kıl payı geç.', reward: { kut: 300, gd: 1, xp: 80 } },
   { id: 'kayi30', lv: 1, after: 2, name: 'Kayı Akını', icon: '⚔', cond: ['kill', 30], req: { boy: 'kayi' }, text: '30 düşman biç.', reward: { kut: 400, gd: 1, xp: 100 } },
-  { id: 'at1000', lv: 2, after: 1, name: 'Atlı Akın', icon: '🐎', cond: ['ride_dist', 1000], req: { boy: 'doger' }, mods: { nal: 0.25 }, text: 'Atla 1000 m git. Yolda nal sık çıkar.', reward: { kut: 400, gd: 2, xp: 100 } },
   { id: 'darbesiz500', lv: 3, after: 0, name: 'Dokunulmaz', icon: '🛡', cond: ['nohit', 500], text: 'Hiç darbe almadan 500 m git. İlk darbede görev biter.', reward: { kut: 400, gd: 2, xp: 120 } },
-  { id: 'halka25', lv: 4, after: 0, name: 'Göğün Eri', icon: '◯', cond: ['hoop', 25], text: 'Uçarken 25 halkadan geç.', reward: { kut: 400, gd: 1, xp: 100 } },
+  { id: 'halka25', lv: 4, after: 0, name: 'Göğün Eri', icon: '◯', cond: ['kilpayi', 25], text: 'Bulut sırtında 25 kez kıl payı geç.', reward: { kut: 400, gd: 1, xp: 100 } },
   { id: 'isabet12', lv: 5, after: 1, name: 'Tamga Avı', icon: '𐰴', cond: ['isabet', 12], text: '12 tamga halkasından geç.', reward: { kut: 500, gd: 2, xp: 120 } },
   { id: 'yay15', lv: 6, after: 0, name: 'Yayın Hakkı', icon: '🏹', cond: ['kill_arrow', 15], req: { boy: 'yazir' }, text: 'Sadece yayla 15 düşman vur (kılıçla öldürülen sayılmaz).', reward: { kut: 500, gd: 2, xp: 120 } },
   { id: 'manas25', lv: 7, after: 1, name: "Manas'ın Yolu", icon: '👑', cond: ['kilpayi', 25], req: { costume: 'manas' }, text: '25 kez kıl payı geç.', reward: { kut: 600, gd: 3, xp: 150 } },
@@ -37,30 +36,63 @@ export const medalsFor = (node, score) => { const t = thresholds(node); return 1
 export const store = load('oguz-harita', {});
 export const saveStore = () => save('oguz-harita', store);
 
+// Üretilen görevler: her hazır bölge en az HEDEF düğüme tamamlanır. Mevcut kısımlar ve elle yazılmış ek görevler
+// korunur; eksik kadar kısa görev, bölgenin temasında ve gittikçe zorlaşarak kısımların arasına dizilir.
+const HEDEF = 22;
+const PLACES = {
+  1: ['Sur Önü', 'Kule Dibi', 'Kervan Yolu', 'Otağ Meydanı', 'Tuğ Alanı', 'Bozkır Kıyısı', 'Nöbet Burcu', 'Ötüken Geçidi'],
+  2: ['Sisli Sazlık', 'Kara Su', 'Batak Kıyısı', 'Çürük Köprü', 'Ölü Ağaç', 'Yeşil Pus', 'Albastı Çukuru', 'Kamış Yolu'],
+  3: ['Karlı Geçit', 'Buz Göl', 'Çam Ormanı', 'Yurt Köyü', 'Kayalık', 'Don Vadisi', 'Kızak Yolu', 'Tipi Başı'],
+  4: ['Bulut Sırtı', 'Rüzgâr Geçidi', 'Güneş Basamağı', 'Yıldız Köprüsü', 'Uçan Kaya', 'Tan Yeli', 'Ak Bulut', 'Tengri Eşiği'],
+  5: ['Kor Yolu', 'Zincir Geçidi', 'Lav Nehri', 'Kemik Ovası', 'Demir Kapı', 'Kara Mağara', 'Ateş Çukuru', 'Erlik Eşiği'],
+  6: ['Taş Avlu', 'Fener Sokağı', 'Esir Kampı', 'Sur Gözcüsü', 'Pagoda Yolu', 'Zindan Önü', 'Pazar Meydanı', 'Bekçi Kulesi'],
+  7: ['Kutup Işığı', 'Kara Çam', 'Gölge Ova', 'Don Tepesi', 'Ruh Yolu', 'Buz Çölü', 'Ay Eşiği', 'Kuzey Geçidi'],
+};
+const r50 = v => Math.round(v / 50) * 50;
+// [ölçü, ad sonu, hedef(k), açıklama]; k: bölgedeki sıra, büyüdükçe hedef artar
+const TASKS = [
+  ['dist', 'Gözcülüğü', k => r50(450 + k * 35), v => `${v} m yol kat et.`],
+  ['kill', 'Avı', k => 8 + Math.round(k * 1.6), v => `${v} düşman biç.`],
+  ['kut', 'Ganimeti', k => 30 + k * 5, v => `${v} kut topla.`],
+  ['combo', 'Kılıç Oyunu', k => 5 + Math.floor(k * 0.7), v => `${v} kombo yap.`],
+  ['kilpayi', 'Kıl Payı Geçidi', k => 4 + Math.floor(k * 0.6), v => `${v} kez kıl payı geç.`],
+  ['nohit', 'Dokunulmaz Yürüyüş', k => r50(150 + k * 25), v => `Hiç darbe almadan ${v} m git. İlk darbede görev biter.`],
+];
+function genNode(lv, k, slot) {
+  const [kind, tail, goal, text] = TASKS[(k + lv) % TASKS.length], v = goal(k), place = PLACES[lv][k % PLACES[lv].length];
+  return { id: `g-gen${lv}_${k}`, lv, after: slot, extra: true, gen: true, name: `${place} ${tail}`, text: text(v), cond: [kind, v],
+    dist: kind === 'dist' || kind === 'nohit' ? v : 400, reward: { kut: 60 + 12 * lv + 5 * k, gd: k % 5 === 4 ? 1 : 0, xp: 30 + 5 * lv } };
+}
+
 // Düğüm listesi (oynama sırasıyla): LEVELS'tan kısımlar + ek görevler
 export function buildNodes(LEVELS, PARTS, BOSSES) {
   const nodes = [];
   for (const part of PARTS) for (const lv of part.levels) {
     const L = LEVELS[lv.id];
     if (!lv.ready || !L?.floors) { nodes.push({ id: 'soon-' + lv.id, lv: lv.id, soon: true, name: lv.name, boss: lv.boss }); continue; }
+    const manual = EXTRA.filter(e => e.lv === lv.id).length, G = Math.max(0, HEDEF - L.floors.length - manual), slots = Math.max(1, L.floors.length - 1);
+    let gk = 0;
     L.floors.forEach((F, fi) => {
       nodes.push({ id: `${lv.id}-${fi}`, lv: lv.id, floor: fi, name: F.name, sub: F.sub, boss: F.boss ? BOSSES[F.boss].name : null, dist: F.goals?.find(g => g[0] === 'dist')?.[1], last: fi === L.floors.length - 1,
         reward: { kut: 100 * lv.id + 50 * fi, gd: F.boss ? 1 : 0, xp: 50 + 10 * lv.id } });
+      if (fi < slots && PLACES[lv.id]) for (let c = Math.floor(G / slots) + (fi < G % slots ? 1 : 0); c > 0; c--) nodes.push(genNode(lv.id, gk++, fi));
       for (const x of EXTRA.filter(e => e.lv === lv.id && e.after === fi)) nodes.push({ ...x, id: 'g-' + x.id, extra: true, dist: x.cond[0] === 'nohit' || x.cond[0] === 'ride_dist' ? x.cond[1] : 600 });
     });
   }
   return nodes;
 }
 
-// Açık mı: bir önceki ana düğüm (ek görevleri atlayarak) en az bronzla bitmiş olmalı; ek görev, bağlı olduğu kısımdan sonra açılır
+// Açık mı: zincirdeki (kısımlar + üretilen görevler) bir önceki düğüm en az bronzla bitmiş olmalı; elle yazılmış ek görev,
+// bağlı olduğu kısımdan sonra açılır. Bir kez bitirilen düğüm hep açık kalır (görev eklenince eski kayıt kilitlenmesin).
+const chainOf = nodes => nodes.filter(x => !x.soon && (!x.extra || x.gen));
 export function isOpen(nodes, n) {
   if (n.soon) return false;
-  if (n.extra) return (store[`${n.lv}-${n.after}`]?.m || 0) > 0;
-  const main = nodes.filter(x => !x.extra && !x.soon);
-  const i = main.indexOf(n);
-  return i === 0 || (store[main[i - 1].id]?.m || 0) > 0;
+  if (store[n.id]?.m) return true;
+  if (n.extra && !n.gen) return (store[`${n.lv}-${n.after}`]?.m || 0) > 0;
+  const c = chainOf(nodes), i = c.indexOf(n);
+  return i === 0 || (store[c[i - 1].id]?.m || 0) > 0;
 }
-export const nextMain = (nodes, n) => { const main = nodes.filter(x => !x.extra && !x.soon); return main[main.indexOf(n) + 1] || null; };
+export const nextMain = (nodes, n) => { const c = chainOf(nodes); return c[c.indexOf(n) + 1] || null; };
 
 // Eski kayıt (bölüm yıldızları) madalyaya dönüşür: ilerleme kaybolmaz
 export function migrate(progress, nodes) {
@@ -74,104 +106,114 @@ export function migrate(progress, nodes) {
 // Bölge sekmeleri + bölgenin çizilmiş manzarası üstünde düğümler. Yatay ekranda yol soldan sağa, dikeyde yukarıdan aşağı.
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const REGION_ICON = { 1: 'otuken', 2: 'bataklik', 3: 'altay', 4: 'gok', 5: 'yeralti', 6: 'cin', 7: 'karanlik' };
-// Manzaralar: gökyüzü + üç kat siluet (uzak, orta, yakın). viewBox 0 0 800 400
-const SCENE = {
-  1: { sky: ['#f6b26b', '#fbe3b0'], layers: [
-    ['#b98a6a', 'M0 250 L60 230 L120 245 L200 215 L280 240 L360 220 L440 238 L520 210 L600 236 L700 218 L800 240 L800 400 L0 400 Z'],
-    ['#8a5a3a', 'M0 290 L40 290 L40 262 L60 262 L60 290 L140 290 L140 250 L150 240 L160 250 L160 290 L300 290 L300 270 L320 270 L320 290 L520 290 L520 244 L532 232 L544 244 L544 290 L700 290 L700 266 L720 266 L720 290 L800 290 L800 400 L0 400 Z'],
-    ['#5a3a22', 'M0 340 L800 330 L800 400 L0 400 Z']], extra: '<path d="M620 120 L620 250" stroke="#3a2a18" stroke-width="5"/><path d="M620 124 q30 10 18 40 q-8 -20 -18 -18 Z" fill="#b3202a"/><circle cx="160" cy="90" r="36" fill="#fff4c0" opacity=".85"/>' },
-  2: { sky: ['#4a6a5a', '#a8c0b0'], layers: [
-    ['#6a8a7a', 'M0 250 Q120 220 240 250 T480 245 T800 240 L800 400 L0 400 Z'],
-    ['#2e4a3a', 'M0 300 Q200 280 400 300 T800 295 L800 400 L0 400 Z'],
-    ['#16281e', 'M0 350 Q200 335 400 350 T800 345 L800 400 L0 400 Z']], extra: '<path d="M120 300 L120 190 M120 220 L150 190 M120 240 L95 215 M650 300 L650 200 M650 230 L680 205" stroke="#16281e" stroke-width="7" fill="none" stroke-linecap="round"/><rect x="0" y="230" width="800" height="30" fill="#e8f0ea" opacity=".25"/>' },
-  3: { sky: ['#6a9ad8', '#d8e8f8'], layers: [
-    ['#9ab0d0', 'M0 260 L90 150 L150 210 L240 110 L330 220 L420 140 L520 230 L620 120 L720 210 L800 170 L800 400 L0 400 Z'],
-    ['#e8f0f8', 'M0 300 L120 230 L200 270 L320 210 L440 280 L560 230 L680 280 L800 240 L800 400 L0 400 Z'],
-    ['#1f4a3a', 'M0 360 L40 320 L60 350 L90 310 L120 350 L700 350 L730 312 L760 350 L800 320 L800 400 L0 400 Z']], extra: '' },
-  4: { sky: ['#3a8ad8', '#bfe0ff'], layers: [
-    ['#ffffff', 'M0 260 Q60 220 120 250 Q180 210 250 245 Q320 215 380 250 Q450 220 520 250 Q600 215 680 250 Q740 225 800 245 L800 400 L0 400 Z'],
-    ['#e8f2ff', 'M0 320 Q80 290 160 315 Q240 285 330 318 Q420 290 520 318 Q620 292 720 318 Q770 300 800 312 L800 400 L0 400 Z'],
-    ['#ffffff', 'M0 370 Q200 350 400 368 T800 362 L800 400 L0 400 Z']], extra: '<circle cx="650" cy="90" r="40" fill="#fff8d0"/>' },
-  5: { sky: ['#1a0a0c', '#5a1a14'], layers: [
-    ['#3a1612', 'M0 220 L80 260 L160 200 L260 250 L360 190 L460 250 L560 200 L660 255 L800 210 L800 400 L0 400 Z'],
-    ['#240c0c', 'M0 300 L120 280 L220 310 L340 285 L480 312 L600 286 L720 308 L800 290 L800 400 L0 400 Z'],
-    ['#ff5a10', 'M0 360 Q200 345 400 362 T800 355 L800 400 L0 400 Z']], extra: '<path d="M0 0 L60 90 L110 0 Z M300 0 L340 70 L380 0 Z M620 0 L670 100 L720 0 Z" fill="#240c0c"/>' },
-  6: { sky: ['#c86a3a', '#f8d8a0'], layers: [
-    ['#b88a6a', 'M0 250 L100 225 L220 245 L340 220 L460 240 L600 215 L800 240 L800 400 L0 400 Z'],
-    ['#8a3a2a', 'M0 290 L60 290 L60 268 L80 268 L80 290 L200 290 L200 250 Q240 232 280 250 L280 290 L420 290 L420 268 L440 268 L440 290 L560 290 L560 246 Q610 226 660 246 L660 290 L800 290 L800 400 L0 400 Z'],
-    ['#4a2418', 'M0 340 L800 334 L800 400 L0 400 Z']], extra: '' },
-  7: { sky: ['#060a20', '#1a2a4a'], layers: [
-    ['#2a3a5a', 'M0 260 L100 230 L200 255 L320 215 L440 250 L560 222 L680 252 L800 230 L800 400 L0 400 Z'],
-    ['#dfe8f8', 'M0 310 Q200 290 400 312 T800 305 L800 400 L0 400 Z'],
-    ['#101830', 'M0 360 L800 352 L800 400 L0 400 Z']], extra: '<path d="M40 110 Q200 40 360 120 T760 80" stroke="#5affb0" stroke-width="18" fill="none" opacity=".5"/><path d="M60 150 Q260 90 440 150 T780 130" stroke="#3ac0ff" stroke-width="12" fill="none" opacity=".4"/>' },
-};
-function sceneSvg(lv) {
-  const D = SCENE[lv] || SCENE[1];
-  const e = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  e.setAttribute('viewBox', '0 0 800 400');
-  e.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-  e.setAttribute('class', 'mbg');
-  e.innerHTML = `<defs><linearGradient id="sky${lv}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${D.sky[0]}"/><stop offset="1" stop-color="${D.sky[1]}"/></linearGradient></defs>
-    <rect width="800" height="400" fill="url(#sky${lv})"/>${D.extra}${D.layers.map(([c, d]) => `<path d="${d}" fill="${c}"/>`).join('')}`;
-  return e;
+// Zemin: yapay zekâyla çizilmiş dikey manzara karoları (src/assets/harita). Bölge uzadıkça karolar alt alta döşenir,
+// her ikinci karo aynalanır ki birleşim yeri belli olmasın. Yol karoda yok; kodla çizilir, düğümlerle hep hizalı kalır.
+const TILES = import.meta.glob('./assets/harita/*.jpg', { eager: true, query: '?url', import: 'default' });
+const TILE_OF = { 1: 'otuken', 2: 'bataklik', 3: 'altay', 4: 'goksirt', 5: 'yeralti', 6: 'cin', 7: 'karanlik', 8: 'orman', 9: 'altay', 10: 'bataklik', 11: 'cin', 12: 'karanlik' };
+// Yol renkleri bölgeye göre: [kenar, dolgu, orta çizgi]
+const ROAD = { 1: ['#5a3a1a', '#f0d79a', '#fff6d8'], 2: ['#2a2a18', '#c2b184', '#f0e6c0'], 3: ['#5a2a10', '#ecc88a', '#fff0cc'], 4: ['#2a4a7a', '#d8ecff', '#ffffff'],
+  5: ['#3a0a00', '#ff9a30', '#ffe08a'], 6: ['#4a1a10', '#ecdcbc', '#fff6e0'], 7: ['#101840', '#8ac4ff', '#e0f4ff'] };
+function tilesFor(lv, H, width) {
+  const box = el('div', 'mbg');
+  const src = TILES['./assets/harita/' + (TILE_OF[lv] || 'otuken') + '.jpg'];
+  const n = Math.ceil(H / (Math.max(width, 320) * 1120 / 640)) + 1;
+  for (let i = 0; i < n; i++) { const im = el('img'); im.src = src; im.alt = ''; im.draggable = false; if (i % 2) im.style.transform = 'scaleY(-1)'; box.append(im); }
+  return box;
 }
+// Noktalardan yumuşak S eğrisi: her parça dikey teğetle başlayıp biter, yol kıvrılarak yükselir
+const curve = pts => pts.map(([x, y], i) => { if (!i) return 'M ' + x + ' ' + y; const [px, py] = pts[i - 1], m = (py + y) / 2; return 'C ' + px + ' ' + m + ' ' + x + ' ' + m + ' ' + x + ' ' + y; }).join(' ');
 let selLv = null;
-const ICON_OF = n => (n.soon ? 'yakinda' : n.extra ? n.cond[0] : n.boss ? 'boss' : 'kisim');
+const ICON_OF = n => (n.soon ? 'yakinda' : n.gen ? { dist: 'kisim', kill: 'kill', kut: 'carsi', combo: 'kilpayi', kilpayi: 'kilpayi', nohit: 'nohit' }[n.cond[0]] : n.extra ? n.cond[0] : n.boss ? 'boss' : 'kisim');
+// Tek parça dünya: bölgeler alt alta, en yeni bölge üstte; yol aşağıdan yukarı tırmanır.
+// Ekranda ortadaki bölge net, komşuları bulanık ("far") görünür.
+const STEP = 120, PAD_BOTTOM = 120, PAD_TOP = 150;
+const regionH = n => Math.max(Math.round(innerHeight * 0.9), n * STEP + PAD_BOTTOM + PAD_TOP);
 export function drawMap(box, nodes, onPick) {
   const byLv = {};
   for (const n of nodes) (byLv[n.lv] ??= []).push(n);
   const lvs = Object.keys(byLv).map(Number);
-  const lastOpen = [...nodes].reverse().find(n => !n.extra && isOpen(nodes, n));
+  const chain = chainOf(nodes), curNode = chain.find(n => !store[n.id]?.m && isOpen(nodes, n));
+  const lastOpen = curNode || chain.at(-1);
   if (!selLv || !byLv[selLv]) selLv = lastOpen?.lv ?? lvs[0];
   box.replaceChildren();
-  // bölge sekmeleri
+  const world = el('div', 'mworld');
   const tabs = el('div', 'mtabs');
+  const regs = {};
+  const yOf = {}; // düğüm id -> bölge üstünden px
+  const focus = lv => {
+    selLv = lv;
+    for (const k in regs) regs[k].classList.toggle('far', +k !== lv);
+    for (const t of tabs.children) { const on = +t.dataset.lv === lv; t.classList.toggle('on', on); if (on) tabs.scrollTo({ left: t.offsetLeft - (tabs.clientWidth - t.offsetWidth) / 2, behavior: 'smooth' }); }
+  };
+  const center = (lv, n, smooth) => {
+    const r = regs[lv];
+    if (!r) return;
+    const y = r.offsetTop + (n && yOf[n.id] != null ? yOf[n.id] : r.offsetHeight / 2);
+    world.scrollTo({ top: Math.max(0, y - world.clientHeight / 2), behavior: smooth ? 'smooth' : 'auto' });
+  };
+  // bölge sekmeleri
   for (const lv of lvs) {
     const open = byLv[lv].some(n => isOpen(nodes, n)), R = REGIONS[lv];
-    const t = el('button', 'mtab' + (lv === selLv ? ' on' : '') + (open ? '' : ' locked'));
+    const t = el('button', 'mtab' + (open ? '' : ' locked'));
+    t.dataset.lv = lv;
     t.append(svg(REGION_ICON[lv] || 'otuken', 40), el('small', null, R ? R.name : byLv[lv][0].name));
-    t.onclick = () => { selLv = lv; drawMap(box, nodes, onPick); };
+    t.onclick = () => { focus(lv); center(lv, byLv[lv].find(n => (!n.extra || n.gen) && isOpen(nodes, n) && !store[n.id]?.m) || byLv[lv][0], true); };
     tabs.append(t);
   }
-  box.append(tabs);
-  // seçili bölge
-  const list = byLv[selLv], R = REGIONS[selLv];
-  const got = list.reduce((a, n) => a + (store[n.id]?.m || 0), 0);
-  const cap = el('div', 'mcap');
-  cap.append(el('h3', null, R ? `${selLv}. ${R.name}` : list[0].name), el('small', null, (R?.sub || 'YAKINDA') + ` · madalya ${got}/${list.length * 3}`));
-  const scene = el('div', 'mscene');
-  scene.append(sceneSvg(selLv));
-  const tall = innerHeight > innerWidth; // dikey ekranda yol yukarıdan aşağı
-  const pts = list.map((n, i) => {
-    const k = list.length === 1 ? 0.5 : i / (list.length - 1);
-    const wave = i % 2 ? 0.7 : 0.3;
-    return tall ? [wave * 100, 10 + k * 70] : [10 + k * 80, (i % 2 ? 0.5 : 0.24) * 100]; // etiket düğümün altında: alt kenara taşmasın
-  });
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  path.setAttribute('viewBox', '0 0 100 100');
-  path.setAttribute('preserveAspectRatio', 'none');
-  path.setAttribute('class', 'mroad');
-  path.innerHTML = `<path d="${pts.map(([x, y], i) => (i ? `L ${x} ${y}` : `M ${x} ${y}`)).join(' ')}"/>`;
-  scene.append(path);
-  list.forEach((n, i) => {
-    const open = isOpen(nodes, n), st = store[n.id];
-    const b = el('button', 'mnode' + (n.extra ? ' extra' : '') + (n.boss && !n.extra ? ' boss' : '') + (open ? '' : ' locked') + (st?.m ? ' done' : ''));
-    b.style.left = pts[i][0] + '%';
-    b.style.top = pts[i][1] + '%';
-    const ic = el('span', 'nicon');
-    ic.append(svg(open || n.soon ? ICON_OF(n) : 'kilit', n.boss && !n.extra ? 50 : 40));
-    b.append(ic);
-    const lab = el('span', 'nlab');
-    lab.append(el('strong', null, n.name));
-    if (n.soon) lab.append(el('small', null, 'YAKINDA'));
-    else if (n.extra) lab.append(el('small', null, `${n.cond[1]} ${COND_TEXT[n.cond[0]]}` + (n.req ? ' · şartlı' : '')));
-    else lab.append(el('small', null, n.boss ? n.boss : n.sub));
-    const md = el('span', 'medals');
-    for (let k = 0; k < 3; k++) md.append(el('i', k < (st?.m || 0) ? ['bz', 'gm', 'al'][k] : ''));
-    lab.append(md);
-    b.append(lab);
-    b.onclick = () => onPick(n, open);
-    scene.append(b);
-  });
-  box.append(cap, scene);
+  box.append(tabs, world);
+  // bölgeler: üstte en yeni (listeyi ters çevir)
+  for (const lv of [...lvs].reverse()) {
+    const list = byLv[lv], R = REGIONS[lv], H = regionH(list.length);
+    const reg = el('section', 'mreg th' + Math.min(lv, 7));
+    reg.style.height = H + 'px';
+    regs[lv] = reg;
+    reg.append(tilesFor(lv, H, world.clientWidth), el('div', 'mfx'));
+    const main = chainOf(list);
+    const done = main.filter(n => store[n.id]?.m).length, pct = main.length ? Math.round(100 * done / main.length) : 0;
+    const got = list.reduce((a, n) => a + (store[n.id]?.m || 0), 0);
+    const head = el('div', 'mhead');
+    head.append(el('h3', null, R ? `${lv}. ${R.name}` : list[0].name), el('small', null, (R?.sub || 'YAKINDA') + ` · madalya ${got}/${list.length * 3}`));
+    if (main.length) { const bar = el('div', 'mbar'), f = el('i'); f.style.width = pct + '%'; bar.append(f, el('b', null, '%' + pct)); head.append(bar); }
+    reg.append(head);
+    // düğümler aşağıdan yukarı; x sağ-sol salınır, bölgenin alt ve üst kenarında yol ortada buluşur
+    const span = H - PAD_BOTTOM - PAD_TOP;
+    const pts = list.map((n, i) => [50 + 22 * Math.sin(i * 1.25 + lv), H - PAD_BOTTOM - (list.length === 1 ? 0 : i * span / (list.length - 1))]);
+    list.forEach((n, i) => { yOf[n.id] = pts[i][1]; });
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    path.setAttribute('viewBox', `0 0 100 ${H}`);
+    path.setAttribute('preserveAspectRatio', 'none');
+    path.setAttribute('class', 'mroad');
+    const [ce, cf, cm] = ROAD[lv] || ROAD[1], d = curve([[50, H], ...pts, [50, 0]]);
+    path.style.setProperty('--re', ce); path.style.setProperty('--rf', cf); path.style.setProperty('--rm', cm);
+    path.innerHTML = `<path class="re" d="${d}"/><path class="rf" d="${d}"/><path class="rm" d="${d}"/>`;
+    reg.append(path);
+    list.forEach((n, i) => {
+      const open = isOpen(nodes, n), st = store[n.id];
+      const b = el('button', 'mnode' + (n.extra && !n.gen ? ' extra' : '') + (n.boss && !n.extra ? ' boss' : '') + (open ? '' : ' locked') + (st?.m ? ' done' : '') + (n === curNode ? ' cur' : ''));
+      b.style.left = pts[i][0] + '%';
+      b.style.top = pts[i][1] + 'px';
+      b.style.setProperty('--d', (i % 7) * 0.35 + 's'); // komşu düğümler aynı anda oynamasın
+      b.setAttribute('aria-label', n.name);
+      const ic = el('span', 'nicon');
+      ic.append(svg(open || n.soon ? ICON_OF(n) : 'kilit', n.boss && !n.extra ? 50 : 40));
+      b.append(ic);
+      const md = el('span', 'medals');
+      for (let k = 0; k < 3; k++) md.append(el('i', k < (st?.m || 0) ? ['bz', 'gm', 'al'][k] : ''));
+      b.append(md);
+      b.onclick = () => onPick(n, open);
+      reg.append(b);
+    });
+    world.append(reg);
+  }
+  // kaydırdıkça ortadaki bölge netleşir
+  world.onscroll = () => {
+    const mid = world.scrollTop + world.clientHeight / 2;
+    for (const k in regs) {
+      const r = regs[k];
+      if (mid >= r.offsetTop && mid < r.offsetTop + r.offsetHeight) { if (+k !== selLv) focus(+k); break; }
+    }
+  };
+  focus(selLv);
+  // harita ekranı görünürken çizilir (openMap); okuma düzeni zorlar, açık düğüme hemen kaydır
+  center(selLv, selLv === lastOpen?.lv ? lastOpen : byLv[selLv][0], false);
 }

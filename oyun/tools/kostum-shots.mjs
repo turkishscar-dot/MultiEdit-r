@@ -1,6 +1,6 @@
 // Kostüm vitrini ve deneme koşusu ekran görüntüleri: node tools/kostum-shots.mjs
 import { chromium } from 'playwright';
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const b = await chromium.launch({ executablePath: process.env.CHROME, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const errs = [];
 async function page(w, h) {
   const p = await b.newPage({ viewport: { width: w, height: h } });
@@ -46,7 +46,7 @@ await p.waitForTimeout(800);
 const r3 = await p.evaluate(() => ({ state: window.__game.state }));
 console.log(JSON.stringify({ r, r2, r3 }));
 const q = await page(390, 844);
-await q.evaluate(() => window.__game.EK.openYigit('fatih'));
+await q.evaluate(() => window.__game.EK.openYigit('babur'));
 await q.waitForTimeout(1200);
 await q.screenshot({ path: 'test-out/kostum-yigit-tel.png' });
 await q.click('#ypbtns > button');

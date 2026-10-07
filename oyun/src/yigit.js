@@ -47,10 +47,6 @@ export const CARDS = [
     text: "Asya Hun hükümdarı (MÖ 209–174). Askerlerinden sorgusuz itaat bekleyen ıslıklı okuyla ünlüdür: ok nereye atılırsa bütün askerler oraya atardı. Orduyu onluk düzene göre kurduğu anlatılır." },
   { id: 'bumin', name: 'Bumin Kağan', title: 'Göktürk Kağanlığının kurucusu', stars: 5, costume: 'gokturk', ab: ['ku30', 'kt3'], group: 'gokturk',
     text: "552'de Juan-juan (Avar) egemenliğine son verip Göktürk Kağanlığı'nı kurdu ve 'İl Kağan' unvanını aldı. Aynı yıl ölünce yerine oğulları geçti; kardeşi İstemi batıyı yönetti." },
-  { id: 'bilge', name: 'Bilge Kağan', title: 'İkinci Göktürk Kağanı', stars: 5, look: look(['KulTiginTac', 'Tug', 'Collar'], 0x1f4a38, 0xd9b04a, 0x1a1414), ab: ['kp50', 'ku30'], group: 'gokturk',
-    text: "İkinci Göktürk Kağanlığı'nın kağanı (716–734). Adına dikilen Orhun yazıtında 'Türk budunu, titre ve kendine dön!' diye halkına seslenir." },
-  { id: 'kultigin', name: 'Kül Tigin', title: 'Göktürk komutanı', stars: 4, look: look(['KulTiginTac'], 0x9a2a1a, 0x2a2a2a, 0x1a1414), ab: ['bp65', 'kp2'], group: 'gokturk',
-    text: "Bilge Kağan'ın kardeşi, büyük komutan (684–731). Ölümünden sonra 732'de dikilen yazıtı, Orhun Yazıtları'nın en ünlülerindendir. Başındaki kuşlu taç heykelinden bilinir." },
   { id: 'tonyukuk', name: 'Tonyukuk', title: 'Bilge vezir', stars: 4, look: look(['Kalpak'], 0xe8e2d0, 0x6a5a48, 0x3a2c22), ab: ['kt7', 'kp30'], group: 'gokturk',
     text: "Göktürklerin veziri ve komutanı; İlteriş Kutluk, Kapgan ve Bilge Kağan'a danışmanlık etti. Kendi ağzından yazdırdığı yazıt (720 dolayı) Türkçenin ilk yazılı metinlerindendir." },
   { id: 'alperTunga', name: 'Alp Er Tunga', title: 'Turan hükümdarı', stars: 5, look: look(['AltinBork'], 0x7a1a4a, 0x2a1a2a, 0xd9a520), ab: ['kp2', 'bp50'], group: 'destan',
@@ -63,14 +59,10 @@ export const CARDS = [
     text: "Dede Korkut Kitabı'nda Kam Püre'nin oğlu. Düğün gecesi tutsak düştü, on altı yıl sonra kaçıp ozan kılığında döndü ve nişanlısını kurtardı." },
   { id: 'dumrul', name: 'Deli Dumrul', title: 'Azrail\'e meydan okuyan', stars: 4, look: look(['HunCap'], 0x1a1a1a, 0x3a1a1a, 0x1a1414), ab: ['kp2', 'kt3'], group: 'dedekorkut',
     text: "Dede Korkut Kitabı'nda kuru çayın üstüne köprü kurup geçenden haraç alan yiğit. Azrail'e meydan okudu; eşi canını onun için vermeye razı olunca ikisine de yüz kırk yıl ömür verildi." },
-  { id: 'manas', name: 'Manas', title: 'Kırgız alpı', stars: 5, costume: 'manas', ab: ['fk', 'bp40'], group: 'destan',
-    text: "Kırgızların büyük destan kahramanı. Kırk yiğidiyle akınlar yapar; Manas Destanı dünyanın en uzun destanlarından sayılır." },
   { id: 'sogotoh', name: 'Er-Sogotoh', title: 'İlk insan', stars: 6, costume: 'sogotoh', ab: ['ku30', 'fk1'], group: 'destan',
     text: "Yakut (Saha) destanında yeryüzünün ilk insanı, dev bir avcı. Hakan Ağacı'nın dibindeki hayat suyuyla güç bulur." },
   { id: 'altin', name: 'Altın Elbiseli Adam', title: 'Saka prensi', stars: 7, costume: 'altin', ab: ['ku50', 'kp30'], group: 'destan',
     text: "Kazakistan'daki Esik kurganında bulunan, MÖ 4.–3. yüzyıldan kalma Saka savaşçısı. Binlerce altın parçayla bezeli giysisiyle bozkırın en görkemli buluntusudur." },
-  { id: 'fatih', name: 'Fatih Sultan Mehmet', title: 'Çağ açan', stars: 6, costume: 'fatih', ab: ['bp65', 'kt5'], group: 'devlet',
-    text: "Osmanlı padişahı (1432–1481). 1453'te İstanbul'u fethetti; bu olay Orta Çağ'ın sonu sayılır." },
   { id: 'babur', name: 'Babür Şah', title: 'Hindistan\'ın fatihi', stars: 6, costume: 'babur', ab: ['ku30', 'kp30'], group: 'devlet',
     text: "Babür İmparatorluğu'nun kurucusu (1483–1530). Çağatay Türkçesiyle yazdığı hatıratı Babürname ile de tanınır." },
   { id: 'ismail', name: 'Şah İsmail', title: 'Hatayi', stars: 6, costume: 'ismail', ab: ['kp50', 'kp1'], group: 'devlet',
@@ -96,19 +88,19 @@ export const ABILITY = A;
 // ---------- Görünüş efektleri (kostüm takımı): koşu izi, kılıç parıltısı, at koşumu, vitrindeki duruş, zafer pozu ----------
 // iz: arkada bırakılan parçacık rengi; kilic: kılıç parıltısı (6★ ve üstünde ya da elle verilmişse); at: eyer ve koşum rengi.
 const GFX = {
-  oguz: { iz: 0x6ab8ff, at: 0x1c3f8a, bekle: 'MX_GS_Idle', zafer: 'MX_GS_PowerUp' },
-  ogullar: { iz: 0xffd060, at: 0x7a4a24, bekle: 'Sword_Idle', zafer: 'MX_GS_Draw' },
-  hun: { iz: 0xff5a2a, at: 0x3a1a1a, bekle: 'MX_GS_Idle3', zafer: 'MX_GS_PowerUp' },
-  gokturk: { iz: 0x5ab0ff, at: 0x1f4a38, bekle: 'MX_GS_Idle2', zafer: 'MX_GS_PowerUp' },
-  destan: { iz: 0xffc040, at: 0x6a1a1a, bekle: 'MX_GS_Idle', zafer: 'MX_GS_PowerUp' },
-  dedekorkut: { iz: 0x8adf6a, at: 0x5a3a1a, bekle: 'MX_GS_Idle3', zafer: 'MX_GS_Draw' },
-  devlet: { iz: 0xff4a4a, at: 0x8a1a1a, bekle: 'MX_GS_Idle2', zafer: 'MX_Examine' },
-  saman: { iz: 0xb07aff, at: 0x3a2a1a, bekle: 'MX_GS_Idle3', zafer: 'MX_Cast' },
-  bayram: { iz: 0x7affb0, at: 0x2a6a3a, bekle: 'MX_GS_Idle', zafer: 'MX_GS_PowerUp' },
+  oguz: { iz: 0x6ab8ff, at: 0x1c3f8a, bekle: 'Idle_Loop', zafer: 'MX_GS_PowerUp' },
+  ogullar: { iz: 0xffd060, at: 0x7a4a24, bekle: 'Idle_Loop', zafer: 'MX_GS_Draw' },
+  hun: { iz: 0xff5a2a, at: 0x3a1a1a, bekle: 'Idle_Loop', zafer: 'MX_GS_PowerUp' },
+  gokturk: { iz: 0x5ab0ff, at: 0x1f4a38, bekle: 'Idle_Loop', zafer: 'MX_GS_PowerUp' },
+  destan: { iz: 0xffc040, at: 0x6a1a1a, bekle: 'Idle_Loop', zafer: 'MX_GS_PowerUp' },
+  dedekorkut: { iz: 0x8adf6a, at: 0x5a3a1a, bekle: 'Idle_Loop', zafer: 'MX_GS_Draw' },
+  devlet: { iz: 0xff4a4a, at: 0x8a1a1a, bekle: 'Idle_Loop', zafer: 'MX_Examine' },
+  saman: { iz: 0xb07aff, at: 0x3a2a1a, bekle: 'Idle_Loop', zafer: 'MX_Cast' },
+  bayram: { iz: 0x7affb0, at: 0x2a6a3a, bekle: 'Idle_Loop', zafer: 'MX_GS_PowerUp' },
 };
 const OWN_FX = { // karta özgü renkler
   gunhan: { iz: 0xffb020 }, ayhan: { iz: 0xdce6ff }, yildizhan: { iz: 0xfff6b0 }, gokhan: { iz: 0x6ab8ff }, daghan: { iz: 0xb09a78 }, denizhan: { iz: 0x4ad8e0 },
-  manas: { iz: 0xf0f4ff }, sogotoh: { iz: 0x9aff9a }, altin: { iz: 0xffd23f, kilic: 0xffd23f }, babur: { iz: 0x2adf8a }, ismail: { iz: 0xd7263d },
+  sogotoh: { iz: 0x9aff9a }, altin: { iz: 0xffd23f, kilic: 0xffd23f }, babur: { iz: 0x2adf8a }, ismail: { iz: 0xd7263d },
   akoglan: { iz: 0xffffff }, attila: { kilic: 0xff3a2a },
 };
 export function cardFx(c) {
@@ -132,18 +124,14 @@ const DETAY = {
   denizhan: { parts: ['C_Sash', 'C_BraidsSide'], colors: { M_Sash: 0x4ad8e0 } },
   mete: { parts: ['C_Lamellar', 'C_Belt', 'C_Mustache', 'C_BraidBack_Sway', 'C_Cape_Sway'], colors: { M_Cape: 0x5a0e0e } },
   bumin: { parts: ['C_Lamellar', 'C_Belt', 'C_BraidBack_Sway', 'C_Cape_Sway'], colors: { M_Cape: 0x1f4a38 } },
-  bilge: { parts: ['C_KaftanLong', 'C_Belt', 'C_BraidBack_Sway', 'C_Mustache', 'C_Cape_Sway'], colors: { M_Cape: 0xb08a2a } },
-  kultigin: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_BraidBack_Sway', 'C_Mustache'] },
   tonyukuk: { parts: ['C_KaftanLong', 'C_BeardLongWhite', 'C_Sash'], colors: { M_Sash: 0x6a5a48, ...BEYAZ_SAC } },
   alperTunga: { parts: ['C_Lamellar', 'C_Pauldrons', 'C_Cape_Sway', 'C_Belt'], colors: { M_Cape: 0x3a0a2a } },
   attila: { parts: ['C_Lamellar', 'C_FurCollar', 'C_Cape_Sway', 'C_Mustache'], colors: { M_Cape: 0x2a1030, M_Kurk: 0x3a2a1a } },
   basat: { parts: ['C_FurCollar', 'C_Belt'], colors: { M_Kurk: 0x8a6a48 } },
   beyrek: { parts: ['C_KaftanLong', 'C_Belt', 'C_Mustache'] },
   dumrul: { parts: ['C_Pauldrons', 'C_Belt', 'C_Cape_Sway'], colors: { M_Cape: 0x2a3a2a } },
-  manas: { parts: ['C_KaftanLong', 'C_Belt', 'C_Cape_Sway', 'C_Mustache'], colors: { M_Cape: 0xf0ece0 } },
   sogotoh: { parts: ['C_FurCollar', 'C_Belt', 'C_BraidBack_Sway'], colors: { M_Kurk: 0xe8e0d0 } },
   altin: { parts: ['C_KaftanLong', 'C_Belt', 'C_Pauldrons'] },
-  fatih: { parts: ['C_KaftanLong', 'C_FurCollar', 'C_Sash', 'C_BeardLong'], colors: { M_Kurk: 0x5a3a22, M_Sash: 0xe8d8a0 } },
   babur: { parts: ['C_KaftanLong', 'C_Sash', 'C_BeardLong'], colors: { M_Sash: 0xd9b04a } },
   ismail: { parts: ['C_KaftanLong', 'C_Sash', 'C_Mustache'], colors: { M_Sash: 0x1a1414 } },
   akoglan: { parts: ['C_Sash', 'C_HairTop'], colors: { M_Sash: 0xffffff } },
@@ -156,7 +144,7 @@ const DETAY = {
 export const CPARTS = [...new Set(Object.values(DETAY).flatMap(d => d.parts))];
 export const cardLook = c => {
   const b = c.costume ? COSTUMES.find(x => x.id === c.costume) : c.look, d = DETAY[c.id];
-  return d ? { ...b, parts: [...b.parts, ...d.parts], colors: { ...b.colors, ...d.colors } } : b;
+  return d ? { ...b, body: c.id, parts: [...b.parts, ...d.parts], colors: { ...b.colors, ...d.colors } } : { ...b, body: c.id };
 };
 
 // ---------- kayıt ----------

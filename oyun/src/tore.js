@@ -67,7 +67,6 @@ export const ACH = [
   ['boybeyi', 'Boybeyi', '{n} farklı boy seç (hepsi 24)', 'boys', [6, 12, 24]],
   ['kombo', 'Kombo Ustası', 'Tek koşuda {n} kombo', 'max_combo', [10, 25, 40]],
   ['atli', 'Atlı', '{n} kez ata bin', 'mount', [5, 25, 100]],
-  ['atsirti', 'At Sırtında', 'Atla toplam {n} m git', 'ride_dist', [1000, 5000, 20000]],
   ['kurtdostu', 'Kurt Dostu', 'Gök Yeleli Kurdu {n} kez çağır', 'wolf', [3, 15, 50]],
   ['isliklik', 'Islıklı Ok', '{n} ok yağmuru çağır', 'volley', [1, 5, 20]],
   ['sifaci', 'Şifacı', '{n} şifalı kımız iç', 'kimiz', [5, 25, 100]],
@@ -119,7 +118,7 @@ export function claimAch(id) { // açılmış ama alınmamış kademelerin ödü
 // [id, metin, istatistik, hedef, 'max' = tek koşudaki en yüksek değer]
 const POOL = {
   kolay: [['k20', '20 düşman biç', 'kill', 20], ['kp5', '5 kıl payı', 'kilpayi', 5], ['is5', '5 tamga halkasından geç', 'isabet', 5], ['kut300', '300 kut topla', 'kut', 300], ['d1500', 'Toplam 1500 m koş', 'dist', 1500], ['br5', '5 ahşap engel kır', 'broken', 5]],
-  orta: [['k40', '40 düşman biç', 'kill', 40], ['kp12', '12 kıl payı', 'kilpayi', 12], ['ok20', 'Yayla 20 düşman vur', 'kill_arrow', 20], ['at800', 'Atla 800 m git', 'ride_dist', 800], ['relic', 'Bir destan eşyası bul', 'relic', 1], ['gold1', 'Bir altın düşman yakala', 'gold', 1], ['kal8', '8 kalkan kır', 'kalkan', 8]],
+  orta: [['k40', '40 düşman biç', 'kill', 40], ['kp12', '12 kıl payı', 'kilpayi', 12], ['ok20', 'Yayla 20 düşman vur', 'kill_arrow', 20], ['relic', 'Bir destan eşyası bul', 'relic', 1], ['gold1', 'Bir altın düşman yakala', 'gold', 1], ['kal8', '8 kalkan kır', 'kalkan', 8]],
   zor: [['tepegoz', "Tepegöz'ü yen", 'boss:tepegoz', 1], ['b3', '3 boss yen', 'boss', 3], ['c25', 'Tek koşuda 25 kombo', 'max_combo', 25, 'max'], ['r3000', 'Tek koşuda 3000 m git', 'max_dist', 3000, 'max'], ['par5', '5 mermiyi geri çal', 'parry', 5], ['albasti', "Albastı'yı yen", 'boss:albasti', 1], ['erlik', "Erlik Han'ı yen", 'boss:erlik', 1]],
 };
 export const DAILY_REWARD = { kolay: { kut: 200, xp: 40, medal: 'bronz' }, orta: { kut: 500, xp: 80, medal: 'gümüş' }, zor: { gd: 3, xp: 150, medal: 'altın' } };

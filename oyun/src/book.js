@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { Actor, GRAD, RIM } from './assets.js';
 import { applyCostume, wallet, sway } from './costumes.js';
+import * as W from './world.js';
 
 export class Book {
   constructor(assets) {
@@ -16,7 +17,9 @@ export class Book {
     key.position.set(3, 5, 4);
     const rim = new THREE.DirectionalLight(0x7aa8ff, 2);
     rim.position.set(-4, 3, -4);
-    this.scene.add(key, rim);
+    const front = new THREE.DirectionalLight(0xfff4e8, 1.3); // önden dolgu: Meshy yüzleri karanlıkta kalmasın
+    front.position.set(0.5, 2, 6);
+    this.scene.add(key, rim, front);
     const base = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.3, 0.25, 40), new THREE.MeshToonMaterial({ color: 0xb3202a, gradientMap: GRAD }));
     base.position.y = -0.125;
     const ring = new THREE.Mesh(new THREE.TorusGeometry(1.17, 0.06, 8, 48), new THREE.MeshToonMaterial({ color: 0xe3a82b, gradientMap: GRAD }));
@@ -53,8 +56,10 @@ export class Book {
 
   show(entry) {
     for (const a of Object.values(this.actors)) a.root.visible = false;
-    this.current = null;
+    for (const g of Object.values(this.sets ??= {})) g.visible = false;
+    this.current = null; this.set = null; this.wd = 0;
     if (entry.locked) return;
+    if (entry.items) return this.showSet(entry);
     const clips = { horse: this.A.horseClips, wolf: this.A.wolfClips, tulpar: this.A.tulparClips, stag: this.A.stagClips }[entry.model] || this.A.clips;
     const a = (this.actors[entry.id] ??= new Actor(this.A, entry.model, clips));
     if (!a.root.parent) {
@@ -75,6 +80,48 @@ export class Book {
     this.frame();
   }
 
+  // Sergi sayfası: engeller, ağaçlar, kayalar, düşman türleri yan yana (gerçek oyun boyutlarıyla). item: { make: 'makeBarricade' } | { env: 'PineTree_aicam1' } | { model, body, anim }
+  showSet(entry) {
+    let g = this.sets[entry.id];
+    if (!g) {
+      g = this.sets[entry.id] = new THREE.Group(); g.userData.actors = [];
+      const satir = [], cok = entry.items.length >= 4; // 4 ve fazlası iki sıra (raf gibi): sayfaya büyük sığsın
+      let x = 0, row = new THREE.Group(); satir.push(row);
+      entry.items.forEach((it, i) => {
+        if (cok && i === Math.ceil(entry.items.length / 2)) { x = 0; row = new THREE.Group(); satir.push(row); }
+        let o;
+        if (it.model) {
+          const a = new Actor(this.A, it.model);
+          if (it.body) a.setBody(it.body);
+          a.play(it.anim || 'Idle_Loop', { fade: 0 });
+          for (const p of ['Axe', 'Shield', 'Spear', 'Club', 'Dao']) if (a.parts[p]) a.parts[p].visible = !it.body && !!it.parts?.includes(p);
+          a.root.rotation.y = 0.35; g.userData.actors.push(a); o = a.root;
+        } else o = it.env ? this.A.env[it.env]?.clone() : W[it.make]?.();
+        if (!o) return;
+        const w = new THREE.Group(); w.add(o);
+        if (it.s) o.scale.multiplyScalar(it.s);
+        const b = new THREE.Box3().setFromObject(o), sz = b.getSize(new THREE.Vector3());
+        o.position.x -= (b.min.x + b.max.x) / 2; o.position.z -= (b.min.z + b.max.z) / 2; o.position.y -= b.min.y;
+        w.position.x = x + sz.x / 2; x += sz.x + (entry.gap ?? 0.6);
+        row.add(w);
+      });
+      let y = 0;
+      for (const r of satir.reverse()) { // arka sıra üstte
+        const rb = new THREE.Box3().setFromObject(r);
+        r.position.set(-(rb.min.x + rb.max.x) / 2, y, 0); y += rb.max.y + 0.4;
+        g.add(r);
+      }
+      const b = new THREE.Box3().setFromObject(g);
+      g.userData.h = b.max.y; g.userData.w = b.max.x - b.min.x;
+      this.scene.add(g);
+    }
+    g.visible = true;
+    this.set = g;
+    this.h = g.userData.h * 1.15;
+    this.wd = g.userData.w * 1.1;
+    this.frame();
+  }
+
   // Yatay ekranda model sola, dikey ekranda yukarı kaydırılır; kart diğer yarıda durur.
   // rect verilirse (kitabın sol sayfası) model o dikdörtgenin ortasına ve boyuna yerleşir.
   resize(w, h, rect = null) {
@@ -84,7 +131,7 @@ export class Book {
     this.wf = 0.9; // kaidenin sığması gereken ekran genişliği payı
     if (rect) {
       this.camera.setViewOffset(w, h, w / 2 - (rect.left + rect.width / 2), h / 2 - (rect.top + rect.height / 2), w, h);
-      this.fill = 0.7 * rect.height / h;
+      this.fill = 0.8 * rect.height / h;
       this.wf = 0.86 * rect.width / w;
     } else {
       if (this.aspect >= 1) this.camera.setViewOffset(w, h, w * 0.2, 0, w, h);
@@ -97,7 +144,7 @@ export class Book {
   frame() {
     const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
     const base = this.baseVisible() ? 2.75 : 0; // kaidenin çapı (1.3 yarıçap + halka): taşmasın
-    const d = Math.max((this.h / this.fill) / (2 * tan), base / (this.wf * 2 * tan * this.aspect));
+    const d = Math.max((this.h / this.fill) / (2 * tan), Math.max(base, this.wd || 0) / (this.wf * 2 * tan * this.aspect));
     this.camera.position.set(0, this.h * 0.75, d + 1);
     this.camera.lookAt(0, this.h * 0.45, 0);
     this.camera.updateProjectionMatrix();
@@ -124,6 +171,11 @@ export class Book {
   }
 
   update(dt) {
+    if (this.set) { // sergi hafifçe sağa-sola salınır
+      this.set.rotation.y = Math.sin(performance.now() / 2200) * 0.35;
+      for (const a of this.set.userData.actors) a.update(dt);
+      return;
+    }
     if (!this.current) return;
     if (this.spin > 0) { this.spin -= dt; this.current.root.rotation.y += dt * 22 * Math.max(0, this.spin); }
     if (this.flashT > 0) {

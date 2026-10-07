@@ -10,11 +10,11 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 
 1. Oyun klasöründe `git status`. Git yoksa önce `git init` ve mevcut hâli commit et.
 2. **Çakışma kontrolü:** Bu repodaki ilk "baseline" commit'i (`Add working copy of the game source`), zip'teki hâldir. PC'deki `src/main.js`, `index.html`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js` o tarihten sonra değiştiyse, dosyaları üstüne yazma. Önce farkı çıkar (`git diff <baseline> -- oyun/src/main.js`) ve değişiklikleri birleştir.
-3. Değişmediyse şunları olduğu gibi kopyala (ayrıca `public/ses/` klasörünün tamamı, yeni `src/assets/karakus.glb`, yapay zekâ paketi `src/assets/dunya.glb`, `src/assets/doku/` klasörü karakter gölgeleri `src/assets/ao.json`, kostüm parçaları `src/assets/kiyafet.glb` ve `src/assets/doku/boya*`):
+3. Değişmediyse şunları olduğu gibi kopyala:
    - **Değişen:** `index.html`, `src/main.js`, `src/bosses.js`, `src/world.js`, `src/costumes.js`, `src/boylar.js`, `src/cine.js`, `src/assets.js`, `src/book.js`, `SESLENDIRME.md`
-   - **Yeni kaynak:** `src/simge.js`, `src/akinci.js`, `ui.js`, `sound.js`, `bonus.js`, `tips.js`, `carsi.js`, `tore.js`, `harita.js`, `yigit.js`, `seferler.js`, `koleksiyon.js`, `ekranlar.js`, `diyalog.js`, `diyalog-metin.js`, `ayarlar.js`, `online.js`, `desen.js`
+   - **Yeni kaynak:** `src/akinci.js`, `ui.js`, `sound.js`, `bonus.js`, `tips.js`, `carsi.js`, `tore.js`, `harita.js`, `yigit.js`, `seferler.js`, `koleksiyon.js`, `ekranlar.js`, `diyalog.js`, `diyalog-metin.js`, `ayarlar.js`, `online.js`, `desen.js`
    - **Belgeler:** `SES-KAYNAKLARI.md`, `CEVRIMICI.md`, `UYGULAMA.md`
-   - **Test araçları** (`tools/` içine; mevcut `bot.js`, `build_chars.py`, `vo_list.mjs` dosyalarının üstüne yazılmaz, adları farklı): `test-bot.mjs`, `bot-brain.js`, `smu2-scenes.mjs`, `kostum-shots.mjs`, `boss-shots.mjs`, `anim-sheet.mjs`, `eagle-shots.mjs`, `tur.mjs`, `ses_uret.py`, `build_eagle.py`, `regresyon.sh`, `flow-test.mjs`, `tore-test.mjs`, `cards-test.mjs`, `dialog-test.mjs`, `tips-test.mjs`, `sound-test.mjs`, `events-test.mjs`, `scenes.mjs`, `shot-menu.mjs`, `ui-test.mjs`, `fps-test.mjs`, `vo_dialog.mjs`
+   - **Test araçları** (`tools/` içine; mevcut `bot.js`, `build_chars.py`, `vo_list.mjs` dosyalarının üstüne yazılmaz, adları farklı): `test-bot.mjs`, `bot-brain.js`, `smu2-scenes.mjs`, `kostum-shots.mjs`, `regresyon.sh`, `flow-test.mjs`, `tore-test.mjs`, `cards-test.mjs`, `dialog-test.mjs`, `tips-test.mjs`, `sound-test.mjs`, `events-test.mjs`, `scenes.mjs`, `shot-menu.mjs`, `ui-test.mjs`, `fps-test.mjs`, `vo_dialog.mjs`
 4. `npm run dev`, sonra `tools/regresyon.sh` (Playwright gerekir: `npm i -D playwright`). Hepsi "tamam" çıkmalı.
 5. `npm run build` ile `OYNA.html`'i yeniden üret.
 6. `node tools/vo_list.mjs` çalıştırılırsa SESLENDIRME.md'nin eski bölümü yeniden yazılır. Diyalog bölümü `<!-- diyaloglar -->` işaretleri arasında durur. Silinirse `node tools/vo_dialog.mjs` ile geri gelir.
@@ -65,66 +65,11 @@ Bu klasördeki kod, 27 Eylül 2026'da Drive'dan alınan `oguzkhan` zip'inin üst
 
 Bot bu mekanikleri de oynuyor (uçurumda zıplar, ışında kayar/zıplar, ▼ düşmanın altından kayar, ▲ çıkınca zıplar, Yada Taşı atar). Ekran görüntüleri: `node tools/smu2-scenes.mjs kalkan kanatli sur ucurum2 yerucurum isin kalinisin yada bitir`.
 
-## Telefonda açmak
-
-- **En kolayı:** claude.ai'de yayınlanan sürüm (özel bağlantı, yalnız senin hesabınla açılır): https://claude.ai/artifact/EhXmC3e9XCYgj3JuVJKTxz
-- **Kendi bilgisayarından (aynı Wi-Fi):** `npm run dev` (zaten `--host` ile açılır), terminalde yazan `Network: http://192.168.x.x:5173` adresini telefonun tarayıcısına yaz.
-- **Web paketi:** `npm run build:web` → `dist-web/` klasörü (modeller ve sesler ayrı dosya, telefonda önbelleğe alınır). Herhangi bir barındırmaya (GitHub Pages, Netlify, Cloudflare Pages) olduğu gibi yüklenebilir. Not: `OYNA.html` 51 MB tek dosya olduğu için telefonda yavaş açılır ve gerçek sesleri yükleyemez.
-- **claude.ai güvenlik kuralı (CSP):** yayın sayfası `data:` ve `blob:` adreslerini yüklemez. Bu yüzden web paketinde modeller `.glb.txt` (base64 metin) olarak gider ve bellekte çözülür (`src/assets.js` → `loadModel`), dokular `createImageBitmap` ile açılır (`BitmapTextures`), diyalog portreleri `<img>` değil `<canvas>`. Denemek için: `node tools/csp-sunucu.mjs 4190` ve `node tools/mobil-test.mjs http://localhost:4190/`.
-
-## Geri bildirim düzeltmeleri (28 Eylül)
-
-| Şikâyet | Ne yapıldı |
-|---|---|
-| Kılıç sesi silah gibi, müzik kötü | Bütün önemli sesler ve 9 müzik artık gerçek ses dosyası (`public/ses/`), `tools/ses_uret.py` ile üretildi. Ayrıntı: SES-KAYNAKLARI.md |
-| Harita | Bölge sekmeleri (kendi çizilmiş simgeleriyle), her bölgenin çizilmiş manzarası, yol üstünde düğümler. Kaydırma yok. Düğüme tıklayınca ayrıntı ekranın ortasında açılır, arkası kararır |
-| Emoji simgeler | `src/simge.js`: bölge, düğüm ve menü simgeleri SVG olarak çizildi |
-| Öğretici ipuçları önü kapatıyor | Küçük bir bant olarak üstte çıkıyor, oyunu yavaşlatmıyor |
-| Önde koşan sarı karakter | Altın düşman kaldırıldı |
-| Mavi küre toplayınca boss kesiliyor | SMU'daki gibi: küre yolda süzülür, yanına gelince kılıçla VUR, küre boss'a uçar. Hasar yalnız böyle ya da altın mermiyi geri çalarak verilir |
-| Boss hiç durmasın | 15 boss'un hepsi aynı çekirdekle baştan yazıldı (`bosses.js` → `kosan`): hep önde koşar, arada sıçrayıp havada döner, şeridine kendi silahını atar, iner, koşmaya devam eder. Albastı yavaşlatıldı |
-| Bitiriş havaya vuruyor | Oğuz boss'un dibine atılır, vuruş noktaları boss'un boyuna göre hesaplanır: diz, sıçrayıp göğüs, son ağır darbe + şimşek. Kamera yolun içinden, çapraz |
-| Havada indirmede değmiyor | Kul Oğuz'un kılıcına doğru dalar, havada buluşurlar |
-| Güçlü kartlar varken oyun kolay | Ordu gücüne göre zorluk (1.0 → 1.8): sıra sıklığı, düşman oranı, pusu, hız, boss canı. HUD'da "ZORLUK ×" |
-| Irmak anlamsız | Irmak bölümü kaldırıldı |
-| Bataklık düşüşü | Yolun önünde toprak çöker, Oğuz çukura düşer, kuyunun içinden aşağı bakan kamerayla yüzüstü düşer, dipte su yaklaşır, suya dalıp yeni kata çıkar. Kesme yok |
-| Destan Kitabı | İçindekiler sayfası (gruplu, tıklanınca o sayfaya gider), her sayfada kurdele ile İçindekiler'e dönüş, alttaki menü kaldırıldı, sayfa kıvrılarak çevrilir, kaide sayfaya sığar |
-| Komik animasyonlar | Her klip kare kare incelendi (`tools/anim-sheet.mjs`); yumruk atar gibi duranlar çıkarıldı |
-| Kartal | Blender'da (bpy) baştan modellendi: `tools/build_eagle.py` → `src/assets/karakus.glb` |
-
 ## Kostüm ve görünüş paketi
 
 Ayrıntı ve Blender talimatı: repo kökündeki **`kostum/`** klasörü (`README.md`, `TASARIM.md`, `BLENDER.md`). Kod tarafı burada bitti: vitrin, "bir koşu dene", yiğide özel iz / kılıç parıltısı / eyer rengi / zafer pozu, kaftan desenleri, kenar ışığı, sallanan parçalar, iki bayram yiğidi. Blender'da yapılacak 15 parça `yigit.js` → `DETAY`'da önceden bağlı.
 
 `assets.js` ve `book.js` de değişti. PC'de bu ikisi zip'ten sonra değiştiyse birleştir.
-
-## Yapay zekâ ile yenilenen dünya (28 Eylül)
-
-Engeller, yol kenarı dekoru ve zemin dokuları Replicate'te yapay zekâyla üretildi (yaklaşık 1,5–2 dolar). Karakterlere dokunulmadı.
-
-- **Hat:** `tools/ai_liste.json` (tarifler) → `tools/ai_uret.py gorsel` (FLUX, her nesneye 3 aday görsel) → elle seçim → `tools/ai_uret.py model <ad>:<no>` (TRELLIS, görselden 3B) → `tools/ai_isle.py <ad>` (Blender: gölge plakası temizliği, üçgen düşürme, engeli yola hizalama, 512 px WebP doku) → `tools/ai_isle.py paket` → `src/assets/dunya.glb`. Dokular: `tools/ai_uret.py doku` → `tools/ai_doku.py <ad>:<no>` (döşenebilir yapar) → `src/assets/doku/*.jpg`.
-- **Anahtar:** `REPLICATE_API_TOKEN` ortam değişkeni. Hiçbir dosyaya yazılmaz. Ham üretimler `ai-kaynak/` klasöründe durur (git'e girmez).
-- **Oyunda:** `src/assets.js` paketi yükler. `PineTree_ai…` gibi aile üyeleri eski paketteki aynı ailenin yerine geçer, `Tower`, `Bush` gibi tam adlar eskisinin üstüne yazılır. `src/world.js` → `aiEngel()`: her engel, eski kodla çizilen hâlinin kutusuna oturtulur (şerit genişliği, zıplama/kayma yüksekliği değişmez; kayılan engellerde geçit yüksekliği korunur). Model yoksa eski hâl çizilir. `aiDoku()`/`aiZemin()`: dokular yüklenince kodla çizilenin yerine geçer.
-- **Yenilenenler (35 nesne):** 20 engel (barikat, araba, sandık, kütük, kayık, karlı kaya, kızak, kemik yığını, kafes, lav kayası, küpler, erzak arabası, buz kristali, çit, diken tuzağı, Çin çiti, sarmaşık, kilimli kiriş, devrik ağaç, zincirli geçit, Çin sancak kapısı), 7 ağaç (2 çam, huş, 2 yapraklı, akçaağaç), 2 çalı, 2 kaya, 3 kule, pagoda. 8 doku: taş yol, sur duvarı, tahta, iskele, bazalt, uçurum kayası, toprak, çimen.
-- **Eski hâlinde kalanlar (yapay zekâ bozdu):** gerili ip (ince ip kayboldu), karlı devrik çam (gövde kayboldu), ölü ağaçlar (ince dallar), ikinci huş ve yosunlu kaya (şekil bozuldu), kar dokusu.
-- **Telefon bütçesi:** engel 3–4 bin, ağaç 1000, çalı 1500, kaya 500, kule 1500 üçgen. Ormanda sahne 500 binden 209 bin üçgene indi. Paket 5,5 MB.
-- **Görüntüler:** `node tools/ai-bolge.mjs <önek> [bölüm...]`, `node tools/ai-oncesonra.mjs <boş.glb> [bölüm...]`, `node tools/ai-onizle.mjs <çıktı> <açı> <glb,...>`.
-
-## Karakter ayrıntısı (28 Eylül)
-
-Modellere dokunmadan karakterlerin yüzeyi zenginleştirildi (`src/ayrinti.js`, `src/assets.js` → `toon()`):
-- **Ayrıntı dokuları:** kumaş, deri, kürk, keçe, ahşap, metal, altın, kemik (`src/assets/doku/detay_*.jpg`, yapay zekâyla üretilip gri tona çevrildi). Malzeme adına göre eşlenir (`M_Leather`, `M_Gold`, `Steel`...). Gri oldukları için kostüm rengini bozmaz. Parçaların çoğunda UV yok: doku, iskelet öncesi konuma göre üç eksenden izdüşürülür (triplanar), koşarken gövdeye yapışık kalır.
-- **Parlama:** metal, altın, mücevher ve cilada çizgi film tarzı ışık lekesi.
-- **Gölge boşlukları (AO):** kol altı, yaka altı, kıvrımlar. `python3 tools/karakter_ao.py` (Blender Python modülü) 21 modelin hepsini ~30 sn'de hesaplar → `src/assets/ao.json` (409 KB). Anahtar köşe sayısı + ilk köşe konumu olduğundan model değişirse o parça kendiliğinden gölgesiz kalır. **`build_chars.py` ile bir karakter yeniden üretilirse bu komutu tekrar çalıştır.**
-- Önce/sonra: `node tools/karakter-yakin.mjs oguz model:tepegoz` → `test-out/yakin-*.png`. `window.__game.AYR` ile ayrıntı, parlama ve gölge kısılabilir.
-
-## Kostüm parçaları, kadın yiğitler, boyalı ayrıntı (28 Eylül)
-
-- **15 kostüm parçası + saç tepesi** (`kostum/BLENDER.md` tablosundakilerin hepsi): `python3 tools/build_kiyafet.py` Oğuz gövdesinin kesitlerini ölçüp Blender'da üretir → `src/assets/kiyafet.glb` (1,1 MB). `oguz.glb`'ye dokunulmaz; oyun yüklerken parçaları Oğuz şablonuna ekler (`src/assets.js` → `kiyafetEkle`). Kemer, kuşak, uzun kaftan, pul zırh, omuzluk, kürk yaka gövdenin kemik ağırlıklarını alır. Pelerin, arka örgü ve şaman saçağı menteşelidir; koşarken gövde dönse de karakterin arkasına kalkar (`costumes.js` → `sway`). Hangi yiğidin ne giydiği `yigit.js` → `DETAY`.
-- **Kadın yiğitler kaldırıldı** (Adım 1): Tomris Hatun ve Banu Çiçek kartları, kadın gövde biçimi kodu silindi. Eski kayıttaki bu kartlar açılışta temizlenir. Başı açık yiğitler için `C_HairTop` (saç tepesi) parçası durur.
-- **Boyalı ayrıntı:** `node tools/boya-render.mjs` Oğuz gövdesini T duruşunda önden ve arkadan çeker, `python3 tools/boya.py` yapay zekâya (FLUX Kontext) ayrıntılı boyatır ve boyanın düz renge oranından gri harita çıkarır (`src/assets/doku/boya_*.jpg`). Gölgelendirici haritayı gövdeye bağlanma konumundan izdüşürür. Renk alınmadığı için kostüm renkleri bozulmaz.
-- **Model değişirse:** `build_chars.py` ile `oguz.glb` yeniden üretilirse sırayla `python3 tools/build_kiyafet.py`, `python3 tools/karakter_ao.py`, `node tools/boya-render.mjs` ve `python3 tools/boya.py` çalıştır.
-- Görüntüler: `node tools/kiyafet-shots.mjs [--yakin] [yiğit...]`, `node tools/karakter-yakin.mjs [--boya] [yiğit|model:ad...]`.
 
 ## Bilinçli kararlar
 
@@ -133,9 +78,3 @@ Modellere dokunmadan karakterlerin yüzeyi zenginleştirildi (`src/ayrinti.js`, 
 - **Seferden gelen destan eşyası:** Uzun seferler bazen eksik bir **gümüş ok** getirir, **altın yay hiçbir zaman** gelmez; altın yay bölümde bulunmalı.
 - **Nazar Boncuğu + Kara-evli:** İkisi toplanır (2 kalkan).
 - **Kaçış süreleri:** Bot, 15 boss'un hepsini sürenin yarısından azında yendi (en uzun: Yelbegen 35 sn / 70 sn). Oyuncu için bol pay var.
-
-## Splash art kartları (Adım 2)
-
-- Yiğitler ekranındaki her kart karesinin ve seçili yiğit başlığının arka planı, o yiğide özel çizgi roman (comic) splash art'tır (`src/assets/splash/<id>.jpg`, 640x360, 29 dosya, ~2 MB). `src/ekranlar.js` dosya varsa `art` sınıfını ekler, yoksa eski düz kart kalır.
-- Üretim: `node tools/splash-render.mjs [id...]` yiğidin vitrindeki 3B görüntüsünü düz zeminde 16:9 alır (`ai-kaynak/splash/<id>-girdi.png`); `python3 tools/splash-uret.py <id...>` FLUX Kontext pro ile çizgi roman illüstrasyonuna çevirir (~0,04 $ / görsel, anahtar `REPLICATE_API_TOKEN` ortam değişkeninden); `python3 tools/splash-uret.py paket` küçültüp `src/assets/splash`'a koyar. Yeni yiğit eklenince yalnız o `id` için üç adım yeterli.
-- Şaman kostümlerinden (Geyik, Ayı, Kartal) `C_Fringe_Sway` (belden aşağı püskül) çıkarıldı; oyun içinde kötü duruyordu.

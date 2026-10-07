@@ -351,4 +351,56 @@ export const BOOK = [
     id: 'boyali', group: 'Devler ve hükümdarlar', name: 'İt-Barak Pehlivanı', title: 'Üç kat boyalı', model: 'boyali', anim: 'Idle_Loop', h: 2.4,
     text: "Destana göre İt-Barak pehlivanları savaştan önce siyah ve beyaz iki sıvıyı karıştırıp vücutlarına üç kat sürer, böylece oklar onlara işlemezdi; Oğuz'un ilk akını bu yüzden yenilgiyle bitti (Ögel, s.186). Oyunda saldırısından yana kaç, dengesi bozulunca kılıçla vur: her vuruş bir kat boyayı kırar. Boyası dökülünce okla bitir!",
   },
+  // ---- sergi sayfaları: oyundaki engeller, yeryüzü ve düşman türleri (gerçek oyun boyutlarıyla yan yana) ----
+  {
+    id: 'kormosturleri', group: 'Düşmanlar', name: 'Körmös Bölükleri', title: 'Erlik ordusunun türleri', gap: 0.4,
+    items: [{ model: 'kormos', body: 'baltaci', anim: 'Sword_Idle' }, { model: 'kormos', body: 'kalkanli', anim: 'Idle_Shield_Loop' }, { model: 'kormos', body: 'mizrakci', anim: 'Sword_Idle' },
+      { model: 'kormos', body: 'okcu', anim: 'MX_BowIdle' }, { model: 'kormos', body: 'pusucu', anim: 'Sword_Idle' }, { model: 'kormos', body: 'kanatli', anim: 'Idle_Loop' }],
+    text: "Soldan sağa: Baltacı, saldırısı yavaştır; tek kılıç darbesi yeter. Kalkanlı, ok işlemez; önce kalkanını kılıçla kır. Mızrakçı, uzaktan dürter; mızrağın altından kay. Okçu, ok yağdırır; okları kılıçla savuştur ya da şerit değiştir. Pusucu, surlardan ve ağaç dallarından aniden atlar. Kanatlı, Bulut Sırtı'nda havadan dalar; zıplayıp vur.",
+  },
+  {
+    id: 'engel_surlar', group: 'Engeller', name: 'Sur Yolu Engelleri', title: 'Kale surlarının üstünde',
+    items: [{ make: 'makeBarricade' }, { make: 'makeCart' }, { make: 'makeCrates' }, { make: 'makeRope' }, { make: 'makeBeam' }],
+    text: "Barikat, araba ve sandık yolu tamamen kapatır: kılıçla kırılır ya da şerit değiştirilerek geçilir. Gerili ip alçaktadır, üstünden zıpla. Kiriş baş hizasındadır, altından kay. Surlar Oğuz yurdunun ilk savunma hattıdır; akıncı onları en hızlı geçendir.",
+  },
+  {
+    id: 'engel_bataklik', group: 'Engeller', name: 'Bataklık Engelleri', title: 'Kara Bataklık',
+    items: [{ make: 'makeStump' }, { make: 'makeBoat' }, { make: 'makeVine' }, { make: 'makeLog' }],
+    text: "Çürümüş kütük yolu keser: şerit değiştir. Batık kayık kılıçla kırılır. Sarkan sarmaşıkların üstünden zıpla, devrik ağacın altından kay. Bataklığın dibinde Sulu ölüleri bekler; ayağını yavaşlatan her engel onlara fırsattır.",
+  },
+  {
+    id: 'engel_altay', group: 'Engeller', name: 'Altay Geçidi Engelleri', title: 'Karlı dağ yolları',
+    items: [{ make: 'makeSnowRock' }, { make: 'makeSled' }, { make: 'makeFence' }, { make: 'makePine' }],
+    text: "Karlı kaya kırılmaz, yanından geç. Yük kızağı kılıçla parçalanır. Alçak çitin üstünden zıpla, yola devrilmiş çamın altından kay. Altay, Türklerin atayurdu sayılan kutlu dağdır; geçitleri Almaslar gözetler.",
+  },
+  {
+    id: 'engel_yeralti', group: 'Engeller', name: 'Yeraltı Engelleri', title: "Erlik'in ülkesi",
+    items: [{ make: 'makeBones' }, { make: 'makeCage' }, { make: 'makeLavaRock' }, { make: 'makeSpikes' }, { make: 'makeChain' }],
+    text: "Kemik yığını, ruh kafesi ve lav kayası yolu kapatır. Yerden çıkan dikenlerin üstünden zıpla, sallanan zincirin altından kay. Altay inanışında yeraltı dokuz kattır; her katta Erlik'in kulları yolcuyu bekler.",
+  },
+  {
+    id: 'engel_cin', group: 'Engeller', name: 'Çin Seferi Engelleri', title: 'Tang ordusunun yolu',
+    items: [{ make: 'makeJars' }, { make: 'makeSupply' }, { make: 'makeLowGate' }, { make: 'makeBannerBeam' }, { make: 'makeCaltrops' }],
+    text: "Şarap küpleri ve erzak arabası kılıçla kırılır. Alçak kırmızı kapının ve generalin döktüğü demir dikenlerin üstünden zıpla. Sancak kirişinin altından kay.",
+  },
+  {
+    id: 'engel_irmak', group: 'Engeller', name: 'Irmak ve Buz Gölü', title: 'Koşu içi bölümler',
+    items: [{ make: 'makeKutuk' }, { make: 'makeRiverRock' }, { make: 'makeCatlak' }, { make: 'makeBuzkule' }],
+    text: "Sal bölümünde ırmakta yüzen kütüklerden ve sivri kayalardan kaçılır. Buzda kayarken çatlak buzun üstünden zıpla, buz kulesinin yanından geç. Bunlar koşunun ortasında açılan özel bölümlerdir.",
+  },
+  {
+    id: 'agaclar', group: 'Yeryüzü', name: 'Ağaçlar', title: 'Orman ve bozkır',
+    items: [{ env: 'PineTree_aicam1' }, { env: 'BirchTree_aihus1' }, { env: 'MapleTree_aiakcaagac' }, { env: 'NormalTree_aiagac1' }, { env: 'DeadTree_1' }],
+    text: "Çam, kayın (huş), akçaağaç, meşe ve kuru ağaç. Eski Türk inancında ağaç yeri göğe bağlar: Hayat Ağacı'nın kökleri yeraltına, dalları göğe uzanır. Kayın ağacı kutlu sayılırdı; şamanlar törenlerde kayın dikerdi.",
+  },
+  {
+    id: 'kayalar', group: 'Yeryüzü', name: 'Kayalar ve Yer Şekilleri', title: 'Dağ, çıkıntı ve taş',
+    items: [{ env: 'Rock_aikaya2' }, { env: 'Rock_aikaya3' }, { make: 'makeKaya' }, { make: 'makeLedge' }, { env: 'Bush_Large' }],
+    text: "Yol kenarındaki kayalar, ormandaki yosunlu taş ve uçurum inişindeki kaya çıkıntısı. Serbest düşüşte çıkıntılardan kaçılır. Türk destanlarında dağlar kutludur; Ergenekon'dan çıkış demir dağı eriterek olur.",
+  },
+  {
+    id: 'kuleler', group: 'Yeryüzü', name: 'Kaleler ve Kuleler', title: 'Şehirler ve sınır boyları',
+    items: [{ env: 'Tower' }, { env: 'WatchTowerWRoof' }, { env: 'LargeTower' }, { env: 'Pagoda' }],
+    text: "Sur kuleleri, gözcü kulesi ve Çin seferindeki pagoda. Bozkırın göçebeleri kale kurmaktan çok at sırtında yaşadı, ama Göktürk ve Uygur kağanları şehirler ve sınır kaleleri de kurdu: Ordu-Balık bunların en ünlüsüdür.",
+  },
 ];

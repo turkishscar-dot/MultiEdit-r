@@ -1,10 +1,10 @@
 // Yiğit Kartları, Kademe, Seferler, Koleksiyon akış testi
 import { chromium } from 'playwright';
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const b = await chromium.launch({ executablePath: process.env.CHROME, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await b.newPage({ viewport: { width: 960, height: 540 } });
 const errs = []; p.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
 await p.goto('http://localhost:5173/');
-await p.evaluate(() => { localStorage.clear(); localStorage.setItem('oguz-test', '1'); localStorage.setItem('oguz-owned', JSON.stringify(['oguz', 'manas', 'attila'])); localStorage.setItem('oguz-costume', JSON.stringify('manas')); });
+await p.evaluate(() => { localStorage.clear(); localStorage.setItem('oguz-test', '1'); localStorage.setItem('oguz-owned', JSON.stringify(['oguz', 'babur', 'attila'])); localStorage.setItem('oguz-costume', JSON.stringify('babur')); });
 await p.reload();
 await p.waitForFunction(() => window.__game?.state === 'gate', null, { timeout: 120000 });
 const r = await p.evaluate(() => {
@@ -14,10 +14,10 @@ const r = await p.evaluate(() => {
   g.wallet.deposit(100000); g.wallet.addGD(500); g.wallet.addDavul(40);
   let draws = {}; for (let i = 0; i < 40; i++) { const d = Y.drum(); draws[d.card.stars] = (draws[d.card.stars] || 0) + 1; }
   out.draws = JSON.stringify(draws) + ' kart=' + Y.ownedCount();
-  for (let i = 0; i < 29; i++) Y.levelUp('manas');
-  out.lvl = JSON.stringify(Y.cardState('manas')) + ' güç=' + Y.power('manas');
-  out.rank = Y.rankUp('manas', true) + ' ' + JSON.stringify(Y.cardState('manas'));
-  const owned = Y.CARDS.filter(c => Y.owned(c.id) && c.id !== 'manas').slice(0, 3);
+  for (let i = 0; i < 29; i++) Y.levelUp('babur');
+  out.lvl = JSON.stringify(Y.cardState('babur')) + ' güç=' + Y.power('babur');
+  out.rank = Y.rankUp('babur', true) + ' ' + JSON.stringify(Y.cardState('babur'));
+  const owned = Y.CARDS.filter(c => Y.owned(c.id) && c.id !== 'babur').slice(0, 3);
   for (const c of owned) Y.toggleTeam(c.id);
   out.army = Y.team().map(c => c.id).join(',') + ' güç=' + Y.armyPower() + ' ×' + Y.armyMult();
   out.tier = JSON.stringify(Y.checkTier().map(t => t.name)) + ' kademe=' + Y.tier();

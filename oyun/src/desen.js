@@ -2,6 +2,18 @@
 // aynı desen her renkte kullanılabilir. Blender'da kaftana gerçek işleme dokusu yapılınca bunların yerini alabilir.
 import * as THREE from 'three';
 
+export const ALL_DESEN_TEX = [];
+let currentDesenAniso = 8;
+export function setDesenAnisotropy(val) {
+  currentDesenAniso = val;
+  for (const t of ALL_DESEN_TEX) {
+    if (t.anisotropy !== val) {
+      t.anisotropy = val;
+      t.needsUpdate = true;
+    }
+  }
+}
+
 function tex(draw, size = 256, rep = 3) {
   const c = document.createElement('canvas');
   c.width = c.height = size;
@@ -13,7 +25,8 @@ function tex(draw, size = 256, rep = 3) {
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(rep, rep);
-  t.anisotropy = 4;
+  t.anisotropy = currentDesenAniso;
+  ALL_DESEN_TEX.push(t);
   return t;
 }
 const line = (g, w, col) => { g.strokeStyle = col; g.lineWidth = w; g.lineJoin = 'round'; };

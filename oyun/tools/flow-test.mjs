@@ -1,7 +1,7 @@
 // Akış testleri: Hayat Suyu (devam, 3 hak sınırı), Çarşı (satın al, raf, koşuda etkisi), Sonsuz Akın bitiş ekranı.
 import { chromium } from 'playwright';
 const which = process.argv[2] || 'all';
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const b = await chromium.launch({ executablePath: process.env.CHROME, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const mobile = process.argv[3] === 'mobile';
 const p = await b.newPage({ viewport: mobile ? { width: 390, height: 844 } : { width: 960, height: 540 } });
 const errs = []; p.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
@@ -23,12 +23,12 @@ if (which === 'all' || which === 'revive') {
 if (which === 'all' || which === 'shop') {
   await ev(`g.toMenu(); g.wallet.deposit(20000); g.wallet.addGD(5); g.openShop();`);
   await shot('carsi-takviye');
-  console.log('buy', await ev(`for (const id of ['kimiz','kurt','bereket','nal','nazar','kilic']) g.shop.buyBoost(id); for (let i=0;i<3;i++) g.shop.buyUpg('at'); g.shop.buyUpg('miknatis'); return { inv: g.shop.inv, upg: g.shop.upg, bank: g.wallet.bank, gd: g.wallet.gokdemir };`));
+  console.log('buy', await ev(`for (const id of ['kimiz','bereket','nazar','kilic']) g.shop.buyBoost(id); for (let i=0;i<3;i++) g.shop.buyUpg('kilic'); g.shop.buyUpg('miknatis'); return { inv: g.shop.inv, upg: g.shop.upg, bank: g.wallet.bank, gd: g.wallet.gokdemir };`));
   await ev(`document.querySelector('#stabs [data-tab=yukselt]').click();`);
   await shot('carsi-yukselt');
   await ev(`document.querySelector('#stabs [data-tab=gokdemir]').click();`);
   await shot('carsi-gokdemir');
-  await ev(`g.toMenu(); g.openMap(); document.querySelector('.mnode').click(); document.querySelector('#mapdetail .big').click();`);
+  await ev(`g.toMenu(); g.openMap(); document.querySelector('.mnode:not(.locked)').click(); document.querySelector('#mapdetail .big').click();`);
   await ev(`for (const id of ['kimiz','kurt','nal']) g.shop.toggleRack(id); document.querySelector('#boyrack').replaceChildren(); document.querySelector('#boyback').click(); document.querySelector('.mnode').click(); document.querySelector('#mapdetail .big').click();`);
   await shot('boy-raf');
   await ev(`document.querySelector('#boygo').click(); g.cine.skip();`);

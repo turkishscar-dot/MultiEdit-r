@@ -1,14 +1,15 @@
 // İpucu testi: temiz kayıtla 1-0 düğümünü oynar (bot ipuçlarını kapatmadan), hangi ipuçları sırayla göründü, ekran görüntüleri
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 const dev = process.argv[2];
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const b = await chromium.launch({ executablePath: process.env.CHROME, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await b.newPage({ viewport: dev === 'mobile' ? { width: 390, height: 844 } : { width: 960, height: 540 }, hasTouch: dev === 'mobile', isMobile: dev === 'mobile' });
 const errs = []; p.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
 await p.goto('http://localhost:5173/');
 await p.evaluate(() => localStorage.clear());
 await p.reload();
 await p.waitForFunction(() => window.__game?.state === 'gate', null, { timeout: 120000 });
-await p.addScriptTag({ path: new URL('./bot-brain.js', import.meta.url).pathname });
+await p.addScriptTag({ path: fileURLToPath(new URL('./bot-brain.js', import.meta.url)) });
 const shots = [];
 let seenN = 0;
 await p.evaluate(() => { window.__tipLog = []; const h = document.getElementById('hint'); new MutationObserver(() => { if (!h.hidden) window.__tipLog.push(h.textContent.slice(0, 40)); }).observe(h, { attributes: true, childList: true }); });

@@ -7,20 +7,18 @@ const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } cat
 
 export const BOOSTS = [
   { id: 'kimiz', name: 'Kımız Tulumu', icon: '🍶', text: 'Koşuya fazladan bir canla başla (4 can).', price: 150 },
-  { id: 'kurt', name: 'Kurt Çağrısı', icon: '🐺', text: 'Koşuya Gök Yeleli Kurt ile başla.', price: 200 },
   { id: 'bereket', name: 'Bereket Muskası', icon: '📿', text: 'İlk 3 dakika topladığın kut iki kat.', price: 250 },
-  { id: 'nal', name: 'Hız Nalı', icon: '🐎', text: 'Koşuya at sırtında başla.', price: 150 },
   { id: 'nazar', name: 'Nazar Boncuğu', icon: '🧿', text: 'İlk darbe işlemez. Kara-evli boyunun kalkanıyla toplanır.', price: 200 },
   { id: 'kilic', name: 'Tengri Kılıcı', icon: '⚔', text: 'Koşuya 10 saniye Tanrı Kılıcı ile başla.', gd: 2 },
 ];
 // Kalıcı yükseltmeler: değer = temel + kademe × adım
+export const SMU_DUR = [6, 9, 12, 15, 18, 23, 30]; // SMU Powerup süreleri (GameData.json)
 export const UPGRADES = [
-  { id: 'at', name: 'At Süresi', icon: '🐴', base: 12, step: 2, unit: ' sn', text: 'Altın nalla binilen at daha uzun koşar.' },
-  { id: 'kurt', name: 'Kurt Süresi', icon: '🐺', base: 14, step: 2, unit: ' sn', text: 'Gök Yeleli Kurt daha uzun yol gösterir.' },
   { id: 'kilic', name: 'Tanrı Kılıcı Süresi', icon: '⚔', base: 12, step: 2, unit: ' sn', text: 'Tanrı Kılıcı elinde daha uzun kalır.' },
   { id: 'yagmur', name: 'Ok Yağmuru', icon: '🏹', base: 40, step: 10, unit: ' ok', text: 'Islıklı okun çağırdığı yağmur daha geniş ve yoğun.' },
   { id: 'kimiz', name: 'Kımız Şansı', icon: '🍶', base: 100, step: 25, unit: '%', text: 'Şifalı kımız yolda daha sık çıkar.' },
   { id: 'miknatis', name: 'Kut Mıknatısı', icon: '🧲', base: 0, step: 1, unit: '', text: 'Yakındaki kutlar sana çekilir; 5. kademede yan şeritlerden bile.' },
+  { id: 'carpan', name: 'Çifte Kut Süresi', icon: '✖2', base: 6, step: 3, unit: ' sn', dur: true, text: 'Çifte Kut tılsımı daha uzun sürer.' },
 ];
 export const UPG_PRICE = [300, 700, 1500, 3000, 6000];
 export const MAX_RACK = 3;
@@ -28,11 +26,12 @@ export const MAX_RACK = 3;
 export const shop = {
   inv: load('oguz-takviye', {}), // takviye id -> adet
   upg: load('oguz-yukselt', {}), // yükseltme id -> kademe (0-5)
-  rack: load('oguz-raf', []), // bir sonraki koşuya seçilen takviyeler
+  rack: load('oguz-raf', []).filter(id => BOOSTS.some(b => b.id === id)), // bir sonraki koşuya seçilen takviyeler (kaldırılan kurt/nal rafta kalmışsa atılır)
   onBuy: null, // (tür, id): istatistik kancası
   saveAll() { save('oguz-takviye', this.inv); save('oguz-yukselt', this.upg); save('oguz-raf', this.rack); },
   buyBoost(id) {
     const b = BOOSTS.find(x => x.id === id);
+    if (!b) return false; // kaldırılmış takviye (kurt, nal)
     if (b.gd ? !wallet.spendGD(b.gd) : !wallet.spend(b.price)) return false;
     this.inv[id] = (this.inv[id] || 0) + 1;
     this.saveAll();
@@ -62,7 +61,7 @@ export const shop = {
   },
 };
 export const upg = id => shop.upg[id] || 0;
-export const upgVal = id => { const u = UPGRADES.find(x => x.id === id); return u.base + upg(id) * u.step; };
+export const upgVal = id => { const u = UPGRADES.find(x => x.id === id); return u ? u.base + upg(id) * u.step : 0; };
 
 // ---------- arayüz ----------
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -86,8 +85,8 @@ export function drawShop(box, tab, redraw) {
       const t = upg(u.id), c = el('div', 'scard');
       const pips = el('div', 'pips');
       for (let i = 0; i < 5; i++) pips.append(el('i', i < t ? 'on' : ''));
-      const now = u.id === 'miknatis' ? (t ? `Menzil ${t}` : 'Yok') : `${u.base + t * u.step}${u.unit}`;
-      const next = t < 5 ? (u.id === 'miknatis' ? `Menzil ${t + 1}` : `${u.base + (t + 1) * u.step}${u.unit}`) : null;
+      const now = u.dur ? `${SMU_DUR[t]} sn` : u.id === 'miknatis' ? (t ? `Menzil ${t}` : 'Yok') : `${u.base + t * u.step}${u.unit}`;
+      const next = t < 5 ? (u.dur ? `${SMU_DUR[t + 1]} sn` : u.id === 'miknatis' ? `Menzil ${t + 1}` : `${u.base + (t + 1) * u.step}${u.unit}`) : null;
       c.append(el('b', 'sicon', u.icon), el('h3', null, u.name), el('p', null, u.text), pips, el('div', 'sown', next ? `${now} → ${next}` : `${now} · EN ÜST KADEME`));
       const btn = el('button', 'small', t < 5 ? `◆ ${UPG_PRICE[t]}` : 'TAMAM');
       btn.disabled = t >= 5 || wallet.bank < UPG_PRICE[t];

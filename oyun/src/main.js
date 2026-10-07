@@ -7,6 +7,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadAssets, Actor, GRAD } from './assets.js';
 import * as W from './world.js';
+import { setDesenAnisotropy } from './desen.js';
 import { Cine } from './cine.js';
 import { Comic } from './comic.js';
 import { Book } from './book.js';
@@ -20,7 +21,7 @@ import { sfx, music, sting, regionOf } from './sound.js';
 import * as SOUND from './sound.js';
 import { bonus, collect as collectBonus } from './bonus.js';
 import { tip, hideTip, tipSeen, resetTips, setGate } from './tips.js';
-import { shop, upg, upgVal, drawShop, drawRack, BOOSTS } from './carsi.js';
+import { shop, upg, upgVal, drawShop, drawRack, BOOSTS, SMU_DUR } from './carsi.js';
 import * as TORE from './tore.js';
 import { rec, recMax, recSet } from './tore.js';
 import { buildNodes, drawMap, isOpen, nextMain, migrate, medalsFor, thresholds, store as hStore, saveStore, COND_TEXT, REGIONS } from './harita.js';
@@ -31,6 +32,7 @@ import * as EK from './ekranlar.js';
 import * as DLG from './diyalog.js';
 import * as AY from './ayarlar.js';
 import { svg } from './simge.js';
+import * as SMU from './smu.js';
 
 const LANES = [-2.5, 0, 2.5];
 const $ = id => document.getElementById(id);
@@ -40,8 +42,9 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 
 // --- sahne + efekt zinciri: mürekkep hatlı çizim -> parlama (bloom) -> renk çıkışı ---
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+const maxDpr = Math.min(typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 2, 3);
+renderer.setPixelRatio(maxDpr);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.prepend(renderer.domElement);
@@ -62,9 +65,19 @@ class OutlineRenderPass extends Pass {
 }
 const active = { scene, camera };
 const gfx = { outline: true };
-const composer = new EffectComposer(renderer);
+
+// MSAA (samples = 4) destekli EffectComposer render hedefi
+const composerTarget = new THREE.WebGLRenderTarget(innerWidth, innerHeight, {
+  type: THREE.HalfFloatType,
+  samples: 0,
+});
+const composer = new EffectComposer(renderer, composerTarget);
 composer.addPass(new OutlineRenderPass());
+
 const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.35, 0.86);
+// Bloom ara render hedeflerini yarı çözünürlükte tutarak mobilde GPU fillrate tasarrufu sağla
+const origBloomSetSize = bloom.setSize.bind(bloom);
+bloom.setSize = (w, h) => origBloomSetSize(Math.max(128, Math.round(w / 2)), Math.max(128, Math.round(h / 2)));
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -72,10 +85,10 @@ const hemi = new THREE.HemisphereLight(0xd6e6ff, 0x8a6a48, 1.15);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffe2b8, 2.6);
 sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 14, bottom: -10, near: 1, far: 60 });
-sun.shadow.bias = -0.0004;
-sun.shadow.normalBias = 0.03;
+sun.shadow.bias = -0.0003;
+sun.shadow.normalBias = 0.02;
 scene.add(sun, sun.target);
 
 const sky = W.makeSky();
@@ -107,7 +120,7 @@ function setMood(a, b = a, k = 1) {
   const mix = (key, target) => target.copy(ca.set(m1[key]).lerp(cb.set(m2[key]), k));
   mix('top', u.top.value); mix('mid', u.mid.value); mix('low', u.low.value);
   mix('fog', scene.fog.color); mix('hs', hemi.color); mix('hg', hemi.groundColor); mix('sc', sun.color);
-  mix('rock', sky.userData.rock.color); mix('snow', sky.userData.snow.color); mix('orb', sky.userData.orb.color);
+  mix('rock', sky.userData.rock.color); mix('snow', sky.userData.snow.color); mix('orb', sky.userData.orb.color); sky.userData.orbDisc.color.copy(sky.userData.orb.color).multiplyScalar(1.5);
   hemi.intensity = lerp(m1.hi, m2.hi, k);
   sun.intensity = lerp(m1.si, m2.si, k);
   scene.fog.near = lerp(m1.fn ?? 70, m2.fn ?? 70, k);
@@ -151,6 +164,7 @@ const DEF = {
   kut: { make: W.makeKut },
   tamga: { make: W.makeTamga }, // İSABET: içinden geçilen altın tamga halkası
   kimiz: { make: W.makeKimiz }, // nadir: bir can verir
+  miknatis: { make: W.makeMiknatis }, carpan: { make: W.makeCarpan },
   hoop: { make: W.makeHoop }, // uçuşta boş hücreyi gösteren halka
   // destan eşyaları: koşarken toplanır
   kurt: { make: () => makeWolfToken() }, islik: { make: W.makeIslik }, yay: { make: W.makeAltinYay }, gumus: { make: W.makeGumusOk },
@@ -203,6 +217,8 @@ const THEMES = {
   aksam: { seg: 'surlar', mood: 'aksam', obst: ['barricade', 'cart', 'crates', 'rope', 'beam'], foes: [['baltaci', 0], ['kalkanli', 150], ['mizrakci', 250]] },
   burc: { seg: 'surlar', mood: 'blood', obst: ['barricade', 'cart', 'crates', 'rope', 'beam'], foes: [['baltaci', 0], ['kalkanli', 100], ['mizrakci', 200]] },
   firtina: { seg: 'gok', mood: 'storm', obst: [] },
+  goksirt: { seg: 'altay', mood: 'sky', obst: ['snowrock', 'fence', 'pine', 'crates', 'sled'], foes: [['baltaci', 0], ['kanatli', 100], ['kalkanli', 250], ['almas', 350], ['mizrakci', 450]] },
+  firtinasirt: { seg: 'altay', mood: 'storm', obst: ['snowrock', 'fence', 'pine', 'sled'], foes: [['kanatli', 0], ['baltaci', 0], ['almas', 150], ['kalkanli', 250], ['mizrakci', 350]] },
   abyss: { seg: 'yeralti', mood: 'abyss', obst: HELL, foes: [['sulmus', 0], ['sulmus', 100], ['kalkanli', 200], ['mizrakci', 300]] },
   // koşu içi bölümlerin sahneleri (ışık önceki temadan kalır); ırmakta düşmanlar önceki temadan gelir
   kuyu: { obst: [] }, vadi: { obst: [] },
@@ -218,7 +234,7 @@ const LEVELS = {
   1: {
     theme: 'surlar', floors: [
       { name: 'SUR KAPISI', sub: 'BİRİNCİ KISIM', theme: 'surlar', boss: 'korbasi', goals: [['dist', 550], ['kut', 40]] },
-      { name: 'AKŞAM SURLARI', sub: 'İKİNCİ KISIM', theme: 'aksam', boss: null, goals: [['dist', 500], ['kill', 8]], sect: ['kartal', 200] },
+      { name: 'AKŞAM SURLARI', sub: 'İKİNCİ KISIM', theme: 'aksam', boss: null, goals: [['dist', 500], ['kill', 8]] },
       { name: 'KANLI BURÇLAR', sub: 'ÜÇÜNCÜ KISIM', theme: 'burc', boss: 'tepegoz', goals: [['dist', 450], ['combo', 5]] },
     ],
   },
@@ -231,15 +247,15 @@ const LEVELS = {
   },
   3: {
     theme: 'orman', floors: [
-      { name: 'KAYIN ORMANI', sub: 'BİRİNCİ KISIM', theme: 'orman', boss: 'almasbey', goals: [['dist', 600], ['kill', 10]], sect: ['kartal', 250] },
+      { name: 'KAYIN ORMANI', sub: 'BİRİNCİ KISIM', theme: 'orman', boss: 'almasbey', goals: [['dist', 600], ['kill', 10]] },
       { name: 'KARLI YAMAÇ', sub: 'İKİNCİ KISIM', theme: 'altay', boss: null, goals: [['dist', 500], ['kut', 60]], sect: ['buz', 180] },
       { name: 'ALTAY GEÇİDİ', sub: 'ÜÇÜNCÜ KISIM', theme: 'altay', boss: 'yelbegen', goals: [['dist', 500], ['kill', 8]] },
     ],
   },
   4: {
-    theme: 'gok', flight: true, floors: [
-      { name: 'BULUT DENİZİ', sub: 'BİRİNCİ KISIM', theme: 'gok', boss: null, goals: [['dist', 700], ['hoop', 10]] },
-      { name: 'FIRTINA', sub: 'İKİNCİ KISIM', theme: 'firtina', boss: 'karakus', goals: [['dist', 600], ['hoop', 8]] },
+    theme: 'goksirt', floors: [
+      { name: 'BULUT SIRTI', sub: 'BİRİNCİ KISIM', theme: 'goksirt', boss: null, goals: [['dist', 650], ['kill', 10]] },
+      { name: 'FIRTINA DORUĞU', sub: 'İKİNCİ KISIM', theme: 'firtinasirt', boss: 'karakus', goals: [['dist', 550], ['kut', 50]] },
     ],
   },
   5: {
@@ -254,14 +270,14 @@ const LEVELS = {
     theme: 'cin', foeModel: 'cinli', prisoners: true, floors: [
       { name: 'SINIR KARAKOLU', sub: 'BİRİNCİ KISIM', theme: 'cin', boss: 'yuzbasi', goals: [['dist', 550], ['kill', 10]] },
       { name: 'ESİR KAMPI', sub: 'İKİNCİ KISIM', theme: 'cin', boss: null, goals: [['dist', 500], ['esir', 8]] },
-      { name: 'KALE KAPISI', sub: 'ÜÇÜNCÜ KISIM', theme: 'karakol', boss: 'general', goals: [['dist', 500], ['kill', 10]], sect: ['kartal', 180] },
+      { name: 'KALE KAPISI', sub: 'ÜÇÜNCÜ KISIM', theme: 'karakol', boss: 'general', goals: [['dist', 500], ['kill', 10]] },
     ],
   },
   7: {
     theme: 'karanlik', floors: [
       { name: 'DONMUŞ IRMAK', sub: 'BİRİNCİ KISIM', theme: 'karanlik', boss: 'itbasi', goals: [['dist', 600], ['kill', 12]], sect: ['buz', 200] },
       { name: 'KUZEY IŞIKLARI', sub: 'İKİNCİ KISIM', theme: 'karanlik', boss: null, goals: [['dist', 500], ['combo', 6]] },
-      { name: 'İT-BARAK OBASI', sub: 'ÜÇÜNCÜ KISIM', theme: 'karanlik', boss: 'boyali', goals: [['dist', 500], ['kill', 12]], sect: ['kartal', 200] },
+      { name: 'İT-BARAK OBASI', sub: 'ÜÇÜNCÜ KISIM', theme: 'karanlik', boss: 'boyali', goals: [['dist', 500], ['kill', 12]] },
     ],
   },
 };
@@ -271,7 +287,7 @@ const ZONES = [
   { lv: 1, name: 'ÖTÜKEN', theme: 'surlar', boss: 'tepegoz' },
   { lv: 2, name: 'KARA BATAKLIK', theme: 'bataklik', boss: 'albasti' },
   { lv: 3, name: 'ALTAY', theme: 'altay', boss: 'yelbegen' },
-  { lv: 4, name: 'GÖK YOLU', theme: 'gok', boss: 'karakus', flight: true },
+  { lv: 4, name: 'GÖK YOLU', theme: 'goksirt', boss: 'karakus' },
   { lv: 5, name: 'YERALTI', theme: 'yeralti', boss: 'erlik' },
   { lv: 6, name: 'ÇİN', theme: 'cin', boss: 'general', foeModel: 'cinli', prisoners: true },
   { lv: 7, name: 'KARANLIK ÜLKE', theme: 'karanlik', boss: 'boyali' },
@@ -317,6 +333,7 @@ FOE.kalkanli.icon = 'kay';
 const FOE_NAME = { ikikalkan: 'KALKAN DUVARI', kanatli: 'KANATLI KUL' };
 const EXTRA_FOES = [['ikikalkan', 220], ['kanatli', 280]]; // her yer bölgesine eklenir
 const setParts = (a, list) => {
+  if (a.baked) list = []; // Meshy gövdesinde silah ve kalkan hazır
   for (const p of ['Axe', 'Dao', 'Shield', 'Spear', 'Shield2']) if (a.parts[p]) a.parts[p].visible = list.includes(p === 'Dao' ? 'Axe' : p);
   if (a.wings) a.wings.visible = false;
 };
@@ -346,11 +363,16 @@ const RIDE_TIME = 12, HORSE_SCALE = 0.48, SEAT = 1.2;
 const SECTS = {
   dive: { name: 'UÇURUMDAN İNİŞ!', seg: 'kuyu', dur: 12, fly: true, obst: ['ledge', 'roots'], pose: 'MX_FallLoop' },
   kartal: { name: 'KARTAL TAŞIMASI!', seg: 'vadi', dur: 15, fly: true, obst: ['cloud', 'bird'], pose: 'MX_FallLoop' },
+  kement: { name: 'KEMENT SALLANMASI!', seg: 'vadi', dur: 16, fly: true, obst: ['cloud', 'bird'], pose: 'MX_FallLoop' },
   sal: { name: 'SALLA IRMAĞA!', seg: 'nehir', dur: 16, stand: 'MX_GS_Idle' },
   buz: { name: 'BUZDA KAYMA!', seg: 'buzgol', dur: 14, stand: 'Crouch_Idle_Loop', slip: 3.2, fast: 1.2 },
 };
+const BAND = { dive: 'SERBEST DÜŞÜŞ', kement: 'KEMENT', buz: 'BUZDA KAYMA', sal: 'SAL' };
+let bossCam = 0; // boss tanıtımında yakın çekim süresi
 let sect = null, sectDone = false, sectAt = 300, eagle = null, eagleAway = null, raft = null, board = null;
 const sw = { a: 0, v: 0, px: 0 }; // kartalın pençesinde sarkaç
+let kementRope = null, kementAnchor = null, kementAx = 0;
+const kementA3 = new THREE.Vector3(), kementV = new THREE.Vector3();
 let camEase = 0;
 const camFromP = new THREE.Vector3(), camFromQ = new THREE.Quaternion();
 const P = { lane: 1, x: 0, y: 0, vy: 0, z: 0, slide: 0, inv: 0, hp: 3, speed: 0, lock: 0, lunge: 0, ride: 0, sword: 0, row: 1, flip: 0, flipAxis: 'x', spin: 0, roll: false, rear: 0 };
@@ -361,6 +383,16 @@ let hero, giant, horse, wolf, tulpar, book, cine, ctx, horseAway = null, mode = 
 let flow = 1, holdTarget = 1, esirs = 0; // düelloda Oğuz durur: dünya akışı 0'a iner
 const foes = [];
 const pools = {}; // model -> tekrar kullanılan aktörler (düşmanlar, esirler)
+// düşman türü -> [şablon, Meshy gövdesi (assets/govde)]: gövdede silah ve kalkan hazır, parça listesi boşalır
+const FOE_BODY = { baltaci: ['kormos', 'baltaci'], kalkanli: ['kormos', 'kalkanli'], mizrakci: ['kormos', 'mizrakci'], pusucu: ['kormos', 'pusucu'], yeralti: ['kormos', 'yeralti'],
+  okcu: ['kormos', 'okcu'], ikikalkan: ['kormos', 'ikikalkan'], kanatli: ['kormos', 'kanatli'], sulu: ['sulu', 'sulu'], albis: ['albasti', 'albis'], almas: ['almas', 'almas'],
+  sulmus: ['sulmus', 'sulmus'], kosucu: ['itbarak', 'kosucu'], itokcu: ['itbarak', 'itokcu'], itkalkan: ['itbarak', 'itkalkan'] };
+function foeBody(a, variant, model) {
+  const b = FOE_BODY[variant];
+  a.baked = !!(b && b[0] === model && a.setBody(b[1]));
+  if (!a.baked) a.setBody(null);
+  return a.baked;
+}
 function pool(model) {
   return (pools[model] ??= Array.from({ length: model === 'esir' ? 6 : 10 }, () => {
     const a = new Actor(A, model);
@@ -386,20 +418,24 @@ const wolfTokenMat = new THREE.MeshToonMaterial({ color: 0x6ab8ff, emissive: 0x1
 let weapon = 'sword'; // koşarken elde kılıç ya da yay; düğme / Q ile değişir
 // görevler, katlar, destan eşyaları ve boy güçleri
 let floor = 0, goalsDone = false, hoops = 0, maxCombo = 0, goalKey = '';
-const pow = { kurt: 0, kilic: 0 }; // etkin güçlerin kalan süresi
+const pow = { kurt: 0, kilic: 0, miknatis: 0, carpan: 0 }; // etkin güçlerin kalan süresi
 let secret = 0, secretTheme = null, deer = null, deerDone = false, trail = null, godDone = false, islikDone = false;
 let stageT = 0, godGlow = null, relicPlan = [], rain = null, guideLane = 1, guideT = 0, shield = 0, reviveUsed = false, smashUsed = false, rideTime = 12;
 const cur = () => LEVELS[level].floors?.[floor] ?? LEVELS[level];
 const relicSave = (() => { try { return JSON.parse(localStorage.getItem('oguz-relics')) || {}; } catch { return {}; } })();
 let runHits = 0, runArrow = 0, runRide = 0, runFly = 0, nodeRun = null, runRecorded = false;
+let contRun = false, contPaid = null, contShown = -1; // görev bitince "koşuya devam et": ödenen kut/XP kayıtlı, altın madalya skoruna kadar sürer
 let continues = 0, noRevive = false, maxHp = 3, bereketT = 0, reviveT = 0, endlessBosses = 0;
 let gallopT = 0, runBosses = 0, runParries = 0, runBroken = 0, runGold = 0; // bu koşuda yenilen boss sayısı (XP için)
 let time = 0, runZ = 0, kut = 0, score = 0, combo = 0, kills = 0, nextZ = 0, bossAt = 0, cool = 0, shake = 0, bannerT = 0, overT = 0;
+let markNext = 500, marks = [], bestDist = 0, recMark = null, recMarkDone = false;
 let trial = null; // "bir koşu dene": { id } (kostüm denemesi, ödül yok)
 let debugCam = null, camX = 0, fovKick = 0, slowK = 1, slowT = 0, stopT = 0, ambushT = 0, slashStep = 0, lastSlash = -9, wasSliding = false;
 
 const dist = () => Math.max(0, Math.floor(runZ - P.z));
-const mult = () => (1 + Math.min(combo, 40) * 0.1) * (has('kayi') ? 1.15 : 1) * (1 + bonus.scoreMult); // 40 komboya kadar artar
+// SMU 5-kademeli kombo çarpanı (GameData.json): 1-10: 1x, 11-20: 2x, 21-30: 3x, 31-40: 4x, 40+: 5x
+const comboTier = () => (combo >= 40 ? 5 : combo >= 31 ? 4 : combo >= 21 ? 3 : combo >= 11 ? 2 : 1);
+const mult = () => comboTier() * (has('kayi') ? 1.15 : 1) * (1 + bonus.scoreMult) * (pow.carpan > 0 ? 2 : 1);
 const slowmo = (k, dur) => { slowK = k; slowT = dur; };
 
 function swordMode(on) { // ara sahneler ve bitiriş: kılıç elde mi kında mı
@@ -438,6 +474,7 @@ loadAssets(p => ($('loadbar').style.width = p * 100 + '%')).then(a => {
     foes.push(f);
   }
   giant = new Actor(A, 'tepegoz');
+  giant.setBody('tepegoz');
   giant.root.scale.setScalar(BOSS_SCALE);
   giant.root.visible = false;
   scene.add(giant.root);
@@ -465,8 +502,9 @@ loadAssets(p => ($('loadbar').style.width = p * 100 + '%')).then(a => {
   scene.add(deerActor.root);
   book = new Book(A);
   portraits = new DLG.Portraits(A, renderer, outline);
-  if (AY.cfg.gfx) applyGfx(AY.cfg.gfx);
-  AY.init({ setState: s => { state = s; }, toMenu, gallery, applyGfx, tilt: () => tilt, setTilt: toggleTilt });
+  applyGfx(AY.cfg.gfx || 'yuksek');
+  warmShaders();
+  AY.init({ setState: s => { state = s; }, toMenu, gallery, applyGfx, applyDynRes: setDynRes, tilt: () => tilt, setTilt: toggleTilt });
   AY.wire();
   EK.init({ setState: s => { state = s; }, book, toMenu, isUnlocked, locked, toast, sfx, levelUps, addXP, levelBar, dressHero, onCards, missingArrow, trial: id => startTrial(id) });
   ctx = makeCtx();
@@ -479,6 +517,7 @@ loadAssets(p => ($('loadbar').style.width = p * 100 + '%')).then(a => {
   $('loadbar').parentElement.hidden = true;
   $('loadtext').hidden = true;
   $('enter').hidden = false;
+  gpuUyari();
 }).catch(e => { $('loading').querySelector('p').textContent = 'Yüklenemedi: ' + e.message; });
 
 // --- ara sahne bağlamı: story.js çekimleri sahneyi bununla kurar ---
@@ -515,6 +554,7 @@ function makeCtx() {
       const a = pool(model)[i];
       a.busy = true;
       a.root.rotation.set(0, 0, 0);
+      foeBody(a, variant, model);
       setParts(a, FOE[variant].parts);
       a.play(FOE[variant].idle, { fade: 0 });
       return a;
@@ -585,11 +625,13 @@ async function playCine(shots, after = toMenu) {
 }
 
 function toMenu() {
+  SMU.modeBand(null); bossCam = 0;
   if (trial) { trial = null; TORE.mute(false); }
   for (const id of ['trialend', 'trialtag']) $(id).hidden = true;
   for (const o of objs) release(o);
   for (const a of arrows) scene.remove(a.mesh);
   objs = []; arrows = [];
+  clearMarks();
   if (boss) endBoss();
   fin = null;
   ctx.clear();
@@ -628,28 +670,178 @@ function locked(key) {
   return true;
 }
 
+// Dizüstünde tarayıcı çoğu zaman ekran kartı yerine Intel/yazılım çizicisini seçer: bir kez uyar
+function gpuUyari() {
+  try {
+    const gl = renderer.getContext(), e = gl.getExtension('WEBGL_debug_renderer_info'), ad = e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : '';
+    if (!/Intel|SwiftShader|Basic Render|llvmpipe/i.test(ad) || localStorage.getItem('oguz-gpu-uyari')) return;
+    localStorage.setItem('oguz-gpu-uyari', '1');
+    setTimeout(() => toast('⚠️', 'Ekran kartı kullanılmıyor', 'Tarayıcı Intel/yazılım çiziciyi seçti. Windows > Grafik ayarları > tarayıcı > Yüksek performans.'), 1500);
+  } catch { /* uyarı verilemese de oyun çalışır */ }
+}
+
 const progress = (() => { try { return JSON.parse(localStorage.getItem('oguz-levels')) || {}; } catch { return {}; } })();
 
-// Grafik düzeyi (Ayarlar): çözünürlük, gölge, parlama, mürekkep çizgisi
+// Dinamik çözünürlük: FPS düşerse geçici olarak oranı kıs, toparlanınca tekrar yükselt (kalıcı düşürme yok)
+const dyn = {
+  enabled: AY.cfg.dynRes ?? true,
+  scale: 1.0,
+  targetRatio: AY.GFX[AY.cfg.gfx || 'yuksek']?.ratio ?? maxDpr,
+  activeRatio: AY.GFX[AY.cfg.gfx || 'yuksek']?.ratio ?? maxDpr,
+  frames: 0,
+  timeAcc: 0,
+  minScale: 0.75, // en çok %25 kısılır: yarı çözünürlük görüntüyü bulanıklaştırıyordu
+  maxScale: 1.0,
+};
+
+function setDynRes(enabled) {
+  dyn.enabled = enabled;
+  if (!enabled) {
+    dyn.scale = 1.0;
+    dyn.activeRatio = dyn.targetRatio;
+    renderer.setPixelRatio(dyn.activeRatio);
+    composer.setPixelRatio(dyn.activeRatio);
+  }
+}
+
+function updateDynRes(realDt) {
+  if (!dyn.enabled || state !== 'run') return;
+  dyn.frames++;
+  dyn.timeAcc += realDt;
+  if (dyn.timeAcc >= 2) { // her oran değişimi render hedeflerini yeniden kurar (~80 ms takılma): seyrek ve kararlı değiştir
+    const fps = dyn.frames / dyn.timeAcc;
+    dyn.frames = 0;
+    dyn.timeAcc = 0;
+    let changed = false;
+    dyn.hold = Math.max(0, (dyn.hold || 0) - 2);
+    if (fps < 45 && dyn.scale > dyn.minScale) {
+      dyn.scale = Math.max(dyn.minScale, +(dyn.scale - (fps < 30 ? 0.25 : 0.15)).toFixed(2));
+      dyn.hold = 12;
+      changed = true;
+    } else if (fps >= 58 && !dyn.hold && dyn.scale < dyn.maxScale) {
+      dyn.scale = Math.min(dyn.maxScale, +(dyn.scale + 0.05).toFixed(2));
+      changed = true;
+    }
+    if (changed) {
+      const newRatio = +(dyn.targetRatio * dyn.scale).toFixed(2);
+      if (Math.abs(newRatio - dyn.activeRatio) >= 0.05) {
+        dyn.activeRatio = newRatio;
+        renderer.setPixelRatio(dyn.activeRatio);
+        composer.setPixelRatio(dyn.activeRatio);
+      }
+    }
+  }
+}
+
+// Grafik düzeyi (Ayarlar): çözünürlük, MSAA, anizotropi, gölge, parlama, mürekkep çizgisi
 function applyGfx(k) {
-  const G = AY.GFX[k] || AY.GFX.yuksek;
-  renderer.setPixelRatio(Math.min(devicePixelRatio, G.ratio));
-  sun.castShadow = G.shadow;
+  const G = AY.GFX[k] || AY.GFX.yerel;
+  dyn.targetRatio = G.ratio;
+  dyn.scale = 1.0;
+  dyn.activeRatio = G.ratio;
+  renderer.setPixelRatio(dyn.activeRatio);
+  composer.setPixelRatio(dyn.activeRatio);
+
+  // Kenar yumuşatma (MSAA)
+  const maxSmpl = renderer.capabilities.maxSamples ?? 4;
+  const samples = Math.min(G.msaa ?? 0, maxSmpl);
+  if (composer.renderTarget1.samples !== samples) {
+    composer.renderTarget1.samples = samples;
+    composer.renderTarget2.samples = samples;
+    composer.renderTarget1.dispose();
+    composer.renderTarget2.dispose();
+  }
+
+  // Gölge kalitesi
+  if (G.shadow === 'high' || (G.shadow === true && G.ratio >= 2)) {
+    sun.castShadow = true;
+    if (sun.shadow.mapSize.x !== 2048) {
+      sun.shadow.mapSize.set(2048, 2048);
+      sun.shadow.map?.dispose();
+      sun.shadow.map = null;
+    }
+    sun.shadow.bias = -0.0003;
+    sun.shadow.normalBias = 0.02;
+  } else if (G.shadow === 'med' || G.shadow === true) {
+    sun.castShadow = true;
+    if (sun.shadow.mapSize.x !== 1024) {
+      sun.shadow.mapSize.set(1024, 1024);
+      sun.shadow.map?.dispose();
+      sun.shadow.map = null;
+    }
+    sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.01;
+  } else if (G.shadow === 'low') {
+    sun.castShadow = true;
+    if (sun.shadow.mapSize.x !== 512) {
+      sun.shadow.mapSize.set(512, 512);
+      sun.shadow.map?.dispose();
+      sun.shadow.map = null;
+    }
+    sun.shadow.bias = -0.0006;
+    sun.shadow.normalBias = 0.01;
+  } else {
+    sun.castShadow = false;
+    sun.shadow.map?.dispose();
+    sun.shadow.map = null;
+  }
+
   bloom.enabled = G.bloom;
   gfx.outline = G.outline;
+
+  // Doku anizotropisi
+  const maxAniso = renderer.capabilities.getMaxAnisotropy?.() || 16;
+  const aniso = Math.min(G.aniso || 4, maxAniso);
+  W.setWorldAnisotropy?.(aniso);
+  setDesenAnisotropy?.(aniso);
+  if (A?.templates) {
+    for (const group of Object.values(A.templates)) {
+      group.traverse?.(o => {
+        if (o.material?.map && o.material.map.anisotropy !== aniso) {
+          o.material.map.anisotropy = aniso;
+          o.material.map.needsUpdate = true;
+        }
+      });
+    }
+  }
+
   resize();
 }
-// Açılışta FPS ölçülür, grafik düzeyi kendiliğinden seçilir (oyuncu seçtiyse dokunulmaz)
+
+// Gölgelendirici ısıtma: ilk kez görünen nesne/düşman koşu ortasında saniyelerce takılmasın diye hepsi bir kez gizlice çizilir
+function warmShaders() {
+  const g = new THREE.Group();
+  let i = 0;
+  const put = o => { o.traverse(c => { c.visible = true; c.frustumCulled = false; }); o.position.set((i % 8 - 3.5) * 2, 0, P.z - 8 - Math.floor(i / 8) * 3); i++; g.add(o); };
+  for (const d of Object.values(DEF)) if (d.make) { try { put(d.make()); } catch {} }
+  for (const m of new Set(['kormos', 'esir', ...Object.values(LEVELS).map(L => L?.foeModel), ...ZONES.map(Z => Z.foeModel)].filter(Boolean))) { try { put(new Actor(A, m).root); } catch {} }
+  scene.add(g);
+  const cp = camera.position.clone(), cq = camera.quaternion.clone();
+  camera.position.set(0, 6, P.z + 6);
+  camera.lookAt(0, 0, P.z - 12);
+  composer.render();
+  camera.position.copy(cp); camera.quaternion.copy(cq);
+  scene.remove(g);
+  pool('kormos'); pool('esir'); // havuz da önceden kurulur (10 iskeletli kopya ~0,3 sn sürer)
+}
+
+// Açılışta FPS ölçülür (kalıcı düşürme yok; oyuncu seçmediyse donanıma göre başlangıç önerilir)
 const fpsProbe = { n: 0, t0: 0, done: !!AY.cfg.gfx };
-function probeFps() { // gerçek saatle (kare süresi 0.05'te kesildiği için dt'ye güvenilmez)
+function probeFps() {
   if (fpsProbe.done || !hero) return;
+  if (state === 'run') { fpsProbe.n = fpsProbe.t0 = 0; fpsProbe.warm = undefined; return; } // koşu sırasında ayar değişip takılmasın: menüde yeniden ölçülür
   const t = performance.now();
   fpsProbe.warm ??= t + 1500; // ilk kareler (gölgelendirici derleme) yavaştır: sayılmaz
   if (t < fpsProbe.warm) return;
   if (!fpsProbe.t0) fpsProbe.t0 = t;
   fpsProbe.n++;
   const sec = (t - fpsProbe.t0) / 1000;
-  if (sec > 2.5) { fpsProbe.done = true; fpsProbe.fps = fpsProbe.n / sec; applyGfx(AY.autoGfx(fpsProbe.fps)); }
+  if (sec > 2.5) {
+    fpsProbe.done = true;
+    fpsProbe.fps = fpsProbe.n / sec;
+    applyGfx(AY.autoGfx(fpsProbe.fps));
+    warmShaders();
+  }
 }
 // Ara sahne galerisi
 function gallery() {
@@ -795,18 +987,18 @@ function openMap() {
   state = 'map';
   for (const id of ['menu', 'win', 'over', 'boyscreen', 'result']) $(id).hidden = true;
   $('mapdetail').hidden = $('mapshade').hidden = true;
-  drawMap($('maplist'), nodes(), showNode);
   $('map').hidden = false;
+  drawMap($('maplist'), nodes(), showNode);
 }
 const reqCard = n => Y.CARDS.find(c => c.costume === n.req?.costume || c.id === n.req?.card);
 function reqOk(n) {
   if (n.req?.boy && !picks.list.includes(n.req.boy)) return false;
-  if (n.req?.costume && Y.leader() !== reqCard(n)) return false;
+  if (n.req?.costume && reqCard(n) && Y.leader() !== reqCard(n)) return false; // ponytail: Manas'ın yiğit kartı yok; kart çıkana dek şart sayılmaz
   return true;
 }
 function reqText(n) {
   if (n.req?.boy) return `Bu görev ${BOYLAR.find(b => b.id === n.req.boy).name} boyundan bir yiğit ister.`;
-  if (n.req?.costume) return `Bu görevde lider ${reqCard(n).name} olmalı.`;
+  if (n.req?.costume && reqCard(n)) return `Bu görevde lider ${reqCard(n).name} olmalı.`;
   return '';
 }
 function showNode(n, open) {
@@ -814,7 +1006,7 @@ function showNode(n, open) {
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const F = !n.extra && !n.soon ? LEVELS[n.lv].floors[n.floor] : null;
   const goals = n.soon ? 'Bu bölüm henüz yapılıyor.' : n.extra ? n.text : F.goals.map(([k, v]) => `${GOAL_ICON[k][0]} ${v}${GOAL_ICON[k][1]}`).join('  ·  ') + (F.boss ? `  ·  sonunda ${BOSSES[F.boss].name}` : '');
-  const kids = [el('h3', null, n.name), el('small', null, n.extra ? 'EK GÖREV' : `${REGIONS[n.lv]?.name || ''} · ${n.sub || ''}`), el('p', 'mgoal', goals)];
+  const kids = [el('h3', null, n.name), el('small', null, n.extra ? (n.gen ? 'GÖREV' : 'EK GÖREV') : `${REGIONS[n.lv]?.name || ''} · ${n.sub || ''}`), el('p', 'mgoal', goals)];
   if (!n.soon) {
     const thr = el('p', 'mthr');
     const md = (cls, text) => { const w = el('span', 'mm'); w.append(el('i', cls), document.createTextNode(text)); return w; };
@@ -822,7 +1014,7 @@ function showNode(n, open) {
     kids.push(thr);
     const r = n.reward;
     kids.push(el('p', 'mrew', (st?.m ? 'İlk ödül alındı · ' : 'İlk bitirişte: ') + `◆ ${r.kut}` + (r.gd ? ` · ⬢ ${r.gd}` : '') + ` · ${r.xp} XP` + (st?.best ? ` · En iyi skor ${st.best.toLocaleString('tr-TR')}` : '')));
-    if (n.req) kids.push(el('p', 'mreq' + (reqOk(n) ? ' ok' : ''), (reqOk(n) ? '✓ ' : '✗ ') + reqText(n)));
+    if (reqText(n)) kids.push(el('p', 'mreq' + (reqOk(n) ? ' ok' : ''), (reqOk(n) ? '✓ ' : '✗ ') + reqText(n)));
   }
   const row = el('div', 'menu-buttons');
   const go = el('button', 'big', open ? 'BAŞLA ▸' : 'KİLİTLİ');
@@ -831,7 +1023,7 @@ function showNode(n, open) {
   const close = el('button', 'small', 'KAPAT');
   close.onclick = () => { box.hidden = true; $('mapshade').hidden = true; };
   row.append(go, close);
-  if (n.req?.costume && Y.leader() !== reqCard(n)) {
+  if (n.req?.costume && reqCard(n) && Y.leader() !== reqCard(n)) {
     const c = reqCard(n), w = el('button', 'small', Y.owned(c.id) ? 'LİDER YAP' : 'YİĞİTLER ▸');
     w.onclick = () => { if (Y.owned(c.id)) { Y.setLeader(c.id); dressHero(); showNode(n, open); } else EK.openYigit(c.id); };
     row.append(w);
@@ -866,8 +1058,8 @@ function nodeDone() {
   const sc = Math.floor(score), m = medalsFor(n, sc), was = st.m, first = !was, newBest = sc > st.best && was > 0;
   st.m = Math.max(was, m); st.best = Math.max(st.best, sc);
   saveStore();
-  if (!flying) timed(hero, Y.cardFx(runner()).zafer, 2.2);
-  const runKut = Math.round(kut * (has('alkaevli') ? 1.25 : 1) * (1 + bonus.kutPct));
+  if (!flying && !P.dead) timed(hero, Y.cardFx(runner()).zafer, 2.2);
+  const totalKut = Math.round(kut * (has('alkaevli') ? 1.25 : 1) * (1 + bonus.kutPct)), runKut = totalKut - (contPaid?.kut || 0);
   wallet.deposit(runKut);
   let xp = 0, gd = runGold, bonusKut = 0;
   for (let k = was; k < m; k++) xp += MEDAL_XP[k];
@@ -893,15 +1085,31 @@ function nodeDone() {
   $('rstats').replaceChildren(...rows.map(([k, v]) => { const d = document.createElement('div'); d.append(Object.assign(document.createElement('span'), { textContent: k }), Object.assign(document.createElement('b'), { textContent: v })); return d; }));
   $('rstamp').hidden = !newBest;
   $('rstory').textContent = story;
-  const nx = n.extra ? null : nextMain(nodes(), n);
+  const nx = n.extra && !n.gen ? null : nextMain(nodes(), n);
   $('rnext').hidden = !nx;
   $('rnext').onclick = () => { $('result').hidden = true; if (nx) showNodeOnMap(nx); };
   $('result').hidden = false;
   sting('win');
-  endRunXP(xp);
+  const paidXP = contPaid?.xp || 0;
+  endRunXP(xp, paidXP);
+  contPaid = { kut: totalKut, xp: runXP() };
+  const need = thresholds(n)[2];
+  $('rcont').hidden = m >= 3 || P.dead;
+  $('rcont').onclick = () => continueRun(need);
   const after = DLG.DIALOGS['son:' + n.lv];
   if (first && !n.extra && n.last && after) { $('result').hidden = true; showDialog(after, () => { state = 'result'; $('result').hidden = false; }); } // bölüm sonu
 }
+// Görev bitse de altın madalya skoruna kadar koşuya devam: skor eşiğe varınca ya da ölünce sonuç ekranı yeniden gelir
+function continueRun(need) {
+  $('result').hidden = true;
+  contRun = true; contShown = -1; contNeed = need;
+  state = 'run';
+  P.inv = Math.max(P.inv, 2);
+  hero.play('Sprint_Loop');
+  $('hud').hidden = false; $('goals').hidden = false;
+  banner(`ALTIN MADALYA: ${need.toLocaleString('tr-TR')} SKOR`);
+}
+let contNeed = 0;
 function showNodeOnMap(n) { openMap(); showNode(n, isOpen(nodes(), n)); }
 
 // Boy seçimi: bölüm öncesi isteğe bağlı; yuva sayısı geçilen ana bölümlerle artar.
@@ -1002,7 +1210,7 @@ function openBook() {
   $('book').hidden = false;
   page = -1; // kitap İçindekiler'den açılır
   fillPage(page);
-  book.current && (book.current.root.visible = false);
+  book.show({ locked: true });
   book.pedestal(false);
   requestAnimationFrame(bookResize);
 }
@@ -1013,10 +1221,10 @@ function openCover() {
   sfx('page');
   setTimeout(() => { bookResize(); showModel(page); }, 700);
 }
-const showModel = i => { if (i < 0 || BOOK[i].locked) { book.current && (book.current.root.visible = false); book.pedestal(false); } else { book.pedestal(true); book.show(BOOK[i]); } };
+const showModel = i => { if (i < 0 || BOOK[i].locked || BOOK[i].items) { book.pedestal(false); if (i >= 0 && BOOK[i].items) return book.show(BOOK[i]); book.show({ locked: true }); } else { book.pedestal(true); book.show(BOOK[i]); } };
 function closeBook() {
   if ($('tome').classList.contains('closed')) return toMenu();
-  book.current && (book.current.root.visible = false);
+  book.show({ locked: true }); // karakter de sergi de gizlenir
   book.pedestal(false);
   $('tome').className = 'closing'; // kapak sayfaların üstüne kapanır, sonra kitap ortaya kayar
   $('book').className = 'closed';
@@ -1208,6 +1416,8 @@ function win() {
     + (full ? ' · ALTIN YAY VE ÜÇ GÜMÜŞ OK TAMAM! +200 KUT' : '') + (firstThree ? ' · İLK ÜÇ YILDIZ! +3 GÖK DEMİR' : '')
     + ` · +${runXP()} XP`;
   $('winstory').textContent = EPILOG[level] || '';
+  { let pb = 0; try { pb = +localStorage.getItem('oguz-best') || 0; if (score > pb) localStorage.setItem('oguz-best', Math.floor(score)); } catch {}
+    SMU.endPanel('win', { kind: 'win', cardId: runner()?.id, score, best: pb, newBest: score > pb && pb > 0 }); }
   for (const id of ['hud', 'bossbar', 'ride']) $(id).hidden = true;
   if (!flying) timed(hero, Y.cardFx(runner()).zafer, 2.2); // yiğide özel zafer pozu
   $('win').hidden = false;
@@ -1320,9 +1530,9 @@ function recordRun() {
 
 // Koşu sonu XP'si: mesafe, düşman, boss
 function runXP() { return Math.floor(dist() / XP.perMeters) + kills * XP.kill + runBosses * XP.boss; }
-function endRunXP(extra = 0) {
-  recordRun();
-  const ups = addXP(runXP() + extra);
+function endRunXP(extra = 0, paidXP = 0) {
+  if (!paidXP) recordRun();
+  const ups = addXP(runXP() - paidXP + extra);
   recMax('level', akinciLevel());
   levelUps(ups, levelBar);
 }
@@ -1352,6 +1562,8 @@ function start(m = mode, lv = level, skipIntro = false) {
   dlgShown = false;
   flying = !!L.flight;
   sect = eagleAway = null; sectDone = false; sectAt = 300; hideProps();
+  markNext = 500; clearMarks(); bestDist = 0; recMarkDone = false;
+  if (mode === 'endless') { try { bestDist = JSON.parse(localStorage.getItem('oguz-sonsuz'))?.bestDist || 0; } catch {} }
   hero.root.visible = true;
   hero.root.rotation.set(0, Math.PI, 0);
   for (const o of objs) release(o);
@@ -1364,6 +1576,7 @@ function start(m = mode, lv = level, skipIntro = false) {
   clearTerrain(); terrNext = rand(140, 220); camGy = 0;
   Object.assign(P, { lane: 1, x: 0, y: 0, gy: 0, vy: 0, slide: 0, inv: 0, hp: 3, speed: has('kayi') ? 13.5 : 12, lock: 0, lunge: 0, ride: 0, sword: 0, dead: false, flip: 0, spin: 0, roll: false, rear: 0 });
   time = kut = score = combo = kills = hoops = maxCombo = runBosses = runParries = runBroken = runGold = endlessBosses = 0;
+  contRun = false; contPaid = null;
   comboT = 0; for (const k in runCounts) runCounts[k] = 0;
   runHits = runArrow = runRide = runFly = 0; runRecorded = false;
   for (const id of picks.list) recSet('boys', id);
@@ -1371,10 +1584,10 @@ function start(m = mode, lv = level, skipIntro = false) {
   goldPlan = []; // önden kaçan altın düşman kaldırıldı (kafa karıştırıyordu)
   runZ = P.z; nextZ = P.z - 35; bossAt = cur().goals ? Infinity : L.bossAt; ambushT = 6; esirs = 0;
   goalsDone = false; goalKey = ''; stageT = 0; goalBase = { kill: 0, kut: 0, esir: 0, hoop: 0 };
-  pow.kurt = pow.kilic = secret = 0; deer = trail = rain = null; deerDone = godDone = islikDone = false;
+  pow.kurt = pow.kilic = pow.miknatis = pow.carpan = secret = 0; deer = trail = rain = null; deerDone = godDone = islikDone = false;
   secretTheme = null; wolf.root.visible = deerActor.root.visible = false;
-  shield = has('karaevli') ? 1 : 0; reviveUsed = smashUsed = false;
-  rideTime = upgVal('at') + (has('doger') ? 6 : 0); // Çarşı yükseltmesi: at süresi
+  shield = (has('karaevli') ? 1 : 0) + (has('alayuntli') ? 1 : 0); reviveUsed = smashUsed = false;
+  rideTime = 12;
   continues = 0; noRevive = false; maxHp = 3; bereketT = 0;
   planRelics();
   $('goals').hidden = !cur().goals;
@@ -1396,7 +1609,6 @@ function start(m = mode, lv = level, skipIntro = false) {
   comboUi();
   $('armym').textContent = '×' + Y.armyMult(isUnlocked('ordu')).toFixed(1); // Ordu gücü (SMU Team Power)
   $('zorm').textContent = zorluk() > 1.05 ? 'ZORLUK ×' + zorluk().toFixed(1) : ''; // güçlü ordu: oyun da zorlaşır
-  if (has('alayuntli') && !flying) mount(); // Ala-yuntlı: akına at sırtında başla
   useBoosts();
   if (nodeRun?.floor > 0) { floor = nodeRun.floor - 1; nextFloor(); } // haritadan sonraki bir kısım: o kısmın girişiyle başlar
   rec('runs');
@@ -1409,9 +1621,7 @@ function useBoosts() {
   rec('boost', used.length);
   for (const id of used) {
     if (id === 'kimiz') { maxHp = 4; P.hp = 4; hearts(); }
-    if (id === 'kurt') callWolf();
     if (id === 'bereket') bereketT = 180;
-    if (id === 'nal' && !flying && !P.ride) mount();
     if (id === 'nazar') shield++;
     if (id === 'kilic') { pow.kilic = 10; setWeapon('sword'); }
   }
@@ -1442,11 +1652,12 @@ function add(kind, lane, z, extra = {}) {
     const mdl = cfg.model || LEVELS[level].foeModel || 'kormos';
     actor = pool(mdl).find(f => !f.busy);
     if (!actor) return null;
-    if (cfg.parts.includes('Shield2')) dualShield(actor, mdl);
+    if (cfg.parts.includes('Shield2') && !foeBody(actor, extra.variant, mdl)) dualShield(actor, mdl);
     actor.busy = true;
     actor.root.visible = true;
     actor.root.rotation.set(0, 0, 0);
     actor.root.scale.setScalar(cfg.scale || 1);
+    foeBody(actor, extra.variant || 'baltaci', mdl);
     setParts(actor, cfg.parts);
     const idle = cfg.idle === 'Sword_Idle' ? pick(FOE_IDLE) : cfg.idle;
     actor.play(extra.phase === 'wait' && extra.variant === 'pusucu' ? 'MX_GS_Crouch' : idle, { fade: 0 }); // pusucu çömelip bekler
@@ -1599,9 +1810,9 @@ function spawnRow(z) {
     if (trail && l === trail.lane && z < trail.z0 && z > trail.z1) continue; // kan izi şeridi kılıca kadar boş
     if (l === free) {
       if (relicPlan.length && d >= relicPlan[0][2]) { const [k, i] = relicPlan.shift(); add(k, l, z, { fy: 1.6, ri: i }); } // zıplayarak alınır
-      else if (d > 150 && !P.ride && !sect && Math.random() < (has('doger') ? 0.06 : 0.035) + (nodeRun?.mods?.nal || 0)) add('nal', l, z);
       else if (d > 100 && Math.random() < (P.hp < maxHp ? 0.025 : 0.004) * (has('bayindir') ? 2 : 1) * upgVal('kimiz') / 100) add('kimiz', l, z);
-      else if (d > 200 && !pow.kurt && Math.random() < 0.012) add('kurt', l, z);
+      else if (d > 160 && !pow.miknatis && Math.random() < 0.012) add('miknatis', l, z);
+      else if (d > 260 && !pow.carpan && Math.random() < 0.01) add('carpan', l, z);
       else if (d > 300 && !islikDone && Math.random() < 0.012) { islikDone = true; add('islik', l, z); }
       else if (LEVELS[level].prisoners && d > 60 && Math.random() < 0.22) add('esir', l, z);
       else if (d > 80 && !sect && Math.random() < 0.07) add('tamga', l, z); // İSABET halkası
@@ -1764,7 +1975,7 @@ function hurt(o) {
   sfx('hurt');
   AY.vibrate(70);
   runHits++;
-  if (nodeRun?.cond?.[0] === 'nohit') return missionFail('DARBE ALDIN!');
+  if (nodeRun?.cond?.[0] === 'nohit' && !contRun) return missionFail('DARBE ALDIN!');
   P.hp--; P.inv = has('eymur') ? 2.4 : 1.4; shake = 0.4; combo = has('dodurga') ? Math.floor(combo / 2) : 0;
   comboUi();
   hearts();
@@ -1826,10 +2037,15 @@ function killFoe(o, how) {
   rec('kill');
   if (how === 'arrow') { rec('kill_arrow'); runArrow++; }
   addCombo('vurus', how === 'horse' ? 50 : 100);
+  const COMIC_WORDS = ['GÜM!', 'BAM!', 'SAVRUL!', 'BİÇ!', 'ŞAAK!'];
+  pop(how === 'slide' ? 'KAYARAK VURUŞ!' : pick(COMIC_WORDS), at);
+  shake = Math.max(shake, how === 'slide' ? 0.22 : 0.18);
   if (how === 'sword') stopT = 0.06;
+  else if (how === 'slide') stopT = 0.05;
   if (bonus.foeKut) kut += bonus.foeKut;
+  if (has('doger')) kut += 2; // Döğer: avcı
   if (o.gold) goldKilled(o);
-  if (how === 'slide') { rec('slidekill'); pop('ALTINDAN!', at); return true; }
+  if (how === 'slide') { rec('slidekill'); return true; }
   if (kills % (has('avsar') ? 4 : 6) === 0 && how !== 'horse') { // bitiriş anı: ağır çekim + yakınlaşma
     slowmo(0.25, 0.45);
     fovKick = -12;
@@ -1857,7 +2073,7 @@ function updateObj(o, dt) {
     o.z -= 3 * dt;
     if ((o.ft += dt) > 1.8) o.dead = true;
   }
-  if (o.kind === 'kut' && !o.mag && ahead < 7 && ahead > 0 && (has('salur') || (has('kizik') && Math.abs(o.x - P.x) < 2.8) || (upg('miknatis') && Math.abs(o.x - P.x) < 1.1 + upg('miknatis') * 0.35))) o.mag = true; // Çarşı: kut mıknatısı
+  if (o.kind === 'kut' && !o.mag && ahead < 7 && ahead > 0 && (has('salur') || (has('kizik') && Math.abs(o.x - P.x) < 2.8) || (upg('miknatis') && Math.abs(o.x - P.x) < 1.1 + upg('miknatis') * 0.35) || (pow.miknatis > 0 && ahead < 16))) o.mag = true; // Çarşı: kut mıknatısı
   if (o.def.foe && !o.phase && !o.dying && !o.bank) o.x += (LANES[o.lane] - o.x) * Math.min(1, dt * 8); // şerit değiştiren düşman
   if (o.raft) o.raft.position.set(o.x, Math.sin(o.t * 2) * 0.05, o.z);
   if (o.def.deer) updateDeer(o, dt, ahead);
@@ -1931,7 +2147,9 @@ const ISIN = { sur: 0xb06aff, tahta: 0x6aff8a, kar: 0x7ad0ff, kaya: 0xffc040, ba
 const isinColor = () => (LEVELS[level].foeModel === 'cinli' || theme === 'cin' || theme === 'karakol' ? 0xff3a3a : ISIN[TSTYLE[theme]] ?? 0xb06aff);
 
 function addCombo(kind, pts, n = 1) {
+  const prevTier = comboTier();
   combo += n;
+  const newTier = comboTier();
   comboT = comboTime();
   maxCombo = Math.max(maxCombo, combo);
   runCounts[kind] += 1;
@@ -1942,6 +2160,13 @@ function addCombo(kind, pts, n = 1) {
   $('combolabel').textContent = `${COMBO_KIND[kind]}  +${gain.toLocaleString('tr-TR')}`;
   $('combolabel').className = 'show k-' + kind;
   comboLabelT = 1.4;
+  if (newTier > prevTier && combo >= 11) {
+    const TIER_NAMES = { 2: '2x AKINCI!', 3: '3x FIRTINA!', 4: '4x HİDDET!', 5: '5x DESTANSI!' };
+    pop(TIER_NAMES[newTier] || `${newTier}x KOMBO!`, { x: P.x, y: P.gy + 2.2, z: P.z });
+    shake = Math.max(shake, 0.25);
+    sfx('gold');
+    sparks.emit(P.x, P.gy + 1.8, P.z, 35, 0xffd23f, 6, 3);
+  }
 }
 // Kıl payı: yan şeritteki engelin 0.6 m'den yakınından geçmek ya da alçak/yüksek engeli son 0.25 sn'de atlatmak
 function nearMiss(o) {
@@ -1952,6 +2177,8 @@ function nearMiss(o) {
   if (!ok) return;
   addCombo('kilpayi', 50, 1 + bonus.nearMiss);
   pop('KIL PAYI!', o.mesh.position);
+  shake = Math.max(shake, 0.14);
+  sparks.emit(P.x, P.gy + 1.2, P.z, 20, 0x7ad0ff, 4, 2);
   sfx('near');
   tip('kilpayi', 'Kıl payı! Engelin dibinden geçmek ya da son anda atlamak kombo verir.', '✦', slowmo);
 }
@@ -1961,7 +2188,7 @@ function pickup(o) {
   const at = o.mesh.position;
   switch (o.kind) {
     case 'kut': {
-      const n = (pow.kurt > 0 && P.lane === guideLane ? 2 : 1) * (time < bereketT ? 2 : 1); // kurdun yolundan gidene iki kat; Bereket Muskası
+      const n = (pow.kurt > 0 && P.lane === guideLane ? 2 : 1) * (time < bereketT ? 2 : 1) * (pow.carpan > 0 ? 2 : 1); // kurdun yolundan gidene iki kat; Bereket Muskası; Çifte Kut
       kut += n; score += 10 * n * mult(); o.dead = true; sfx('kut', { gap: 0.02 }); return true;
     }
     case 'tamga':
@@ -1971,7 +2198,7 @@ function pickup(o) {
       sparks.emit(o.x, 1.6, o.z, 30, 0xffd23f, 5, 2);
       o.mesh.visible = false;
       return true;
-    case 'hoop': hoops++; rec('hoop'); score += 50 * mult() * (has('begdili') ? 2 : 1); sparks.emit(o.x, o.y, o.z, 20, 0xffd23f, 5, 2); o.mesh.visible = false; return true;
+    case 'hoop': hoops++; rec('hoop'); score += 50 * mult() * (has('begdili') ? 2 : 1); sparks.emit(o.x, o.y, o.z, 20, 0xffd23f, 5, 2); o.mesh.visible = false; if (sect?.kind === 'kement') addCombo('isabet', 75); return true;
     case 'kimiz':
       sfx('heal');
       rec('kimiz');
@@ -1982,6 +2209,8 @@ function pickup(o) {
       sparks.emit(o.x, 1.5, o.z, 40, 0xff4a6a, 5, 3);
       return true;
     case 'nal': o.dead = true; mount(); return true;
+    case 'miknatis': o.dead = true; rec('powerup'); pow.miknatis = SMU_DUR[upg('miknatis') + 1]; banner('KUT MIKNATISI!'); sfx('gold'); sparks.emit(at.x, 1.2, at.z, 40, 0xd7263d, 5, 3); return true;
+    case 'carpan': o.dead = true; rec('powerup'); pow.carpan = SMU_DUR[upg('carpan')]; banner('ÇİFTE KUT!'); sfx('gold'); sparks.emit(at.x, 1.2, at.z, 40, 0xffcf3f, 5, 3); slowmo(0.5, 0.3); return true;
     case 'kan': return true;
     case 'kurt': // Gök yeleli kurt: önden koşup güvenli yolu gösterir, pusucuları yakalar
       o.dead = true;
@@ -2545,6 +2774,7 @@ function getBossActors(kind) {
   const def = BOSSES[kind];
   const mk = () => {
     const a = new Actor(A, def.model);
+    a.baked = a.setBody(kind);
     a.root.scale.setScalar(def.scale);
     a.root.visible = false;
     scene.add(a.root);
@@ -2627,6 +2857,9 @@ function startBoss() {
   $('bossname').textContent = def.name;
   $('bossbar').hidden = false;
   bossBar();
+  SMU.bossIntro(def.name);
+  bossCam = 2.2;
+  slowmo(0.12, 2.2);
 }
 
 // Kanat çırpma: kanatlar model kökünde, uzunlamasına (z) eksen etrafında döner; base < 0 kanatları yukarı açar
@@ -2870,7 +3103,7 @@ function updateFinisher(dt) {
       sparks.emit(b.x, b.y + 1, gz + 1, 50, 0xffc040, 8, 4);
       pop(['ŞAK!', 'ÇAT!', 'GÜM!'][fin.hits - 1], new THREE.Vector3(b.x, b.y, gz));
     }
-    flightRig(dt);
+    if (flying) flightRig(dt); else hero.update(dt);
     if (fin.t > 2.6) finishDone(b);
     return;
   }
@@ -3072,8 +3305,17 @@ function divePebbles(dt) { // taşlar Oğuz'dan yavaş düşer: ekranda yukarı 
     p.m.rotation.x += dt * 3;
   }
 }
+function kementProps() { // kement: ip ve parlayan çapa
+  if (kementRope) return;
+  kementRope = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1, 6), W.toon(0x8a5a2b, 'kement'));
+  kementRope.visible = false;
+  scene.add(kementRope);
+  kementAnchor = W.glowSprite(0xffd23f, 1.2, 0);
+  kementAnchor.visible = false;
+  scene.add(kementAnchor);
+}
 function hideProps() {
-  for (const p of [eagle, raft, board, diveWater, diveGlow]) if (p) p.visible = false;
+  for (const p of [eagle, raft, board, diveWater, diveGlow, kementRope, kementAnchor]) if (p) p.visible = false;
   for (const p of pebbles) p.m.visible = false;
   if (hero) hero.root.rotation.z = 0;
   $('grid').hidden = !LEVELS[level]?.flight;
@@ -3090,6 +3332,7 @@ function startSect(kind, after = null) {
   flash();
   setTheme(S.seg);
   if (!after) banner(S.name);
+  SMU.modeBand(BAND[kind]);
   P.slide = P.flip = 0; P.lock = 0;
   if (S.fly) {
     swordMode(false);
@@ -3098,6 +3341,7 @@ function startSect(kind, after = null) {
     $('grid').hidden = false;
   }
   if (kind === 'kartal') { (eagle ??= makeEagle()).visible = true; eagleAway = null; sw.a = sw.v = 0; sw.px = P.x; }
+  if (kind === 'kement') { kementProps(); kementRope.visible = kementAnchor.visible = true; kementAx = P.x; sw.a = sw.v = 0; sw.px = P.x; sfx('swing'); }
   if (kind === 'dive') { diveProps(); P.row = 1; P.y = HEIGHTS[1]; sfx('whoosh'); }
   if (kind === 'sal') { (raft ??= (() => { const r = W.makeSal(); scene.add(r); return r; })()).visible = true; P.y = 0; }
   if (kind === 'buz') { (board ??= (() => { const b = W.makeShieldBoard(); scene.add(b); return b; })()).visible = true; }
@@ -3105,6 +3349,7 @@ function startSect(kind, after = null) {
 function endSect() {
   const s = sect;
   sect = null;
+  SMU.modeBand(null);
   for (const o of objs) if (P.z - o.z > -2) o.dead = true;
   nextZ = P.z - 30;
   terrNext = Math.max(terrNext, runZ - P.z + rand(100, 180));
@@ -3133,7 +3378,7 @@ function sectTick(dt) { // update(): bölüm zamanı ve tetikleyiciler
   if (boss || fin || flying || stageT > 0) return;
   const sc = cur().sect;
   if (mode === 'level' && sc && !sectDone && !goalsDone && dist() >= sc[1]) { sectDone = true; startSect(sc[0]); }
-  else if (mode === 'endless' && dist() >= sectAt) { sectAt += 650; startSect(pick(['kartal', 'buz'])); }
+  else if (mode === 'endless' && dist() >= sectAt) { sectAt += 650; startSect(pick(['buz', 'kement'])); }
 }
 function sectView(dt) { // view(): bölümdeki duruşlar ve sahne eşyaları
   const r = hero.root, k = sect.kind;
@@ -3158,6 +3403,24 @@ function sectView(dt) { // view(): bölümdeki duruşlar ve sahne eşyaları
     flap(eagle, 7, 'z', -0.2);
     r.position.set(P.x + Math.sin(a) * arm, py - Math.cos(a) * arm + into * 9, P.z + into * 6);
     r.rotation.set(0, Math.PI, -a);
+  } else if (k === 'kement') {
+    const cyc = 1.5, ct = sect.t % cyc;
+    if (ct < dt) { kementAx = P.x; sfx('swing', { gain: 0.6 }); } // yeniden tutunma
+    const vx = (P.x - sw.px) / Math.max(dt, 1e-3);
+    sw.px = P.x;
+    sw.v += ((-clamp(vx * 0.05, -0.45, 0.45) - sw.a) * 28 - sw.v * 2.5) * dt; // şerit değişince Oğuz sarkaç gibi sallanır
+    sw.a += sw.v * dt;
+    const a = sw.a + Math.sin(time * 1.7) * 0.07;
+    const arc = -1.2 * Math.sin(Math.PI * ct / cyc); // ileri sarkaç: ortada en alçak
+    r.position.set(P.x + Math.sin(a) * 2.1, P.y + arc, P.z);
+    hero.bone('hand_r').getWorldPosition(kementV);
+    const A = kementA3.set(kementAx, HEIGHTS[P.row] + 9, P.z - 14);
+    kementRope.position.copy(kementV).add(A).multiplyScalar(0.5);
+    kementRope.scale.set(1, kementV.distanceTo(A), 1);
+    kementRope.lookAt(A);
+    kementRope.rotateX(Math.PI / 2);
+    kementAnchor.position.copy(A);
+    r.rotation.set(Math.atan2(kementV.z - A.z, A.y - kementV.y), Math.PI, -a); // gövde ipin açısına yatar
   } else if (k === 'sal') {
     const bob = Math.sin(time * 2.2) * 0.05;
     raft.position.set(P.x, bob, P.z + 0.3);
@@ -3201,6 +3464,8 @@ function updateGoals() {
 function updatePowers(dt) {
   if (pow.kurt > 0) { updateGuide(dt); pow.kurt -= dt; }
   if (pow.kilic > 0 && (pow.kilic -= dt) <= 0) banner('KILIÇ GÖĞE DÖNDÜ');
+  if (pow.miknatis > 0 && (pow.miknatis -= dt) <= 0) banner('MIKNATIS BİTTİ');
+  if (pow.carpan > 0 && (pow.carpan -= dt) <= 0) banner('ÇİFTE KUT BİTTİ');
   if (secret > 0 && (secret -= dt) <= 0) { flash(); setTheme(secretTheme); for (const o of objs) if (o.kind === 'kut') o.dead = true; }
   godGlow ??= (() => { const g = W.glowSprite(0xff3a2a, 1.6, 0); scene.add(g); return g; })(); // kızıl parlayan kılıç
   godGlow.visible = pow.kilic > 0 && weapon === 'sword';
@@ -3208,6 +3473,8 @@ function updatePowers(dt) {
   const items = [];
   if (pow.kurt > 0) items.push(`🐺 ${Math.ceil(pow.kurt)}` + (P.lane === guideLane ? ' ×2' : ''));
   if (pow.kilic > 0) items.push(`⚔ ${Math.ceil(pow.kilic)}`);
+  if (pow.miknatis > 0) items.push(`🧲 ${Math.ceil(pow.miknatis)}`);
+  if (pow.carpan > 0) items.push(`✖2 ${Math.ceil(pow.carpan)}`);
   if (secret > 0) items.push(`🦌 ${Math.ceil(secret)}`);
   if (shield > 0) items.push('🛡');
   $('powers').hidden = !items.length;
@@ -3235,6 +3502,43 @@ function flightRig(dt) {
   tulpar.root.rotation.z = (P.x - LANES[P.lane]) * 0.08;
   tulpar.root.rotation.x = (P.y - HEIGHTS[P.row]) * 0.08;
   flap(tulpar.root, 5, 'z', -0.45); // yukarı açık V
+}
+
+// ---- mesafe tabelaları (SMU pankartları): 500 m'de bir ----
+function dropMark(m) {
+  scene.remove(m.mesh);
+  const s = m.mesh.userData.sign;
+  s.material.map.dispose(); s.material.dispose(); s.geometry.dispose();
+}
+function clearMarks() {
+  for (const m of marks) dropMark(m);
+  marks = [];
+  if (recMark) { dropMark(recMark); recMark = null; }
+}
+function updateMarks() {
+  if (flying || sect || boss) { if (dist() >= markNext) markNext += 500; }
+  else if (dist() + 70 >= markNext) {
+    const z = runZ - markNext;
+    const mesh = W.makeMarker(markNext + ' METRE');
+    mesh.position.z = z;
+    scene.add(mesh);
+    marks.push({ n: markNext, z, mesh, done: false });
+    markNext += 500;
+  }
+  if (bestDist > 0 && !recMarkDone && !recMark && dist() + 70 >= bestDist) {
+    const z = runZ - bestDist;
+    const mesh = W.makeMarker('REKOR ' + bestDist + ' M', true);
+    mesh.position.z = z;
+    scene.add(mesh);
+    recMark = { n: bestDist, z, mesh, done: false };
+  }
+  for (const m of marks) {
+    if (!m.done && P.z < m.z) { m.done = true; pop(`${m.n} M!`, { x: P.x, y: 1.5, z: P.z }); sfx('combo'); score += 100 * mult(); }
+    if (P.z < m.z - 20) { dropMark(m); m.dead = true; }
+  }
+  marks = marks.filter(m => !m.dead);
+  if (recMark && !recMark.done && P.z < recMark.z) { recMark.done = true; pop('REKOR!', { x: P.x, y: 1.5, z: P.z }); sfx('gold'); }
+  if (recMark && P.z < recMark.z - 20) { dropMark(recMark); recMark = null; recMarkDone = true; }
 }
 
 // --- döngü ---
@@ -3267,7 +3571,7 @@ function update(dt) {
   if (state === 'menu' || state === 'map' || state === 'gate' || state === 'win' || state === 'boylar' || state === 'carsi' || state === 'result' || state === 'tore' || state === 'kademe' || state === 'sefer' || state === 'dialog' || state === 'ayar' || state === 'trialend') { hero.update(dt); return; }
   if (state === 'dying') {
     hero.update(dt);
-    if ((overT -= dt) <= 0) { if (trial) trialEnd(); else if (!noRevive && continues < 3) showRevive(); else gameOver(); }
+    if ((overT -= dt) <= 0) { if (contRun) nodeDone(); else if (trial) trialEnd(); else if (!noRevive && continues < 3) showRevive(); else gameOver(); }
     return;
   }
   if (state === 'revive') { reviveTick(dt); return; }
@@ -3318,13 +3622,19 @@ function update(dt) {
 
   while (nextZ > P.z - 110) {
     if (runZ - nextZ > terrNext && terrOk(nextZ)) { const end = buildTerrain(nextZ - 6); terrNext = runZ - end + rand(160, 300); }
-    if (sect || (!boss && (cur().goals ? !goalsDone : runZ - nextZ < bossAt - 40))) (flying ? spawnSky : spawnRow)(nextZ);
+    if (sect || (!boss && (cur().goals ? !goalsDone || contRun : runZ - nextZ < bossAt - 40))) (flying ? spawnSky : spawnRow)(nextZ);
     nextZ -= (rand(9, 13) + P.speed * 0.28) / Math.sqrt(zorluk()); // SMU temposu: her saniye bir sıra; güçlü orduda daha sık
   }
   if (terr.length) pruneTerrain();
   if (!sect?.after) updateGoals(); // kat geçişi inişinde görevler sayılmaz
+  if (contRun && state === 'run') {
+    const v = Math.min(contNeed, Math.floor(score));
+    if (v !== contShown) { contShown = v; const d = document.createElement('div'); d.textContent = `★ ${v.toLocaleString('tr-TR')}/${contNeed.toLocaleString('tr-TR')}`; $('goals').replaceChildren(d); }
+    if (score >= contNeed) { hero.play('Idle_Loop', { fade: 0.3 }); return nodeDone(); }
+  }
   if (trial) { trialTick(); if (state !== 'run') return; }
   sectTick(dt);
+  updateMarks();
   W.flowWater(dt);
   if (stageT > 0 && !sect && (stageT -= dt) <= 0) {
     if (nodeRun) return nodeDone();
@@ -3417,6 +3727,7 @@ function view(dt, realDt) {
   snowfx.update(realDt);
   embers.update(realDt);
   sky.position.set(P.x, 0, P.z);
+  sky.userData.u.t.value = performance.now() / 1000; // bulutlar yavaşça kayar
   sun.position.set(P.x - 7, 14, P.z + 6);
   sun.target.position.set(P.x, 0, P.z - 4);
 
@@ -3444,6 +3755,12 @@ function view(dt, realDt) {
   } else if (state !== 'run' && state !== 'pause' && state !== 'dying') {
     camera.position.set(1.4, 1.7, P.z - 4.2);
     camera.lookAt(0, 1.25, P.z);
+  } else if (bossCam > 0 && boss && state === 'run') { // boss tanıtımı: kamera boss'un önünde, yüzüne doğru yaklaşır
+    bossCam -= realDt;
+    const s2 = boss.def.scale || 1.4, hy = (boss.def.hitY || 2) * 0.85 + (boss.y || 0), k = 1 - bossCam / 2.2;
+    camera.position.set(boss.x + 1.2 * s2, hy + 0.4, boss.gz - (4.5 - k * 1.2) * Math.max(1, s2 * 0.7)); // yüzünün önünden (boss oyuncuya bakmıyorsa sırtı görünür: önden çekilir)
+    camera.lookAt(boss.x, hy, boss.gz);
+    if (bossCam <= 0) camMark(); // oyun kamerasına yumuşak dönüş
   } else if (fin && boss) {
     const gz = boss.gz, s = boss.def.scale || 1.4, mid = gz + 1;
     if (boss.def.flying) {
@@ -3499,8 +3816,11 @@ function comboRing() {
   if (comboLabelT > 0 && (comboLabelT -= 1 / 60) <= 0) $('combolabel').className = '';
 }
 function comboUi(bump) {
+  const tier = comboTier();
   $('combo').hidden = combo < 2;
   $('combon').textContent = combo;
+  $('combo').dataset.tier = tier;
+  if ($('combotier')) $('combotier').textContent = 'x' + tier;
   if (!bump || combo < 2) return;
   const c = $('combo');
   c.classList.remove('pop');
@@ -3576,8 +3896,9 @@ function doRevive() {
   state = 'run';
   P.dead = false;
   P.hp = maxHp;
-  P.inv = 2; // 2 sn yenilmez
-  for (const o of objs) if (P.z - o.z > -2 && P.z - o.z < 20 && !o.def.esir) o.dead = true; // önündeki 20 m temizlenir
+  P.inv = 6.0; // SMU ReviveInvincibleTime: 6000 ms
+  slowmo(0.35, 1.0); // SMU ContinueRunSlomotion: 1000 ms
+  for (const o of objs) if (P.z - o.z > -2 && P.z - o.z < 35 && !o.def.esir) o.dead = true; // SMU güvenli alan: önündeki 35 m temizlenir
   hearts();
   banner('HAYAT SUYU!');
   flash('#7dff9a');
@@ -3598,8 +3919,9 @@ function gameOver() {
   $('over').querySelector('h1').textContent = overTitle || 'YENİLDİN!';
   overTitle = null;
   wallet.deposit(Math.round(kut * (1 + bonus.kutPct)));
-  let best = Math.floor(score);
-  try { best = Math.max(best, +localStorage.getItem('oguz-best') || 0); localStorage.setItem('oguz-best', best); } catch {}
+  let best = Math.floor(score), prevBest = 0;
+  try { prevBest = +localStorage.getItem('oguz-best') || 0; best = Math.max(best, prevBest); localStorage.setItem('oguz-best', best); } catch {}
+  SMU.endPanel('over', { kind: 'over', cardId: runner()?.id, score, best: prevBest, newBest: score > prevBest && prevBest > 0 });
   const f = $('final');
   f.replaceChildren();
   const rows = mode === 'endless' ? endlessRecords() : [['Mesafe', dist() + ' m'], ['Kut', kut], ['Düşman', kills], ['Skor', Math.floor(score)], ['En iyi', best], ['XP', '+' + runXP()]];
@@ -3731,7 +4053,7 @@ $('wardback').onclick = closeWardrobe;
 $('enter').onclick = () => { music('menu'); playCine(JENERIK, () => playComic(PROLOG_PAGES)); };
 $('skip').onclick = () => cine.skip();
 for (const id of ['mapback', 'overmenu', 'pausemenu', 'wmenu']) $(id).onclick = toMenu;
-for (const [id, ic] of Object.entries({ torebtn: 'tore', carsibtn: 'carsi', yigitbtn: 'yigit', seferbtn: 'sefer', wardbtn: 'kostum', bookbtn: 'destan', storybtn: 'hikaye', ayarbtn: 'ayar' })) $(id).querySelector('.ticon').replaceChildren(svg(ic, 36)); // menü simgeleri (emoji yerine)
+for (const [id, ic] of Object.entries({ torebtn: 'tore', carsibtn: 'carsi', yigitbtn: 'yigit', seferbtn: 'sefer', wardbtn: 'kostum', bookbtn: 'destan', storybtn: 'hikaye', ayarbtn: 'ayar' })) $(id)?.querySelector('.ticon')?.replaceChildren(svg(ic, 36)); // menü simgeleri (emoji yerine)
 $('mapshade').onclick = () => { $('mapdetail').hidden = $('mapshade').hidden = true; };
 $('bookback').onclick = closeBook;
 $('cover').onclick = openCover;
@@ -3764,6 +4086,7 @@ resize();
 const clock = new THREE.Clock();
 function frame(realDt) {
   probeFps(realDt);
+  updateDynRes(realDt);
   let k = 1;
   if (stopT > 0) { stopT -= realDt; k = 0.03; }
   else if (slowT > 0) { slowT -= realDt; k = slowK; }
@@ -3784,8 +4107,9 @@ renderer.setAnimationLoop(() => {
 
 // test kancası (tarayıcı konsolundan oyunu adım adım sürmek için)
 window.__game = {
+  THREE, W, DEF, FOE, THEMES, Actor, setParts, makeBird, makeWolfToken, get A() { return A; }, BOSSES_DEF: BOSSES,
   AYR: AYRINTI, // karakter ayrıntısı ayarları (önce/sonra görüntüleri için)
-  AY, applyGfx, get fps() { return fpsProbe; },
+  renderer, AY, applyGfx, get fps() { return fpsProbe; }, get dyn() { return dyn; }, setDynRes,
   resetTips, tipSeen,
   DLG, showDialog, get portraits() { return portraits; },
   Y, EK, KO, dressHero,
@@ -3796,8 +4120,8 @@ window.__game = {
   get runCounts() { return runCounts; }, get bonus() { return bonus; }, spawnGold, get runStats() { return { parries: runParries, broken: runBroken, gold: runGold, bosses: runBosses }; },
   sfx, music, sting, SOUND,
   unlockAll, addXP, levelUps, toast,
-  get warnLane() { return warn.visible ? LANES.indexOf(warn.position.x) : -1; }, get flow() { return flow; }, get time() { return time; }, get dist() { return dist(); }, get level() { return level; }, get mode() { return mode; }, get kills() { return kills; }, get combo() { return combo; }, get score() { return score; }, get kut() { return kut; },
-  get boss2() { return boss; }, get flying() { return flying; }, get sect() { return sect; }, startSect, get theme() { return theme; }, setTheme, LEVELS,
+  get warnLane() { return warn.visible ? LANES.indexOf(warn.position.x) : -1; }, get flow() { return flow; }, get time() { return time; }, get dist() { return dist(); }, get level() { return level; }, get mode() { return mode; }, get kills() { return kills; }, get combo() { return combo; }, get score() { return score; }, set score(v) { score = v; }, get kut() { return kut; },
+  get boss2() { return boss; }, get bossCam() { return bossCam; }, startBoss, gameOver, win, get flying() { return flying; }, get sect() { return sect; }, startSect, get theme() { return theme; }, setTheme, LEVELS,
   P, get state() { return state; }, get boss() { return boss; }, get objs() { return objs; }, get fin() { return fin; },
   get hero() { return hero; }, get book() { return book; }, get weapon() { return weapon; }, setWeapon, add, pow, get relics() { return relicSave; }, volley, enterSecret, get goalsDone() { return goalsDone; }, get floor() { return floor; }, nextFloor, set cam(v) { debugCam = v; }, set frozen(v) { frozen = v; }, set norender(v) { norender = v; }, get cine() { return cine; }, get comic() { return comic; }, playComic, recordComic, wallet, openWardrobe, playCine, openBook, openMap, toMenu, start, act, tick: frame, mount, spawnAmbush,
 };

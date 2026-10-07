@@ -2,7 +2,7 @@
 // Not: başsız Chromium SwiftShader (yazılım GPU) kullanır; sonuçlar gerçek telefondan düşük ve yalnızca karşılaştırma içindir.
 import { chromium } from 'playwright';
 const throttle = +(process.argv[2] || 1);
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const b = await chromium.launch({ executablePath: process.env.CHROME, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 const cdp = await p.context().newCDPSession(p);
 await p.goto('http://localhost:5173/');

@@ -10,9 +10,9 @@ from mathutils import Vector
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KAYNAK = os.path.join(KOK, 'ai-kaynak')
 LISTE = json.load(open(os.path.join(KOK, 'tools', 'ai_liste.json')))['nesne']
-UCGEN = {'engel': 3500, 'alcak': 3000, 'yuksek': 4000, 'dekor': 1000}
+UCGEN = {'engel': 3500, 'alcak': 3000, 'yuksek': 4000, 'dekor': 4500, 'merkez': 3000}
 # dekor sahnede yüzlerce kez tekrarlanır (telefonda üçgen bütçesi): aileye göre
-AILE_UCGEN = {'Rock': 500, 'Bush': 1500, 'Bush_Flowers': 1500, 'Tower': 1500, 'WatchTowerWRoof': 1500, 'LargeTower': 1500, 'Pagoda': 1500}
+AILE_UCGEN = {'Rock': 2200, 'Bush': 3000, 'Bush_Flowers': 3000, 'Tower': 4000, 'WatchTowerWRoof': 4000, 'LargeTower': 4000, 'Pagoda': 3000}  # masaüstü uygulaması: eski düşük bütçe (500-1500) delik/parçalanma yaratıyordu
 DOKU = 512
 
 
@@ -67,12 +67,24 @@ def taban_temizle(o, esik=0.03):
     return len(sil)
 
 
+def kaynat(o):
+    """Aynı konumdaki köşeleri birleştir (dikiş/normal bölünmeleri): yoksa sadeleştirme dikişlerden yırtılıp delik açar."""
+    bm = bmesh.new(); bm.from_mesh(o.data)
+    boy = max(max(v.co[i] for v in bm.verts) - min(v.co[i] for v in bm.verts) for i in range(3))
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=max(boy * 2e-4, 1e-6))
+    bm.to_mesh(o.data); bm.free()
+
+
 def hafiflet(o, hedef):
+    kaynat(o)
     n = sum(len(p.vertices) - 2 for p in o.data.polygons)
     if n > hedef:
-        m = o.modifiers.new('dec', 'DECIMATE'); m.ratio = hedef / n; m.use_collapse_triangulate = True
-        bpy.context.view_layer.objects.active = o
-        bpy.ops.object.modifier_apply(modifier=m.name)
+        for _ in range(4):  # ayrık kabuklarda tek geçiş hedefe inmeyebilir
+            k = sum(len(p.vertices) - 2 for p in o.data.polygons)
+            if k <= hedef * 1.15: break
+            m = o.modifiers.new('dec', 'DECIMATE'); m.ratio = max(0.02, hedef / k); m.use_collapse_triangulate = True
+            bpy.context.view_layer.objects.active = o
+            bpy.ops.object.modifier_apply(modifier=m.name)
     bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); bpy.context.view_layer.objects.active = o
     bpy.ops.object.shade_smooth_by_angle(angle=math.radians(50))
     return n, sum(len(p.vertices) - 2 for p in o.data.polygons)
@@ -182,6 +194,7 @@ def paket():
 
 
 if __name__ == '__main__':
-    if sys.argv[1] == 'paket': paket()
+    ARGV = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:]  # blender -b --python ... -- <id>
+    if ARGV[0] == 'paket': paket()
     else:
-        for i in sys.argv[1:]: isle(i)
+        for i in ARGV: isle(i)

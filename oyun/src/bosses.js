@@ -160,11 +160,11 @@ const itbasi = champ({ name: 'İT-BARAK BAŞBUĞU', model: 'itbarak', parts: ['A
 // ---------------- Dev Kara Kuş (uçuş bölümü): önde uçar, tüy yağdırır ve kuş sürüsü salar.
 // Arada dönüp çığlık atar; o an gözü açıktadır, okla vur.
 const karakus = {
-  name: 'DEV KARA KUŞ', hp: 9, escape: 75, model: 'karakus', scale: 3.2, hitY: 0, flying: true,
+  name: 'DEV KARA KUŞ', hp: 9, escape: 75, model: 'karakus', scale: 3.2, hitY: 3, flying: true, ranged: true,
   start(B, b) { b.gz = B.P.z - 80; b.rot = Math.PI; b.y = 4.5; B.banner('DEV KARA KUŞ!'); },
   update(B, b, dt) {
     const phase = b.hp > 6 ? 1 : b.hp > 3 ? 2 : 3;
-    b.y = 4.5 + Math.sin(b.time * 1.3) * 1.2;
+    b.y = (b.state === 'screech' ? 2.6 : 4.2) + Math.sin(b.time * 1.3) * 0.5; // çığlıkta yola alçalır
     b.x = Math.sin(b.time * 0.7) * 2.2;
     b.flap = b.state === 'screech' ? 3 : 7;
     if (b.state === 'enter') { runTo(B, b, 24, 1, dt); if (b.off < 25) setState(b, 'fly'); }
@@ -173,8 +173,9 @@ const karakus = {
       b.rot = Math.PI;
       if (b.t > 1.3 - phase * 0.2) {
         b.t = 0;
-        const cells = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(() => Math.random() - 0.5).slice(0, 2 + phase);
-        for (const c of cells) B.add('feather', c % 3, b.gz + 3, { vz: 18, row: Math.floor(c / 3), parry: true });
+        const lanes = [0, 1, 2].sort(() => Math.random() - 0.5).slice(0, phase >= 2 ? 2 : 1); // en az bir şerit boş
+        if (!lanes.includes(B.P.lane) && Math.random() < 0.6) lanes[0] = B.P.lane;
+        for (const l of lanes) B.add('feather', l, b.gz + 3, { vz: 18, y: 1.3, parry: true });
         if (++b.n >= 4) { b.n = 0; b.sh = 0; setState(b, 'screech'); B.tap('ŞİMDİ! OKLA!'); }
       }
     }

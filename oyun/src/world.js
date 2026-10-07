@@ -10,6 +10,18 @@ const mats = {};
 export const toon = (color, key = color, extra = {}) =>
   (mats[key] ??= new THREE.MeshToonMaterial({ color, gradientMap: GRAD, ...extra }));
 
+export const ALL_WORLD_TEX = [];
+let currentWorldAniso = 8;
+export function setWorldAnisotropy(val) {
+  currentWorldAniso = val;
+  for (const t of ALL_WORLD_TEX) {
+    if (t.anisotropy !== val) {
+      t.anisotropy = val;
+      t.needsUpdate = true;
+    }
+  }
+}
+
 function tex(w, h, draw, rx = 1, ry = 1) {
   const c = document.createElement('canvas');
   c.width = w;
@@ -18,8 +30,9 @@ function tex(w, h, draw, rx = 1, ry = 1) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = 4;
+  t.anisotropy = currentWorldAniso;
   t.repeat.set(rx, ry);
+  ALL_WORLD_TEX.push(t);
   return t;
 }
 
@@ -204,6 +217,12 @@ const glowTex = tex(64, 64, (g, w) => {
   g.fillRect(0, 0, w, w);
 });
 
+const sunTex = tex(128, 128, (g, w) => { // keskin kenarlı güneş diski
+  const r = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+  r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.6, 'rgba(255,255,255,1)');
+  r.addColorStop(0.68, 'rgba(255,255,255,.4)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, w, w);
+});
 const dotTex = tex(32, 32, (g, w) => { // beyaz yumuşak nokta: kar, toz
   const r = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
   r.addColorStop(0, 'rgba(255,255,255,1)');
@@ -245,6 +264,33 @@ function envObj(name, x, z, s = 1, ry = rand(0, 6.3), y = 0) {
   return o;
 }
 const addEnv = (g, ...a) => { const o = envObj(...a); if (o) g.add(o); return o; };
+
+// ---- Poly Haven paketi (src/assets/ph.glb, PH_<ad>, CC0): kaya, kütük, kök, çalı... bölümlere serpilir ----
+// ton verilirse bölümün rengine boyanır (malzeme kopyası ton başına bir kez üretilir)
+const PH_TON = new Map();
+function phObj(ad, x, z, s = 1, ton = null, y = 0, em = 0, ry = rand(0, 6.3)) {
+  const o = envObj('PH_' + ad, x, z, s, ry, y);
+  if (o && ton != null) o.traverse(m => {
+    if (!m.isMesh) return;
+    const k = m.material.uuid + ton + em;
+    let t = PH_TON.get(k);
+    if (!t) { t = m.material.clone(); t.color.multiply(new THREE.Color(ton)); t.emissive = new THREE.Color(em); PH_TON.set(k, t); }
+    m.material = t;
+  });
+  return o;
+}
+// n adet, yolun iki yanına rastgele (|x| x0..x1), ölçek s0..s1
+function phSerp(g, adlar, n, x0, x1, [s0, s1], ton = null, y = 0, em = 0) {
+  for (let i = 0; i < n; i++) {
+    const o = phObj(adlar[Math.floor(Math.random() * adlar.length)], (Math.random() < 0.5 ? -1 : 1) * rand(x0, x1), -rand(0, SEG), rand(s0, s1), ton, y, em);
+    if (o) g.add(o);
+  }
+}
+const TAS = ['moon_rock_', 'rock_07', 'rock_09', 'stone_01'], // küçük taşlar (gerçek boyları ufak: büyütülür)
+  KAYA = ['namaqualand_boulder_02', 'namaqualand_boulder_04', 'namaqualand_boulder_06', 'boulder_01'],
+  URUN = ['rock_face_01', 'rock_face_02', 'namaqualand_cliff_01', 'namaqualand_cliff_02'], // dik kayalık duvarlar
+  KUTUK = ['dead_tree_trunk', 'dead_tree_trunk_02', 'dead_quiver_trunk', 'tree_stump_01', 'tree_stump_02', 'root_cluster_01', 'root_cluster_02', 'pine_roots'],
+  CALI = ['shrub_01', 'shrub_02', 'shrub_03', 'fern_02', 'wild_rooibos_bush', 'grass_medium_01', 'dry_branches_medium_01'];
 
 // ---- temel geometri yardımcıları ----
 const G = {
@@ -295,32 +341,67 @@ export function makeSky() {
   const g = new THREE.Group();
   const sky = new THREE.Mesh(new THREE.SphereGeometry(380, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { top: { value: new THREE.Color(0x3f78c4) }, mid: { value: new THREE.Color(0xf6b27a) }, low: { value: new THREE.Color(0xffe2b0) } },
+    uniforms: { top: { value: new THREE.Color(0x3f78c4) }, mid: { value: new THREE.Color(0xf6b27a) }, low: { value: new THREE.Color(0xffe2b0) }, t: { value: 0 } },
     vertexShader: 'varying vec3 p; void main(){ p = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
-    fragmentShader: `uniform vec3 top, mid, low; varying vec3 p;
-      void main(){ float h = normalize(p).y; vec3 c = h > 0.08 ? mix(mid, top, smoothstep(0.08, 0.5, h)) : mix(low, mid, smoothstep(-0.05, 0.08, h)); gl_FragColor = vec4(c, 1.); }`,
+    fragmentShader: `uniform vec3 top, mid, low; uniform float t; varying vec3 p;
+      float hs(vec2 q){ return fract(sin(dot(q, vec2(127.1, 311.7))) * 43758.5453); }
+      float vn(vec2 q){ vec2 i = floor(q), f = fract(q); f = f * f * (3. - 2. * f); return mix(mix(hs(i), hs(i + vec2(1, 0)), f.x), mix(hs(i + vec2(0, 1)), hs(i + vec2(1, 1)), f.x), f.y); }
+      float fbm(vec2 q){ float v = 0., a = .5; for (int k = 0; k < 5; k++) { v += a * vn(q); q = q * 2.03 + 7.1; a *= .5; } return v; }
+      void main(){
+        vec3 d = normalize(p); float h = d.y;
+        vec3 c = h > 0.08 ? mix(mid, top, smoothstep(0.08, 0.5, h)) : mix(low, mid, smoothstep(-0.05, 0.08, h));
+        if (h > 0.03) { // bulutlar: gökyüzü renklerinden türetilir (gece sönük, gün batımında sıcak), ufukta incelir
+          vec2 q = d.xz / (h + 0.28) * 1.6 + vec2(t * 0.004, 0.);
+          float k = smoothstep(0.52, 0.82, fbm(q)) * smoothstep(0.03, 0.2, h) * (1. - smoothstep(0.55, 0.9, h));
+          vec3 cc = mix(mid, low, 0.55) * 1.18;
+          c = mix(c, cc, k * 0.62);
+        }
+        gl_FragColor = vec4(c, 1.);
+      }`,
   }));
   sky.material.userData.outlineParameters = NO_OUTLINE;
   g.add(sky);
   g.userData.u = sky.material.uniforms; // ara sahnelerde gökyüzü rengi değişir
-  const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, fog: false, depthWrite: false, color: 0xfff0c0 }));
-  sun.material.userData.outlineParameters = NO_OUTLINE;
-  sun.scale.setScalar(120);
-  sun.position.set(-90, 40, -300);
-  g.add(sun);
-  g.userData.orb = sun.material; // gece aya, Erlik sahnelerinde kızıla döner
-  const rock = new THREE.MeshToonMaterial({ color: 0x8a7fa8, gradientMap: GRAD, fog: false });
+  // güneş: geniş sıcak hâle + keskin kenarlı, parlama (bloom) eşiğini aşan çekirdek disk
+  const sunMat = o => Object.assign(new THREE.SpriteMaterial({ fog: false, depthWrite: false, blending: THREE.AdditiveBlending, ...o }), { userData: { outlineParameters: NO_OUTLINE } });
+  const hale = new THREE.Sprite(sunMat({ map: dotTex, opacity: 0.32 }));
+  hale.scale.setScalar(230);
+  const disc = new THREE.Sprite(sunMat({ map: sunTex }));
+  disc.scale.setScalar(44);
+  for (const o of [hale, disc]) { o.position.set(-90, 40, -300); g.add(o); }
+  g.userData.orb = hale.material; // gece aya, Erlik sahnelerinde kızıla döner
+  g.userData.orbDisc = disc.material; // rengi hâlenin ~1,5 katı parlak (HDR): bloom'u tetikler
+  const rock = new THREE.MeshToonMaterial({ color: 0x8a7fa8, gradientMap: GRAD, fog: false, vertexColors: true });
   const snow = new THREE.MeshToonMaterial({ color: 0xfff1e6, gradientMap: GRAD, fog: false });
   g.userData.rock = rock;
   g.userData.snow = snow;
-  for (let i = 0; i < 16; i++) {
-    const h = rand(40, 90), r = h * 0.9;
-    const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 6), rock);
-    m.position.set(-260 + i * 34 + rand(-8, 8), h / 2 - 20, -300 + rand(-20, 20));
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(r * 0.3, h * 0.3, 6), snow);
-    cap.position.y = h * 0.36;
-    m.add(cap);
+  // uzak dağlar: üç katman sivri sırt (arkadaki açık, öndeki koyu), tepelerinde kar
+  for (const [z, yuk, ton, tohum] of [[-335, 120, 1, 1], [-305, 90, 0.78, 2], [-275, 65, 0.58, 3]]) {
+    const N = 160, pos = [], col = [], spos = [], idx = [];
+    for (let i = 0; i <= N; i++) {
+      const x = -450 + i * (900 / N);
+      let v = 0, a = 1, f = 0.011;
+      for (let o = 0; o < 4; o++) { v += a * (1 - Math.abs(Math.sin(x * f + tohum * 7.1 + o * 1.7))) ** 2; a *= 0.5; f *= 2.1; }
+      const h = 12 + yuk * v / 1.6, kar = yuk * 0.62;
+      pos.push(x, h - 30, z, x, -40, z);
+      col.push(ton, ton, ton, ton * 0.45, ton * 0.45, ton * 0.45);
+      spos.push(x, h - 30, z + 0.6, x, Math.min(h - 30, kar - 30 + Math.sin(x * 0.5) * 3), z + 0.6);
+      if (i < N) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+    }
+    const mk = (p, c) => {
+      const gm = new THREE.BufferGeometry();
+      gm.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+      if (c) gm.setAttribute('color', new THREE.Float32BufferAttribute(c, 3));
+      gm.setIndex(idx);
+      gm.computeVertexNormals();
+      return gm;
+    };
+    const m = new THREE.Mesh(mk(pos, col), rock);
+    m.material.side = THREE.DoubleSide;
     g.add(m);
+    const sm = new THREE.Mesh(mk(spos), snow);
+    sm.material.side = THREE.DoubleSide;
+    g.add(sm);
   }
   return g;
 }
@@ -722,6 +803,10 @@ function segBataklik() {
       g.add(r);
     }
   }
+  phSerp(g, KUTUK, 5, 5.6, 16, [1.2, 2.2], 0x8a9a78, -0.5, 0x040a04);
+  phSerp(g, CALI, 7, 5, 12, [1, 1.7], 0x8aa070, -0.5);
+  phSerp(g, TAS, 5, 5.4, 11, [6, 12], 0x8a9a88, -0.5);
+  phSerp(g, ['rock_moss_set_01'], 2, 7, 14, [0.8, 1.3], 0x9aa890, -0.5);
   for (let i = 0; i < 4; i++) { // hayalet ışıkları
     const w = new THREE.Sprite(M.wisp);
     w.scale.setScalar(0.7);
@@ -757,14 +842,32 @@ function segAltay() {
     if (!addEnv(g, 'PineTree_', x, z, sc * 1.3)) g.add(pineTree(x, z, sc));
   }
   for (let i = 0; i < 3; i++) addEnv(g, 'Rock_', (Math.random() < 0.5 ? -1 : 1) * rand(5.5, 12), -rand(0, SEG), rand(0.8, 1.6));
-  for (let i = 0; i < 4; i++) { // yamaçlar
-    const s = Math.random() < 0.5 ? -1 : 1, h = rand(14, 30);
-    g.add(mesh(G.cone, M.cliff, [s * rand(24, 40), h / 2 - 2, -rand(0, SEG)], [rand(8, 14), h, rand(8, 14)], false));
-    g.add(mesh(G.cone, M.white, [s * rand(24, 40), h - 3, -rand(0, SEG)], [3, 4, 3], false));
-  }
+  phSerp(g, KAYA, 4, 6, 14, [1.2, 2.2], 0xdce6f4, 0.1);
+  phSerp(g, TAS, 8, 5.4, 12, [6, 12], 0xe4ecf6, 0.1);
+  phSerp(g, ['rock_face_01'], 2, 20, 34, [1.8, 3], 0xc8d4e8, -1);
+  phSerp(g, ['rock_face_02'], 2, 20, 34, [2.6, 4], 0xc8d4e8, -1);
+  phSerp(g, ['namaqualand_cliff_01'], 2, 22, 36, [1.4, 2.4], 0xc8d4e8, -1);
   return g;
 }
 
+// Kaya kulesi: bozulmuş, çok halkalı, kaya dokulu (düz koni yerine); yeralti ve benzeri sahneler için
+function kayalik(h, r, [x, y, z]) {
+  const geo = new THREE.CylinderGeometry(r * 0.28, r, h, 8, 7);
+  const p = geo.attributes.position, uv = geo.attributes.uv, ph = rand(0, 6.3);
+  for (let i = 0; i < p.count; i++) {
+    const vx = p.getX(i), vy = p.getY(i), vz = p.getZ(i), a = Math.atan2(vz, vx), t = vy / h + 0.5;
+    const k = 0.72 + 0.5 * Math.abs(Math.sin(a * 3 + vy * 0.9 + ph)) + 0.25 * Math.sin(a * 7 + t * 9);
+    p.setXYZ(i, vx * k + Math.sin(vy * 0.7 + ph) * r * 0.12, vy + (t > 0.95 ? Math.sin(a * 5 + ph) * h * 0.06 : 0), vz * k);
+    uv.setXY(i, uv.getX(i) * 3, uv.getY(i) * h / 6);
+  }
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, (M.kule ??= new THREE.MeshToonMaterial({ map: M.well.map, gradientMap: GRAD, color: 0x6c5a78, emissive: 0x2a0a02 })));
+  m.position.set(x, y + h / 2, z);
+  m.rotation.y = rand(0, 6.3);
+  m.castShadow = false;
+  m.receiveShadow = true;
+  return m;
+}
 function segYeralti() {
   const g = empty();
   g.add(mesh(G.box, M.basalt, [0, -0.5, -SEG / 2], [9.2, 1, SEG], false));
@@ -774,11 +877,19 @@ function segYeralti() {
     lava.rotation.x = -Math.PI / 2;
     g.add(lava);
     g.add(mesh(G.box, M.spire, [s * 4.9, 0.2, -SEG / 2], [0.8, 0.5, SEG]));
-    for (let i = 0; i < 4; i++) { // kara kaya kuleleri
+    for (let i = 0; i < 2; i++) { // kara kaya kuleleri
       const h = rand(6, 20);
-      g.add(mesh(G.cone, M.spire, [s * rand(18, 34), h / 2 - 1, -rand(0, SEG)], [rand(2, 4), h, rand(2, 4)], false));
+      g.add(kayalik(h, rand(2, 3.6), [s * rand(15, 34), -1, -rand(0, SEG)]));
     }
   }
+  // Poly Haven: kor kıyısında volkanik taşlar, ötede dik kayalıklar, yanmış kütük ve kökler
+  phSerp(g, TAS, 9, 5.6, 9, [6, 12], 0xb09aa8, -0.15, 0x3a1204);
+  phSerp(g, KAYA, 3, 6.5, 11, [1, 1.8], 0xa08894, -0.3, 0x3a1204);
+  phSerp(g, ['rock_face_01'], 2, 16, 28, [1.8, 3], 0x9a8496, -1, 0x3a1204);
+  phSerp(g, ['rock_face_02'], 2, 16, 28, [2.6, 4], 0x9a8496, -1, 0x3a1204);
+  phSerp(g, ['namaqualand_cliff_01'], 2, 18, 30, [1.4, 2.4], 0x9a8496, -1, 0x3a1204);
+  phSerp(g, ['namaqualand_cliff_02'], 1, 22, 32, [0.9, 1.3], 0x9a8496, -1, 0x3a1204);
+  phSerp(g, KUTUK, 4, 6.8, 16, [1.2, 2], 0x6a5050, -0.35, 0x3a1204);
   for (const z of [8, 23]) { // mangal ateşi
     const s = z === 8 ? 1 : -1;
     g.add(mesh(G.cyl, M.iron, [s * 4.5, 0.9, -z], [0.1, 1.8, 0.1]));
@@ -901,6 +1012,7 @@ Object.assign(M, {
   forgeFloor: toon(0x2a2226), anvil: toon(0x1e1c22), molten: new THREE.MeshBasicMaterial({ color: 0xffb02a }),
 });
 for (const k of ['mote', 'shaft', 'aurora', 'aurora2', 'blueFlame', 'molten']) M[k].userData.outlineParameters = NO_OUTLINE;
+aiZemin(M.tundra, 'donmus', 4); // Karanlık Ülke donmuş zemini (Poly Haven ground_grey)
 
 function birch(x, z, sc = 1) {
   const t = new THREE.Group();
@@ -923,6 +1035,9 @@ function segKoru() {
     if (!addEnv(g, 'BirchTree_', x, z, sc * 1.3)) g.add(birch(x, z, sc));
   }
   for (let i = 0; i < 8; i++) addEnv(g, pick3(['Bush_Flowers', 'Flower_2_Clump', 'Flower_4_Clump']), (Math.random() < 0.5 ? -1 : 1) * rand(4.6, 9), -rand(0, SEG), rand(1, 1.6));
+  phSerp(g, CALI, 8, 4.8, 10, [1, 1.7], 0xf4eebc);
+  phSerp(g, ['tree_stump_01', 'tree_stump_02', 'root_cluster_01'], 2, 6, 14, [1, 1.6], 0xf0e4c0);
+  phSerp(g, TAS, 4, 5, 10, [6, 11], 0xf0e8d0);
   for (let i = 0; i < 3; i++) { // ışık huzmeleri
     const sh = mesh(new THREE.PlaneGeometry(3, 26), M.shaft, [(Math.random() < 0.5 ? -1 : 1) * rand(3, 9), 10, -rand(0, SEG)], [1, 1, 1], false);
     sh.rotation.z = 0.35;
@@ -962,11 +1077,10 @@ function segKaranlik() {
     const x = (Math.random() < 0.5 ? -1 : 1) * rand(7, 26), z = -rand(0, SEG), sc = rand(0.9, 1.6);
     if (!addEnv(g, 'PineTree_', x, z, sc * 1.4)) g.add(mesh(G.cone, M.blackPine, [x, 2.6 * sc, z], [1.3 * sc, 5.2 * sc, 1.3 * sc], false));
   }
-  for (const s of [-1, 1]) { // kuzey ışıkları
-    const a = mesh(new THREE.PlaneGeometry(60, 14), Math.random() < 0.5 ? M.aurora : M.aurora2, [s * 30, 26, -SEG / 2], [1, 1, 1], false);
-    a.rotation.set(0.3, s * 1.2, 0.1 * s);
-    g.add(a);
-  }
+  phSerp(g, KUTUK, 6, 5.6, 20, [1.3, 2.3], 0x34405a, 0, 0x04060a);
+  phSerp(g, KAYA, 4, 6.5, 16, [1.2, 2.2], 0x4a5670, 0);
+  phSerp(g, TAS, 7, 5.4, 12, [6, 12], 0x5a6680, 0);
+  phSerp(g, ['rock_face_01', 'rock_face_02'], 3, 22, 38, [2, 4], 0x3a4660, -1);
   return g;
 }
 
@@ -982,6 +1096,11 @@ function segOrman() {
   if (!ENV) for (let i = 0; i < 10; i++) g.add(pineTree((Math.random() < 0.5 ? -1 : 1) * rand(6, 22), -rand(0, SEG), rand(0.8, 1.3)));
   for (let i = 0; i < 14; i++) addEnv(g, pick3(['BirchTree_', 'PineTree_', 'NormalTree_', 'MapleTree_']), (Math.random() < 0.5 ? -1 : 1) * rand(6, 26), -rand(0, SEG), rand(1.1, 1.6));
   for (let i = 0; i < 10; i++) addEnv(g, pick3(['Bush', 'Bush_Large', 'Bush_Flowers', 'Flower_2_Clump', 'Flower_4_Clump', 'Grass_Large', 'Plant_1']), (Math.random() < 0.5 ? -1 : 1) * rand(4.6, 10), -rand(0, SEG), rand(1, 1.8));
+  phSerp(g, CALI, 11, 4.8, 12, [1, 1.8]);
+  phSerp(g, KUTUK.slice(3), 3, 6, 14, [1, 1.7]);
+  phSerp(g, KAYA, 3, 7, 14, [1, 2], 0x9aa88a);
+  phSerp(g, ['rock_moss_set_01'], 1, 8, 14, [0.8, 1.2]);
+  phSerp(g, TAS, 6, 5, 11, [6, 12], 0x9aa090);
   for (let i = 0; i < 3; i++) addEnv(g, 'Rock_', (Math.random() < 0.5 ? -1 : 1) * rand(6, 14), -rand(0, SEG), rand(1, 2));
   return g;
 }
@@ -1024,6 +1143,10 @@ function segDemirhane() {
       g.add(mesh(G.box, M.anvil, [s * rand(14, 30), h / 2 - 1, -rand(0, SEG)], [rand(2, 4), h, rand(2, 4)], false));
     }
   }
+  phSerp(g, TAS, 8, 5.6, 14, [6, 13], 0x8a7a84, 0, 0x2a0e04);
+  phSerp(g, KAYA, 3, 7, 14, [1, 1.8], 0x6a5a64, 0, 0x2a0e04);
+  phSerp(g, ['stone_fire_pit'], 2, 7, 12, [1.4, 2], 0x8a7a84, 0, 0x3a1204);
+  phSerp(g, ['rock_face_01', 'rock_face_02'], 3, 16, 30, [2, 3.6], 0x6a5a64, -1, 0x2a0e04);
   const f = mesh(G.cone, M.flame, [(Math.random() < 0.5 ? -1 : 1) * 9, 1.4, -rand(3, 27)], [0.4, 1.2, 0.4], false);
   g.userData.flames.push(f);
   g.add(f);
@@ -1094,7 +1217,7 @@ function eskiFence() {
 function eskiPine() {
   const g = new THREE.Group();
   const l = eskiSnowRock().translateX(-1.1), r = eskiSnowRock().translateX(1.1);
-  l.scale.setScalar(0.7); r.scale.setScalar(0.7);
+  l.scale.set(0.7, 0.95, 0.7); r.scale.set(0.7, 0.95, 0.7); // kaya tepesi kütüğün altına değsin (havada durmasın)
   g.add(l, r);
   const t = mesh(G.cyl, M.deadwood, [0, 1.75, 0], [0.3, 2.7, 0.3]);
   t.rotation.z = Math.PI / 2;
@@ -1229,7 +1352,7 @@ function eskiBannerBeam() { // kırmızı sancak kirişi: altından eğilinir
   g.add(cloth, mesh(G.box, M.gold, [0, 1.95, 0.03], [0.5, 0.5, 0.01], false));
   return g;
 }
-export function makeCaltrops() { // generalin atından döktüğü demir dikenler: üstünden zıplanır
+function eskiCaltrops() { // generalin atından döktüğü demir dikenler: üstünden zıplanır
   const g = new THREE.Group();
   for (let i = 0; i < 9; i++) {
     const c = mesh(new THREE.TetrahedronGeometry(0.16), M.iron, [rand(-0.9, 0.9), 0.12, rand(-0.5, 0.5)]);
@@ -1565,7 +1688,7 @@ function segBuzgol() {
 Object.assign(SEGMENTS, { kuyu: segKuyu, vadi: segVadi, nehir: segNehir, buzgol: segBuzgol });
 
 // ---- bölüm engelleri ----
-export function makeLedge() { // kuyuda duvardan çıkan kaya çıkıntısı: bir hücreyi kapatır
+function eskiLedge() { // kuyuda duvardan çıkan kaya çıkıntısı: bir hücreyi kapatır
   const g = new THREE.Group();
   g.add(mesh(new THREE.DodecahedronGeometry(1, 0), M.well, [0, 0, 0], [1.25, 1.15, 0.7], false));
   for (let i = 0; i < 3; i++) g.add(mesh(new THREE.DodecahedronGeometry(1, 0), M.well, [rand(-0.7, 0.7), rand(-0.7, 0.7), 0.2], [0.5, 0.5, 0.5], false));
@@ -1580,7 +1703,7 @@ export function makeRoots() { // kuyuya sarkan kök yumağı
   }
   return g;
 }
-export function makeKutuk() { // ırmakta yüzen kütük: üstünden zıplanır
+function eskiKutuk() { // ırmakta yüzen kütük: üstünden zıplanır
   const g = new THREE.Group();
   const l = mesh(G.cyl, M.bark, [0, 0.05, 0], [0.38, 2.4, 0.38]);
   l.rotation.z = Math.PI / 2;
@@ -1660,6 +1783,64 @@ export function makeTamga() {
   return g;
 }
 
+// Kut Mıknatısı: kırmızı at nalı mıknatıs (SMU Magneto)
+export function makeMiknatis() {
+  const g = new THREE.Group();
+  const v = new THREE.Group();
+  v.add(mesh(new THREE.TorusGeometry(0.3, 0.09, 8, 20, Math.PI), toon(0xd7263d, 'miknatis'), [0, 0, 0], [1, 1, 1], false));
+  for (const s of [-1, 1]) v.add(mesh(G.cyl, silver, [s * 0.3, 0, 0], [0.09, 0.3, 0.09], false));
+  v.position.y = 1.1;
+  g.add(v, glowSprite(0xd7263d, 1.8, 1.1));
+  g.userData.anim = t => { v.rotation.y = t * 2.5; v.position.y = 1.1 + Math.sin(t * 4) * 0.12; };
+  return g;
+}
+// Çifte Kut: altın para (SMU StatsMultiplier)
+const carpanTex = tex(128, 128, (g, w) => {
+  g.fillStyle = '#ffcf3f';
+  g.fillRect(0, 0, w, w);
+  g.strokeStyle = '#15101c'; g.lineWidth = 8;
+  g.strokeRect(4, 4, w - 8, w - 8);
+  g.fillStyle = '#15101c';
+  g.font = 'bold 64px Impact, sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('×2', w / 2, w / 2);
+});
+export function makeCarpan() {
+  const g = new THREE.Group();
+  const v = new THREE.Group();
+  const c = mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.08, 20), new THREE.MeshBasicMaterial({ map: carpanTex }), [0, 0, 0], [1, 1, 1], false);
+  c.rotation.x = Math.PI / 2;
+  v.add(c);
+  v.position.y = 1.1;
+  g.add(v, glowSprite(0xffcf3f, 1.8, 1.1));
+  g.userData.anim = t => { v.rotation.z = t * 2; v.position.y = 1.1 + Math.sin(t * 4) * 0.12; };
+  return g;
+}
+// Mesafe tabelası: 500 m'de bir yola kurulan ahşap kapı (SMU mesafe pankartı)
+export function makeMarker(text, gold = false) {
+  const g = new THREE.Group();
+  const post = toon(0x6b4a2b, 'markerpost');
+  for (const x of [-4.2, 4.2]) g.add(mesh(G.cyl, post, [x, 2.5, 0], [0.18, 5, 0.18], false));
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  const q = c.getContext('2d');
+  q.fillStyle = '#fffdf5';
+  q.fillRect(0, 0, 512, 128);
+  q.strokeStyle = '#15101c'; q.lineWidth = 10;
+  q.strokeRect(5, 5, 502, 118);
+  q.fillStyle = gold ? '#e3a82b' : '#b3202a';
+  q.font = 'bold 60px Impact, "Bangers", sans-serif';
+  q.textAlign = 'center'; q.textBaseline = 'middle';
+  q.fillText(text, 256, 64);
+  const m = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) });
+  m.userData.outlineParameters = { visible: false };
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), m);
+  sign.position.y = 5;
+  g.add(sign);
+  g.userData.sign = sign;
+  return g;
+}
+
 // ---- kırılabilir ahşap engeller: çatlak dokuyla belli olur ----
 const crackTex = tex(128, 128, (g, w) => {
   g.fillStyle = '#ffffff';
@@ -1722,7 +1903,7 @@ export function makeChips(n = 8) {
 // Parça dünyada zA'dan (yakın uç) zA - len'e uzanır. h0: yakın uçtaki, h1: uzak uçtaki yükseklik.
 // Dokular kutu izdüşümüyle metre başına yerleşir (her parçanın boyu farklı).
 const TW = 8.4; // parçanın genişliği: üç şerit + kenar
-const reTex = (t, r = 1) => { const c = t.clone(); c.repeat.set(r, r); c.needsUpdate = true; KOPYA.set(t, [...(KOPYA.get(t) || []), c]); return c; };
+const reTex = (t, r = 1) => { const c = t.clone(); c.repeat.set(r, r); c.needsUpdate = true; KOPYA.set(t, [...(KOPYA.get(t) || []), c]); ALL_WORLD_TEX.push(c); return c; };
 const TSTYLE = {
   sur: { top: new THREE.MeshToonMaterial({ map: reTex(stoneTex), gradientMap: GRAD }), side: new THREE.MeshToonMaterial({ map: reTex(wallTex), gradientMap: GRAD }), ts: [3.2, 2.2], pit: 0x07050a },
   tahta: { top: new THREE.MeshToonMaterial({ map: reTex(plankTex), gradientMap: GRAD }), side: toon(0x2a2018, 'tside'), ts: [2.6, 2.6], pit: 0x07140f },
@@ -1905,6 +2086,13 @@ function aiEngel(ad, eski, tur) {
   const b = AI_KUTU[ad] || (AI_KUTU[ad] = new THREE.Box3().setFromObject(eski()));
   const hs = b.getSize(new THREE.Vector3()), ks = new THREE.Box3().setFromObject(k).getSize(new THREE.Vector3());
   const o = k.clone(), g = new THREE.Group();
+  if (tur === 'merkez') { // havada duranlar (kuyu çıkıntısı) kutunun ortasına oturur
+    const kc = new THREE.Box3().setFromObject(k).getCenter(new THREE.Vector3()), bc = b.getCenter(new THREE.Vector3());
+    o.scale.setScalar(Math.min(hs.x / ks.x, hs.y / ks.y, hs.z / ks.z));
+    o.position.copy(bc).sub(kc.multiplyScalar(o.scale.x));
+    g.add(o);
+    return g;
+  }
   if (tur === 'yuksek') { const sx = hs.x / ks.x, sy = hs.y / ks.y; o.scale.set(sx, sy, (sx + sy) / 2); }
   else o.scale.setScalar(Math.min(hs.x / ks.x, (hs.y * (tur === 'alcak' ? 1.1 : 1.2)) / ks.y));
   o.position.set((b.min.x + b.max.x) / 2, Math.max(0, b.min.y), (b.min.z + b.max.z) / 2);
@@ -1934,3 +2122,10 @@ export const makeLog = () => aiEngel('devrik', eskiLog, 'yuksek');
 export const makePine = () => aiEngel('devrikcam', eskiPine, 'yuksek');
 export const makeChain = () => aiEngel('zincir', eskiChain, 'yuksek');
 export const makeBannerBeam = () => aiEngel('sancak', eskiBannerBeam, 'yuksek');
+export const makeCaltrops = () => aiEngel('demirdiken', eskiCaltrops, 'alcak');
+export const makeLedge = () => aiEngel('cikinti', eskiLedge, 'merkez');
+export function makeKutuk() { // ırmakta yüzen kütük: sallanır
+  const g = aiEngel('irmakkutuk', eskiKutuk, 'alcak');
+  g.userData.anim ??= t => (g.rotation.z = Math.sin(t * 2) * 0.05);
+  return g;
+}

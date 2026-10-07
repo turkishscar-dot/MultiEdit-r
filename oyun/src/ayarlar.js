@@ -5,22 +5,23 @@ import { resetTips } from './tips.js';
 
 const load = (k, d) => { try { return { ...d, ...JSON.parse(localStorage.getItem(k)) }; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-export const cfg = load('oguz-ayar', { gfx: null, vibrate: true, lang: 'tr' });
+export const cfg = load('oguz-ayar', { gfx: null, dynRes: true, vibrate: true, lang: 'tr' });
 const persist = () => save('oguz-ayar', cfg);
 
-// Grafik düzeyleri: Yüksek (bloom, gölge, mürekkep çizgisi) / Orta / Düşük (gölgesiz, bloomsuz, düşük çözünürlük)
+// Grafik düzeyleri:
+// Yerel (cihaz piksel oranı, üst sınır 2; MSAA yok (HalfFloat hedefte çok pahalı), 16x anizotropi, 2048 gölge, yarı çözünürlük bloom)
+// Yüksek (en çok 1.25x oran, 8x anizotropi, 1024 gölge) / Orta (1.0x oran, 4x anizotropi, 512 gölge) / Düşük (0.75x oran, gölgesiz)
 export const GFX = {
-  yuksek: { name: 'YÜKSEK', ratio: 1.5, shadow: true, bloom: true, outline: true },
-  orta: { name: 'ORTA', ratio: 1, shadow: true, bloom: false, outline: true },
-  dusuk: { name: 'DÜŞÜK', ratio: 0.75, shadow: false, bloom: false, outline: false },
+  yerel: { name: 'YEREL', ratio: Math.min(typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 2, 2), shadow: 'high', bloom: true, outline: true, msaa: 4, aniso: 16 },
+  yuksek: { name: 'YÜKSEK', ratio: Math.min(typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1, 1.5), shadow: 'high', bloom: true, outline: true, msaa: 4, aniso: 8 },
+  orta: { name: 'ORTA', ratio: 1.0, shadow: 'med', bloom: true, outline: true, msaa: 2, aniso: 4 },
+  dusuk: { name: 'DÜŞÜK', ratio: 0.75, shadow: 'none', bloom: false, outline: false, msaa: 0, aniso: 1 },
 };
-// Açılışta ölçülen FPS'e göre varsayılan (oyuncu seçtiyse o kalır)
+// Açılışta ölçülen FPS'e göre öneri (oyuncu seçtiyse o kalır; kalıcı düşürme yok)
 export function autoGfx(fps) {
-  if (cfg.gfx) return cfg.gfx;
-  cfg.gfx = fps < 32 ? 'dusuk' : fps < 50 ? 'orta' : 'yuksek';
   cfg.autoFps = Math.round(fps);
-  persist();
-  return cfg.gfx;
+  if (cfg.gfx) return cfg.gfx;
+  return fps < 25 ? 'dusuk' : fps < 40 ? 'orta' : fps < 55 ? 'yuksek' : 'yerel'; // güçlü cihazda tam çözünürlük + kenar yumuşatma
 }
 export const vibrate = ms => { if (cfg.vibrate) navigator.vibrate?.(ms); };
 
@@ -63,14 +64,20 @@ function draw() {
     row('Dil', lang);
   } else if (tab === 'oyun') {
     const g = el('div', 'aseg');
+    const curGfx = cfg.gfx || 'yuksek';
     for (const [k, G] of Object.entries(GFX)) {
-      const b = el('button', 'small' + (cfg.gfx === k ? ' on' : ''), G.name);
+      const b = el('button', 'small' + (curGfx === k ? ' on' : ''), G.name);
       b.onclick = () => { cfg.gfx = k; persist(); U.applyGfx(k); draw(); };
       g.append(b);
     }
     row('Grafik', g);
-    if (cfg.autoFps) box.append(el('small', 'anote', `Açılışta ölçülen: ${cfg.autoFps} FPS → ${GFX[cfg.gfx]?.name || ''} önerildi.`));
+    if (cfg.autoFps) box.append(el('small', 'anote', `Açılışta ölçülen: ${cfg.autoFps} FPS → ${GFX[curGfx]?.name || ''} etkin.`));
     const tog = (on, fn) => { const b = el('button', 'small' + (on ? ' on' : ''), on ? 'AÇIK' : 'KAPALI'); b.onclick = () => { fn(); draw(); }; return b; };
+    row('Dinamik Çözünürlük', tog(cfg.dynRes ?? true, () => {
+      cfg.dynRes = !(cfg.dynRes ?? true);
+      persist();
+      U.applyDynRes?.(cfg.dynRes);
+    }));
     row('Titreşim (telefon)', tog(cfg.vibrate, () => { cfg.vibrate = !cfg.vibrate; persist(); vibrate(60); }));
     row('Eğerek yönlendirme (özel bölümler)', tog(U.tilt(), () => U.setTilt()));
     const r = el('button', 'small', 'SIFIRLA');

@@ -1,0 +1,29 @@
+{
+ "_on": "Stylized 3D game hero, full body, strict T-pose like a mannequin: both arms perfectly horizontal, elbows straight, palms facing down, fingers together, legs straight and apart. Adult man, all clothing tight to the body.",
+ "_son": "Trousers and boots visible below the knees. Empty hands, no cape, no bag, no extra limbs.",
+ "_doku": "Hand-painted stylized game character texture, rich saturated colors, clean readable fabric and metal detail, warm natural skin.",
+ "fatih": {
+  "prompt": "Ottoman Sultan Mehmed II. Big white pleated turban wrapped tightly, sitting low and snug on the head down to the eyebrows, fully covering the head, small dark red velvet cap on top. Short full dark beard. Knee-length fitted burgundy velvet kaftan with narrow sleeves, gold embroidery, gold frog clasps on the chest, dark brown fur collar, cream waist sash, sheathed curved sword on the left hip, dark red trousers, yellow leather boots.",
+  "doku": "Burgundy velvet kaftan with gold embroidery, dark brown fur collar, white pleated turban with dark red velvet top, cream sash, yellow leather boots, short black beard."
+ },
+ "kultigin": {
+  "prompt": "Gokturk prince and army commander Kul Tigin. Small gold crown with a bird with open wings at the front, long black hair, long drooping black mustache. Chest armor of horizontal rows of dark iron lamellar plates laced with gold, layered iron shoulder plates, knee-length red kaftan under the armor, dark brown trousers, black boots, sheathed sword on the left hip, small quiver strapped tight to the back.",
+  "doku": "Red kaftan, dark iron lamellar armor with gold lacing, gold crown, dark brown trousers, black leather boots, black hair and mustache."
+ },
+ "bilge": {
+  "prompt": "Gokturk ruler Bilge Khagan, dignified middle-aged man. Gold crown with a bird with open wings at the front, long black hair, long drooping mustache, short beard. Knee-length dark green kaftan with gold trim and side slits, broad brown fur collar on the shoulders, dark leather belt with small gold plates, mustard yellow trousers, black boots, sheathed sword on the left hip.",
+  "doku": "Dark green kaftan with gold trim, brown fur collar, gold crown, leather belt with gold plates, mustard yellow trousers, black boots."
+ },
+ "mete": {
+  "prompt": "Hun ruler Mete Khan, strong warrior. Pointed dark red felt Hun cap with a fur brim and gold forehead plates, fitting snug on the head, long black hair, long drooping mustache. Fitted scale armor vest of small iron scales laced with gold over a knee-length dark red kaftan, leather belt with gold plaques, black trousers, black boots, sheathed sword on the left hip, small quiver tight on the back.",
+  "doku": "Dark red kaftan, iron scale armor with gold lacing, dark red felt cap with fur brim and gold plates, black trousers, black boots."
+ },
+ "tonyukuk": {
+  "prompt": "Elderly wise Gokturk vizier Tonyukuk. Tall white felt kalpak hat with a black upturned brim, fitting snug on the head down to the forehead, long white beard to the chest, white mustache. Knee-length white kaftan with thin gold trim, olive green cloth sash, olive brown trousers, dark brown boots, sheathed sword on the left hip.",
+  "doku": "White kaftan with gold trim, white felt hat with black brim, olive sash and trousers, dark brown boots, long white beard."
+ },
+ "manas": {
+  "prompt": "Kyrgyz epic hero Manas, strong young warrior. Tall white felt ak kalpak hat with a black upturned brim, fitting snug on the head down to the forehead, long black mustache. Knee-length dark red kaftan with gold trim, leather belt with small gold plates, dark brown trousers, black boots, sheathed sword on the left hip.",
+  "doku": "Dark red kaftan with gold trim, white felt hat with black brim, leather belt with gold plates, dark brown trousers, black boots, black mustache."
+ }
+}

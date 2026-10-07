@@ -1,0 +1,36 @@
+<title>Oğuz Kağan Tasarım Defteri</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Alegreya:ital,wght@0,400;0,700;1,400&family=Noto+Serif+TC:wght@700&text=%E7%AA%81%E5%8E%A5%E5%82%B3&display=swap">
+<style>
+  :root { --paper: #efe2c4; --ink: #1b1320; --red: #a3202a; --gold: #c8901c; --blue: #1d3552; --muted: #6a5236; --card: #f7eed8; --line: #cdb68a; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --paper: #17121b; --ink: #f1e6cf; --red: #e0555c; --gold: #e2b24a; --blue: #9cc0e8; --muted: #c2ab86; --card: #221a27; --line: #463a4e; color-scheme: dark; } }
+  :root[data-theme="dark"] { --paper: #17121b; --ink: #f1e6cf; --red: #e0555c; --gold: #e2b24a; --blue: #9cc0e8; --muted: #c2ab86; --card: #221a27; --line: #463a4e; color-scheme: dark; }
+  body { background: var(--paper); color: var(--ink); font: 17px/1.6 Alegreya, Georgia, serif; padding-inline: 16px; padding-block: 28px 60px; }
+  .wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 28px; }
+  header { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; border-bottom: 3px solid var(--ink); padding-bottom: 18px; }
+  .seal { writing-mode: vertical-rl; font: 700 40px 'Noto Serif TC', 'SimSun', serif; color: var(--red); border: 3px solid var(--red); padding: 8px 6px; letter-spacing: 6px; }
+  h1 { font: 400 clamp(38px, 7vw, 68px)/0.95 Bangers, Impact, sans-serif; letter-spacing: 1.5px; margin: 0; text-wrap: balance; }
+  header p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; font: 700 13px system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+  .legend span { padding: 3px 10px; border: 2px solid var(--ink); }
+  .legend .b { background: var(--red); color: #fff; border-color: var(--red); } .legend .f { background: var(--blue); color: #fff; border-color: var(--blue); } .legend .a { background: var(--gold); color: #1b1320; border-color: var(--gold); }
+  .sheet { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 22px; background: var(--card); border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 16px; }
+  .sheet.boss { border-left: 10px solid var(--red); } .sheet.foe { border-left: 10px solid var(--blue); } .sheet.ally { border-left: 10px solid var(--gold); }
+  .views { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: start; }
+  .views img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border: 2px solid var(--ink); background: #efdcb4; }
+  .role { font: 700 12px system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  h2 { font: 400 clamp(30px, 4.4vw, 44px)/1 Bangers, Impact, sans-serif; letter-spacing: 1px; margin: 4px 0 2px; color: var(--red); }
+  .epi { font-style: italic; margin: 0 0 10px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .copy p:last-child { margin: 0; max-width: 60ch; }
+  @media (max-width: 720px) { .sheet { grid-template-columns: 1fr; } header { grid-template-columns: 1fr; } .seal { writing-mode: horizontal-tb; justify-self: start; } }
+</style>
+<div class="wrap">
+  <header>
+    <div class="seal">突厥傳</div>
+    <div>
+      <h1>Oğuz Kağan Tasarım Defteri</h1>
+      <p>{{SAYI}} karakterin oyundaki toon çizimi, destanlardaki görünüşü ve oyundaki güçleri. Kaynaklar: Bahaeddin Ögel, <i>Türk Mitolojisi I</i>; Dede Korkut Kitabı; Altay ve Yakut anlatıları.</p>
+    </div>
+  </header>
+  <div class="legend"><span class="b">Boss</span><span class="f">Düşman</span><span class="a">Kahraman ve yoldaş</span></div>
+  {{KARTLAR}}
+</div>

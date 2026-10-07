@@ -16,7 +16,7 @@ export const SETS = [
   { id: 'ogullar', name: "Oğuz'un Altı Oğlu", text: 'Altı oğlun yiğit kartı.', reward: { gd: 10, title: 'Bozok-Üçok Beyi' },
     members: () => [['Gün Han', 'gunhan'], ['Ay Han', 'ayhan'], ['Yıldız Han', 'yildizhan'], ['Gök Han', 'gokhan'], ['Dağ Han', 'daghan'], ['Deniz Han', 'denizhan']].map(([n, id]) => [n, owned(id)]) },
   { id: 'gokturk', name: 'Göktürk Kağanları', text: 'Kağanlar ve yanlarındaki komutan ile vezir.', reward: { gd: 15, title: 'Ötüken Beyi' },
-    members: () => [['Bumin Kağan', 'bumin'], ['Bilge Kağan', 'bilge'], ['Kül Tigin', 'kultigin'], ['Tonyukuk', 'tonyukuk']].map(([n, id]) => [n, owned(id)]) },
+    members: () => [['Bumin Kağan', 'bumin'], ['Tonyukuk', 'tonyukuk']].map(([n, id]) => [n, owned(id)]) },
   { id: 'saman', name: 'Şamanlar', text: 'Geyik, Ayı ve Kartal şamanları.', reward: { gd: 8, title: 'Kam' },
     members: () => [['Geyik Şaman', 'geyiksaman'], ['Ayı Şaman', 'ayisaman'], ['Kartal Şaman', 'kartalsaman']].map(([n, id]) => [n, owned(id)]) },
   { id: 'ruya', name: 'Rüyanın Yayı', text: 'Her bölümün altın yayı ve üç gümüş oku.', reward: { gd: 20, title: 'Uluğ Türük\'ün Yorumcusu' },

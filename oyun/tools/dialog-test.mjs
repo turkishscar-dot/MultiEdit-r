@@ -1,7 +1,7 @@
 // Diyalog testi: bütün düğümlerin diyaloglarını açar, portreleri çizer, ekran görüntüsü alır
 import { chromium } from 'playwright';
 const dev = process.argv[2];
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const b = await chromium.launch({ executablePath: process.env.CHROME, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await b.newPage({ viewport: dev === 'mobile' ? { width: 390, height: 844 } : { width: 960, height: 540 } });
 const errs = []; p.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
 await p.goto('http://localhost:5173/');

@@ -1,1 +1,17 @@
-dist-web
+node_modules/
+dist/
+video/
+OYNA.html
+test-out/
+ai-kaynak/
+MultiEdit-r/
+oyun-bulut/
+Claude Gerkenler/
+__pycache__/
+*.apk
+com.gameloft.android.ANMP.GloftSIHM/
+RAPOR-CLAUDE/
+yedek/
+tools/ph-kaynak/
+tools/ph-agir/
+dist-web/

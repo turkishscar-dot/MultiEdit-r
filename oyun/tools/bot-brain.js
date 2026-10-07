@@ -23,9 +23,8 @@
   // SMU'dan gelenler: uçurum, kam ışını, ▲ kanatlı kul
   function smuThink() {
     const G = g(), P = G.P, v = Math.max(1, P.vz);
-    if (G.yada > 0 && cd <= 0 && G.boss) { G.act('yada'); ev('yada'); }
     if (P.y !== 0 && !G.overPit) return false;
-    const pit = G.terr.find(t => t.kind === 'pit' && !t.dive && t.z0 < P.z + 0.5 && P.z - t.z0 < 12);
+    const pit = G.terr.find(t => t.kind === 'pit' && t.z0 < P.z + 0.5 && P.z - t.z0 < 12);
     if (pit && P.y === 0) {
       const d = P.z - pit.z0, len = pit.z0 - pit.z1;
       if (d <= Math.max(1.2, v * 0.62 - len - 1.5)) { act('up'); stats.jumps++; ev('pitjump'); return true; }
@@ -122,19 +121,6 @@
     else if (best[1] !== P.row) act(best[1] > P.row ? 'up' : 'down');
   }
 
-  // Yada küresi: şeridine geç, erime gelince vur
-  function orbThink() {
-    const G = g(), P = G.P;
-    const o = G.objs.find(o => o.kind === 'yada' && !o.dead && P.z - o.z > -0.5 && P.z - o.z < 30);
-    if (!o) return false;
-    const d = P.z - o.z;
-    if (o.lane === P.lane && d < 4.6) { if (G.tryOrb()) { ev('orb'); cd = 0.1; } return true; }
-    if (o.lane !== P.lane && cd <= 0 && d > 4) {
-      const danger = G.objs.some(x => x.def.hit && !x.dead && x.lane === o.lane && P.z - x.z > 0 && P.z - x.z < d + 1);
-      if (!danger) { laneTo(o.lane); return true; }
-    }
-    return false;
-  }
   function bossThink() {
     const G = g(), P = G.P, b = G.boss;
     const tap = document.getElementById('tap');
@@ -185,7 +171,13 @@
           if (G.boss) {
             if (G.boss !== sawBoss) { if (sawBoss) logBoss(); sawBoss = G.boss; bossT0 = G.time; stats.bosses++; ev('boss:' + G.boss.kind); }
             sawBoss.minEsc = Math.min(sawBoss.minEsc ?? 999, G.boss.esc);
-            if (!G.fin && orbThink()) {} else
+            // Yada küresi: yanına gelince kılıçla vurulur, küre boss'a uçar (eski "topla-fırlat" yerine)
+            const orb = G.objs.find(o => o.kind === 'yada' && !o.dead && G.P.z - o.z > -0.6 && G.P.z - o.z < 5);
+            if (orb && !G.fin) {
+              const ol = [-2.5, 0, 2.5].indexOf(orb.x) >= 0 ? [-2.5, 0, 2.5].indexOf(orb.x) : orb.lane;
+              if (ol !== G.P.lane) act(ol < G.P.lane ? 'left' : 'right');
+              else if (Math.abs(orb.x - G.P.x) < 1.6 && cd <= 0) { G.act('tap'); cd = 0.2; ev('yada'); }
+            }
             if (!(cd <= 0 && parryThink()) && !bossThink()) (G.flying ? skyThink : groundThink)();
           } else if (sawBoss) { logBoss(); sawBoss = null; }
           else if (G.flying) skyThink();
