@@ -1,5 +1,6 @@
 # Devir belgesi: Oğuz Kağan koşu oyunu (başka bir ajan için)
 
+Önce repo kökündeki `CLAUDE.md`'yi oku.
 Dal: `claude/serene-wright-uo3dxg` (repo: turkishscar-dot/MultiEdit-r, klasör `oyun/`). Türkçe konuşulur; kullanıcı küçük küçük "Adım N" istekleri verir.
 Yığın: Three.js r0.186 + Vite 8. Sürekli okunacak diğer belge: `UYGULAMA.md` (özellikler ve geçmiş), `kostum/` (kostüm tasarımı).
 
@@ -19,7 +20,7 @@ node tools/web-paket.mjs                           # çok dosyalı web paketi ->
 node tools/csp-sunucu.mjs 4190 &                   # sıkı CSP sunucusu (claude.ai artifact ortamını taklit eder)
 node tools/mobil-test.mjs http://localhost:4190/   # telefon/CSP testi
 ```
-- Test tarayıcısı: Playwright + `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (swiftshader, yazılımla çizim). Oyun kancaları: `window.__game` (start, tick, Y, EK, book, TORE, AYR...).
+- Test tarayıcısı: Playwright + `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (swiftshader, yazılımla çizim). Test betikleri tarayıcıyı `CHROME` ortam değişkeninden alır: bulutta `export CHROME=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. Regresyon için vite açık olmalı (5173). Oyun kancaları: `window.__game` (start, tick, Y, EK, book, TORE, AYR...).
 - Yayın: claude.ai Artifact, `dist-web/index.html`, URL `https://claude.ai/artifact/EhXmC3e9XCYgj3JuVJKTxz` (Artifact aracı olan ortamda). Bunun dışında `OYNA.html` tek dosya derlemesi (`git`e girmez).
 - `*.glb` dosyaları `.gitignore`'da; yeni model eklerken `git add -f`.
 
@@ -52,5 +53,6 @@ node tools/mobil-test.mjs http://localhost:4190/   # telefon/CSP testi
 ## Tanıtım sitesi (oguzkagangame.com)
 - Kaynak: repo kökünde `site/` (statik: `index.html`, `css/`, `js/veri.js` + `js/site.js`, `fonts/` yerel, `img/`, `oyna/` = oynanabilir oyun). Türkçe/İngilizce geçişli.
 - Güncelleme: `node tools/site-ekran.mjs [bölüm:kare ...]` (gerçek oyun ekranları, vite açık olmalı) → `python3 tools/site-yap.py` (görseller + `site/oyna` oyun derlemesi; `gorsel` argümanıyla yalnız görseller). Yiğit verisi `site/js/veri.js` (oyundaki `CARDS` ile aynı tutulmalı).
-- Yayın: Cloudflare Pages, GitHub'daki bu dala bağlı; derleme komutu yok, çıktı klasörü `site`. Push edilince kendiliğinden yayınlanır. Dosya başı sınır 25 MB (en büyüğü ~7 MB).
+- Yayın: Cloudflare Workers (repo kökündeki `wrangler.jsonc`, varlık klasörü `site`), GitHub'daki bu dala bağlı. Push edilince kendiliğinden yayınlanır. Dosya başı sınır 25 MB.
+- Yiğit sayısı 25 (PC'de Kül Tigin, Bilge Kağan, Manas, Fatih çıkarıldı). Stüdyo bölümü: kurucu, Multi Editor, Scar Edits (`site/img/multi-editor/`).
 - İletişim adresi `kadir@oguzkagangame.com` (Cloudflare Email Routing → kullanıcının Gmail'i).
