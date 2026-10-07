@@ -35,6 +35,7 @@ node tools/mobil-test.mjs http://localhost:4190/   # telefon/CSP testi
   - Pilot sonucu (Kül Tigin): geometri çok iyi, koşu döngüsü temiz. Eksikler: dokusuz teslim edildi; 910k üçgen -> 30k detay kaybettirir, normal haritası çıkarılıp bindirilmeli; ağırlıklar yumuşatınca iyi ama elle düzeltme gerekebilir (omuz, sırt çantası, saç).
 
 ## Sırada (kullanıcı hedefi: 1080p/2K net görüntü ve karakter kalitesi)
+0. **İlk yükleme 175 MB** (Ekim PC güncellemesi): `assets.js` bütün yiğit ve düşman Meshy gövdelerini (`assets/yigit`, `assets/govde`, ~100 MB) açılışta indiriyor. Gövdeler seçilince indirilmeli (tembel yükleme; `setBody` eşzamansız olmalı). Telefonda bellek de sorun olabilir.
 1. **Çözünürlük ve kenar yumuşatma** (bağımsız, ücretsiz kod işi). Bulgu:
    - `src/main.js`: `renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5))`; grafik düzeyleri `src/ayarlar.js` `GFX`: yüksek 1,5×, orta 1×, düşük 0,75×. Açılışta 2,5 sn FPS ölçümü `autoGfx` ile düzeyi düşürüyor (telefonda çoğu zaman ORTA/DÜŞÜK seçilir; ekranın yarısı/üçte biri çözünürlükte çizim, bulanık).
    - `EffectComposer` ara hedefleri **MSAA'sız** (tırtıklı kenarlar).
