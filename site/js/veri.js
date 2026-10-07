@@ -98,7 +98,7 @@ window.VERI = {
       { n: 1, ad: ['Ötüken Surları', 'Walls of Ötüken'], boss: ['Körmös Başı, Tepegöz', 'Körmös Chief, Tepegöz'], ekran: 'b1' },
       { n: 2, ad: ['Kara Bataklık', 'The Black Marsh'], boss: ['Bataklık Ağası, Albastı', 'Marsh Lord, Albastı'], ekran: 'b2' },
       { n: 3, ad: ['Altay', 'Altai'], boss: ['Almas Beyi, Yelbegen', 'Almas Chief, Yelbegen'], ekran: 'b3' },
-      { n: 4, ad: ['Gök Yolu', 'The Sky Road'], boss: ['Dev Kara Kuş', 'The Giant Black Eagle'] },
+      { n: 4, ad: ['Gök Yolu', 'The Sky Road'], boss: ['Dev Kara Kuş', 'The Giant Black Eagle'], ekran: 'b4' },
       { n: 5, ad: ['Yeraltı', 'The Underworld'], boss: ['Kerey, Demirhane, Matman, Erlik', 'Kerey, the Forge, Matman, Erlik'], ekran: 'b5' },
     ] },
     { ad: ['İkinci Kısım', 'Part Two'], alt: ['Çin Seferi', 'The Campaign East'], bolumler: [

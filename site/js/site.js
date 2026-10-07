@@ -9,8 +9,8 @@
   const YAKINDA = ['YAKINDA', 'COMING SOON'];
 
   // oyundan kareler
-  const KARELER = [['b1', 'Ötüken Surları', 'Walls of Ötüken'], ['b6', 'Esir Türkler', 'The Captive Turks'], ['b3', 'Altay', 'Altai'],
-    ['b2', 'Kara Bataklık', 'The Black Marsh'], ['b5', 'Yeraltı', 'The Underworld'], ['yigitler', 'Yiğit kartları', 'Hero cards']];
+  const KARELER = [['b1', 'Ötüken Surları', 'Walls of Ötüken'], ['b4', "Gök Yolu: Tulpar'la uçuş", 'The Sky Road: flying on Tulpar'], ['b6', 'Esir Türkler', 'The Captive Turks'],
+    ['b3', 'Altay', 'Altai'], ['b5', 'Yeraltı', 'The Underworld'], ['b2', 'Kara Bataklık', 'The Black Marsh']];
   function kareler() {
     const k = $('kareler'); k.replaceChildren();
     for (const [id, tr, en] of KARELER) {

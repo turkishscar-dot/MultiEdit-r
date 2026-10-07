@@ -21,7 +21,7 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: calc(var(--ust-y) + 12px); -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--gece); color: var(--metin); font: 400 17px/1.6 var(--govde); overflow-x: hidden; }
-img { max-width: 100%; display: block; }
+img { max-width: 100%; height: auto; display: block; }
 a { color: var(--altin); }
 a:focus-visible, button:focus-visible { outline: 3px solid var(--altin); outline-offset: 3px; }
 h1, h2, h3 { font-family: var(--baslik); font-weight: 400; letter-spacing: .02em; line-height: 1.05; margin: 0; }
@@ -33,12 +33,14 @@ p { margin: 0 0 1em; }
 /* üst çubuk */
 .ust { position: fixed; inset: 0 0 auto; height: var(--ust-y); z-index: 20; display: flex; align-items: center; gap: 16px;
   padding: 0 max(16px, env(safe-area-inset-left)); transition: background .25s, box-shadow .25s; }
+.ust:not(.dolu) { background: linear-gradient(180deg, rgba(12, 9, 22, .75), rgba(12, 9, 22, 0)); }
 .ust.dolu { background: rgba(18, 15, 31, .92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 2px 0 var(--murekkep); }
 .logo { display: flex; align-items: center; gap: 10px; color: var(--kagit); text-decoration: none; font: 400 26px var(--baslik); letter-spacing: .04em; text-shadow: 2px 2px 0 var(--murekkep); }
 .menu { display: flex; gap: 22px; margin-left: auto; }
-.menu a { color: var(--kagit); text-decoration: none; font: 600 15px var(--govde); opacity: .85; }
+.menu a { color: var(--kagit); text-decoration: none; font: 600 15px var(--govde); opacity: .9; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0,0,0,.6); }
 .menu a:hover { opacity: 1; color: var(--altin); }
-.ust-sag { display: flex; align-items: center; gap: 10px; }
+.ust-sag { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.menu + .ust-sag { margin-left: 0; }
 .dil { font: 800 13px var(--govde); background: transparent; color: var(--kagit); border: 2px solid var(--kagit); border-radius: 6px; padding: 5px 8px; cursor: pointer; }
 .hamburger { display: none; width: 44px; height: 40px; background: var(--kagit); border: var(--kenar); box-shadow: 3px 3px 0 var(--murekkep); cursor: pointer; padding: 8px; }
 .hamburger span { display: block; height: 3px; background: var(--murekkep); margin: 4px 0; }
@@ -60,8 +62,8 @@ p { margin: 0 0 1em; }
               linear-gradient(0deg, var(--gece) 0%, rgba(18, 15, 31, 0) 38%); }
 .kahraman-ic { width: min(1180px, 100% - 32px); margin: 0 auto; padding: calc(var(--ust-y) + 60px) 0 clamp(48px, 9vh, 110px); max-width: 1180px; }
 .kahraman-ic > * { max-width: 560px; }
-.ust-baslik { font: 800 13px var(--govde); letter-spacing: .18em; text-transform: uppercase; color: var(--altin); }
-.kahraman h1 { font-size: clamp(64px, 12vw, 148px); color: var(--altin); text-shadow: 4px 4px 0 var(--murekkep), -2px -2px 0 var(--murekkep), 2px -2px 0 var(--murekkep), -2px 2px 0 var(--murekkep), 8px 8px 0 rgba(215, 38, 61, .9); }
+.ust-baslik { font: 800 13px var(--govde); letter-spacing: .18em; text-transform: uppercase; color: var(--altin); text-shadow: 0 1px 3px #000; margin-bottom: 18px; }
+.kahraman h1 { padding-top: .12em; font-size: clamp(64px, 12vw, 148px); color: var(--altin); text-shadow: 4px 4px 0 var(--murekkep), -2px -2px 0 var(--murekkep), 2px -2px 0 var(--murekkep), -2px 2px 0 var(--murekkep), 8px 8px 0 rgba(215, 38, 61, .9); }
 .alt-baslik { font: 400 clamp(28px, 4vw, 44px) var(--baslik); color: var(--kagit); text-shadow: 3px 3px 0 var(--murekkep); letter-spacing: .06em; margin-top: .1em; }
 .ozet { font-size: clamp(17px, 1.6vw, 20px); color: var(--metin); text-shadow: 0 2px 8px rgba(0, 0, 0, .7); }
 .dugmeler { display: flex; flex-wrap: wrap; gap: 14px; margin: 26px 0 18px; }
@@ -167,7 +169,8 @@ p { margin: 0 0 1em; }
     transform: translateY(-120%); transition: transform .25s; visibility: hidden; }
   .menu.acik { transform: none; visibility: visible; }
   .menu a { padding: 16px 20px; border-top: 1px solid rgba(245, 236, 217, .12); font-size: 18px; }
-  .ust { background: rgba(18, 15, 31, .92); }
+  .ust, .ust:not(.dolu) { background: rgba(18, 15, 31, .94); }
+  .menu + .ust-sag { margin-left: auto; }
   .logo span { font-size: 22px; }
 }
 @media (max-width: 700px) {

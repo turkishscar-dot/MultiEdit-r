@@ -48,3 +48,9 @@ node tools/mobil-test.mjs http://localhost:4190/   # telefon/CSP testi
 - Karakter paylaşılan iskelet: Oğuz gövdesi + `C_*` parçaları, hepsi tek şablon. Yiğit rengi, saç dokusu (`MI_Hair_*`), sakal (`C_BeardLong*`) `applyCostume` (`src/costumes.js`) ve `DETAY` (`src/yigit.js`) ile ayarlanır.
 - Pelerin ağırlığı: `sway()` gövde eğimine göre pelerini geriye kaldırır (kalçaya girmesin).
 - claude.ai Artifact CSP'si `data:`/`blob:` isteklerini engeller; web paketi bu yüzden modelleri `.glb.txt` yapıp `parseAsync` ile yükler.
+
+## Tanıtım sitesi (oguzkagangame.com)
+- Kaynak: repo kökünde `site/` (statik: `index.html`, `css/`, `js/veri.js` + `js/site.js`, `fonts/` yerel, `img/`, `oyna/` = oynanabilir oyun). Türkçe/İngilizce geçişli.
+- Güncelleme: `node tools/site-ekran.mjs [bölüm:kare ...]` (gerçek oyun ekranları, vite açık olmalı) → `python3 tools/site-yap.py` (görseller + `site/oyna` oyun derlemesi; `gorsel` argümanıyla yalnız görseller). Yiğit verisi `site/js/veri.js` (oyundaki `CARDS` ile aynı tutulmalı).
+- Yayın: Cloudflare Pages, GitHub'daki bu dala bağlı; derleme komutu yok, çıktı klasörü `site`. Push edilince kendiliğinden yayınlanır. Dosya başı sınır 25 MB (en büyüğü ~7 MB).
+- İletişim adresi `kadir@oguzkagangame.com` (Cloudflare Email Routing → kullanıcının Gmail'i).

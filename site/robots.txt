@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://oguzkagangame.com/sitemap.xml
