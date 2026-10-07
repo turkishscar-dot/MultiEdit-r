@@ -1,7 +1,8 @@
 # Multi Editor — tanıtım bilgileri / product brief
 
-> Bu dosya Multi Editor'ün tanıtımı için toplanmış bilgidir. Sayılar gerçek
-> ölçümlerdir; ölçüm olmayan yerler **[KULLANICIYA SOR]** diye işaretlidir.
+> Bu dosya Multi Editor'ün tanıtımı için toplanmış bilgidir. Yazılımın hız
+> sayıları ölçümdür; elle kurguyla karşılaştırma kanal sahibinin kendi
+> beyanıdır.
 > Görseller ve demo video, telifli içerik kullanmamak için **sentetik demo
 > klipleriyle** üretildi (gerçek projeler Disney dublajlarıyla çalışıyor).
 
@@ -86,10 +87,11 @@ kaymasının kök neden düzeltmesi (48 dilde +4,31 sn → 0,000 sn), zaman
 çizelgesi kurgu penceresi, CapCut taslak yazıcısı, karaoke ve kelime
 hizalama, ön kontrol / render planı / senkron bekçisi, GPU kodlamaya geçiş.
 
-- Kodu yazan oran (insan / Claude): **[KULLANICIYA SOR]** — ölçülmedi
-- Geliştirme başlangıcı: **[KULLANICIYA SOR]** — proje git kullanmıyor;
-  klasördeki en eski dosya tarihi **3 Eylül 2026**, en eski not tarihi
-  **13 Eylül 2026**
+- **Kodun tamamını Claude yazdı.** Kanal sahibi ne istediğini, neyin yanlış
+  gittiğini ve sonucu nasıl beğendiğini anlattı; Claude tasarladı, yazdı,
+  ölçtü ve düzeltti.
+- Geliştirme başlangıcı: **Eylül 2026** (klasördeki en eski dosya
+  3 Eylül 2026)
 
 ### Kazandırdığı zaman (yalnız gerçek ölçümler)
 
@@ -103,9 +105,9 @@ hizalama, ön kontrol / render planı / senkron bekçisi, GPU kodlamaya geçiş.
 - Karaoke alt yazı senkronu: "vokal var ama ekranda yazı yok" süresi
   26,19 sn → 0,74 sn (136 sn'lik şarkı)
 
-Ölçülmemiş olan: **CapCut'ta elle yapılan kurguyla karşılaştırma
-[KULLANICIYA SOR]** — örneğin "40 dillik bir videoyu CapCut'ta ___ saatte
-yapıyordum, şimdi ___ dakikada çıkarıyorum."
+**Elle kurguyla karşılaştırma (kanal sahibinin beyanı):** bir
+multilanguage videosu eskiden yaklaşık **2 saat** sürüyordu, Multi Editor ile
+**30 dakikada** yapılabiliyor — **4 kat** daha hızlı.
 
 ### Kod tarihi ve boyutu
 
@@ -117,9 +119,8 @@ yapıyordum, şimdi ___ dakikada çıkarıyorum."
 
 ### Kimler kullanıyor
 
-**[KULLANICIYA SOR]** — bilinen kullanıcı kanal sahibi (Scar Edits);
-başkalarının kullanıp kullanmadığına dair veri yok. Ürün dağıtılmıyor,
-kullanıcının bilgisayarında çalışıyor.
+**Yalnızca kanal sahibi** (Scar Edits) kullanıyor. Ürün dağıtılmıyor,
+sahibinin bilgisayarında çalışıyor.
 
 ---
 
@@ -203,9 +204,10 @@ fix for cumulative audio drift (+4.31 s over 48 languages → 0.000 s), the
 timeline editor, the CapCut draft writer, karaoke and word alignment,
 pre-flight check / render plan / sync watchdog, and the move to GPU encoding.
 
-- Share of code written by human vs Claude: **[ASK THE USER]** — not measured
-- Development start: **[ASK THE USER]** — the project has no git history;
-  oldest file in the folder is dated **3 Sep 2026**, oldest note **13 Sep 2026**
+- **All of the code was written by Claude.** The channel owner described
+  what they wanted, what was going wrong and whether they liked the result;
+  Claude designed, wrote, measured and fixed it.
+- Development start: **September 2026** (oldest file in the folder: 3 Sep 2026)
 
 ### Time saved (real measurements only)
 
@@ -219,8 +221,9 @@ Measured (the software's own speed):
 - Karaoke subtitle sync: "vocal present but no lyric on screen" time
   26.19 s → 0.74 s (136-second song)
 
-Not measured: **comparison with manual editing in CapCut [ASK THE USER]** —
-e.g. "a 40-language video took ___ hours in CapCut, now ___ minutes."
+**Compared with manual editing (channel owner's own estimate):** a
+multilanguage video used to take about **2 hours**; with Multi Editor it can
+be done in **30 minutes** — **4× faster**.
 
 ### Code history and size
 
@@ -232,9 +235,8 @@ e.g. "a 40-language video took ___ hours in CapCut, now ___ minutes."
 
 ### Who uses it
 
-**[ASK THE USER]** — the known user is the channel owner (Scar Edits); there
-is no data on other users. The product is not distributed; it runs on the
-owner's computer.
+**Only the channel owner** (Scar Edits) uses it. The product is not
+distributed; it runs on the owner's computer.
 
 ---
 
