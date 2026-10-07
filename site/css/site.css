@@ -177,6 +177,7 @@ p { margin: 0 0 1em; }
   body { font-size: 16px; }
   .kahraman { min-height: 100svh; }
   .kahraman picture img { object-position: center top; }
+  .ust-baslik { display: inline-block; background: rgba(7, 6, 12, .78); padding: 6px 10px; letter-spacing: .12em; font-size: 12px; }
   .kahraman::after { background: linear-gradient(0deg, rgba(12, 9, 22, .98) 8%, rgba(12, 9, 22, .75) 45%, rgba(12, 9, 22, .05) 75%); }
   .kareler { grid-template-columns: 1fr; }
   .kartlar { grid-template-columns: repeat(2, 1fr); gap: 12px; }
