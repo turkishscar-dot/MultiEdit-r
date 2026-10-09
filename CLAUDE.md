@@ -28,5 +28,5 @@ Claude oturumları birbirinin sohbetini görmez; bu repo tek ortak nokta. Öneml
 - Telifli içerik (ör. dublajlı film sahneleri, Gameloft dosyaları) repoya ve siteye konmaz.
 
 ## Durum (Ekim 2026)
-- Claude Startups başvurusu "doğrulanamadı" diye reddedildi; resmi şirket kaydı yok. Güçlendirmek için: LinkedIn profili ve şirket sayfası, sitede kurucu bilgisi (eklendi), YouTube geliştirme günlüğü, ziyaretçi sayısı (Cloudflare Web Analytics). Birkaç hafta sonra yeniden başvurulacak.
+- Claude Startups: iki kez reddedildi (7 ve 9 Ekim 2026; ikincisi LinkedIn, kurucu bilgisi, Multi Editor ve kanalla). Neden büyük ihtimalle resmi şirket kaydı olmaması. Şirket kurulana ya da oyundan gelir/kullanıcı kanıtı birikene kadar yeniden başvurulmayacak.
 - Şahıs şirketi şimdilik açılmadı (2026'da genç girişimci Bağ-Kur desteği kalktı; yıllık maliyet yüksek).
